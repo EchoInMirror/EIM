@@ -48,12 +48,12 @@ public:
         case 0:
             note = buffer.readInt8();
             DBG("On: " << note);
-            ((GuiAppApplication*)juce::JUCEApplication::getInstance())->masterTrack->noteOn(note, buffer.readInt8());
+            ((GuiAppApplication*)juce::JUCEApplication::getInstance())->mainWindow->masterTrack->noteOn(note, buffer.readInt8());
             break;
         case 1:
             note = buffer.readInt8();
             DBG("Off: " << note);
-            ((GuiAppApplication*)juce::JUCEApplication::getInstance())->masterTrack->noteOff(note);
+            ((GuiAppApplication*)juce::JUCEApplication::getInstance())->mainWindow->masterTrack->noteOff(note);
             break;
         }
         doRead();
@@ -103,13 +103,30 @@ private:
 
 void GuiAppApplication::initialise(const juce::String& commandLine) {
     juce::ignoreUnused(commandLine);
-    masterTrack.reset(new MasterTrack());
+    mainWindow.reset(new MainWindow());
     auto address = boost::asio::ip::make_address("0.0.0.0");
 
-    std::make_shared<listener>(ioc, boost::asio::ip::tcp::endpoint{ address, 8088 })->run();
+    std::make_shared<listener>(ioc, boost::asio::ip::tcp::endpoint{address, 8088})->run();
 
     v.reserve(4);
-    for (auto i = 4; i > 0; --i) v.emplace_back([this] { ioc.run(); });
+    for (auto i = 0; i < 4; i++) { v.emplace_back([this] { ioc.run(); }).detach();  }
 }
+
+void GuiAppApplication::shutdown() { mainWindow = nullptr; }
+
+void GuiAppApplication::systemRequestedQuit() {
+    ioc.stop();
+    quit();
+}
+
+MainWindow::MainWindow(): juce::DocumentWindow("Echo In Mirror", juce::Colours::lightgrey, juce::DocumentWindow::allButtons) {
+    setSize(400, 400);
+    setUsingNativeTitleBar(true);
+    setResizable(true, true);
+    centreWithSize(getWidth(), getHeight());
+    setVisible(true);
+    masterTrack.reset(new MasterTrack());
+}
+void MainWindow::closeButtonPressed() { juce::JUCEApplication::getInstance()->systemRequestedQuit(); }
 
 START_JUCE_APPLICATION(GuiAppApplication)
