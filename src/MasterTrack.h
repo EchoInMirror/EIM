@@ -4,7 +4,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 
-class MasterTrack: private SynchronizedAudioProcessorGraph, private juce::Timer {
+class MasterTrack: private SynchronizedAudioProcessorGraph {
 public:
     MasterTrack();
     ~MasterTrack() {
@@ -13,7 +13,8 @@ public:
 
     void scanPlugins();
     void removeTrack(int id);
-    void timerCallback() override;
+    void noteOn(int note, int velocity);
+    void noteOff(int note);
     juce::AudioProcessorGraph::Node::Ptr createTrack();
     std::unique_ptr<PluginWrapper> loadPlugin(int id);
 private:

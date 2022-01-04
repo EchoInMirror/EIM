@@ -1,60 +1,69 @@
 #include "Main.h"
 #include <string>
+#include "ByteBuffer.h"
 
-class session : public std::enable_shared_from_this<session>
-{
-    boost::beast::websocket::stream<boost::beast::tcp_stream> ws_;
-    boost::beast::flat_buffer buffer_;
+class session : public std::enable_shared_from_this<session> {
+    boost::beast::websocket::stream<boost::beast::tcp_stream> ws;
+    ByteBuffer buffer;
 
 public:
-    explicit session(boost::asio::ip::tcp::socket&& socket) : ws_(std::move(socket)) {}
+    explicit session(boost::asio::ip::tcp::socket&& socket) : ws(std::move(socket)) {}
 
     void run() {
-        boost::asio::dispatch(ws_.get_executor(), boost::beast::bind_front_handler(&session::on_run, shared_from_this()));
+        boost::asio::dispatch(ws.get_executor(), boost::beast::bind_front_handler(&session::onRun, shared_from_this()));
     }
 
-    void on_run() {
-        ws_.set_option(
-            boost::beast::websocket::stream_base::timeout::suggested(
-                boost::beast::role_type::server));
-
-        // Set a decorator to change the Server of the handshake
-        ws_.set_option(boost::beast::websocket::stream_base::decorator(
-            [](boost::beast::websocket::response_type& res)
-            {
-                res.set(boost::beast::http::field::server,
-                    std::string(BOOST_BEAST_VERSION_STRING) +
-                    " websocket-server-async");
+    void onRun() {
+        ws.set_option(boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
+        ws.set_option(boost::beast::websocket::stream_base::decorator([](boost::beast::websocket::response_type& res) {
+            res.set(boost::beast::http::field::server,
+                std::string(BOOST_BEAST_VERSION_STRING) +
+                " websocket-server-async");
             }));
-        // Accept the websocket handshake
-        ws_.async_accept(
-            boost::beast::bind_front_handler(
-                &session::on_accept,
-                shared_from_this()));
+
+        ws.async_accept(boost::beast::bind_front_handler(&session::onAccept, shared_from_this()));
     }
 
-    void on_accept(boost::beast::error_code ec) {
-        if (!ec) do_read();
+    void doWrite() {
+        ws.binary(true);
+        ws.async_write(buffer.data(), boost::beast::bind_front_handler(&session::onWrite, shared_from_this()));
     }
 
-    void do_read() {
-        ws_.async_read(buffer_, boost::beast::bind_front_handler(&session::on_read, shared_from_this()));
+    void doRead() { ws.async_read(buffer, boost::beast::bind_front_handler(&session::onRead, shared_from_this())); }
+
+    void onAccept(boost::beast::error_code ec) {
+        if (ec) return;
+        buffer.writeInt8(0);
+        buffer.writeInt16(1);
+        doWrite();
     }
 
-    void on_read(boost::beast::error_code ec, std::size_t bytes_transferred) {
+    void onRead(boost::beast::error_code ec, std::size_t bytes_transferred) {
         boost::ignore_unused(bytes_transferred);
 
-        if (ec == boost::beast::websocket::error::closed) return;
+        if (ec) return;
 
-        ws_.text(ws_.got_text());
-        ws_.async_write(buffer_.data(), boost::beast::bind_front_handler(&session::on_write, shared_from_this()));
+        int note;
+        switch (buffer.readInt8()) {
+        case 0:
+            note = buffer.readInt8();
+            DBG("On: " << note);
+            ((GuiAppApplication*)juce::JUCEApplication::getInstance())->masterTrack->noteOn(note, buffer.readInt8());
+            break;
+        case 1:
+            note = buffer.readInt8();
+            DBG("Off: " << note);
+            ((GuiAppApplication*)juce::JUCEApplication::getInstance())->masterTrack->noteOff(note);
+            break;
+        }
+        doRead();
     }
 
-    void on_write(boost::beast::error_code ec, std::size_t bytes_transferred){
+    void onWrite(boost::beast::error_code ec, std::size_t bytes_transferred){
         boost::ignore_unused(bytes_transferred);
         if (ec) return;
-        buffer_.consume(buffer_.size());
-        do_read();
+        buffer.consume(buffer.size());
+        doRead();
     }
 };
 
@@ -83,10 +92,10 @@ public:
 
 private:
     void do_accept() {
-        acceptor_.async_accept(boost::asio::make_strand(ioc_), boost::beast::bind_front_handler(&listener::on_accept, shared_from_this()));
+        acceptor_.async_accept(boost::asio::make_strand(ioc_), boost::beast::bind_front_handler(&listener::onAccept, shared_from_this()));
     }
 
-    void on_accept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket) {
+    void onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket) {
         if (!ec) std::make_shared<session>(std::move(socket))->run();
         do_accept();
     }

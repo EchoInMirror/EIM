@@ -19,8 +19,8 @@ public:
     void initialise(const juce::String& commandLine) override;
 
     void shutdown() override { masterTrack = nullptr; }
+    std::unique_ptr<MasterTrack> masterTrack;
 private:
     boost::asio::io_context ioc{ 4 };
     std::vector<std::thread> v;
-    std::unique_ptr<MasterTrack> masterTrack;
 };

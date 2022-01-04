@@ -22,17 +22,18 @@ MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph() {
 
 	auto track = createTrack()->getProcessor();
 	((Track*)track)->setGenerator(loadPlugin(0));
-	startTimerHz(10);
 }
 
-void MasterTrack::timerCallback() {
-	return;
-	auto msg = juce::MidiMessage::noteOn(1, 60, (juce::uint8)120);
+void MasterTrack::noteOn(int note, int velocity) {
+	auto msg = juce::MidiMessage::noteOn(1, note, (juce::uint8)velocity);
 	msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
 	((Track*)tracks[0]->getProcessor())->getMidiMessageCollector().addMessageToQueue(msg);
-	auto msg2 = juce::MidiMessage::noteOff(1, 60);
-	msg2.setTimeStamp((juce::Time::getMillisecondCounterHiRes() + 10) * 0.001);
-	((Track*)tracks[0]->getProcessor())->getMidiMessageCollector().addMessageToQueue(msg2);
+}
+
+void MasterTrack::noteOff(int note) {
+	auto msg = juce::MidiMessage::noteOff(1, note);
+	msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
+	((Track*)tracks[0]->getProcessor())->getMidiMessageCollector().addMessageToQueue(msg);
 }
 
 void MasterTrack::scanPlugins() {

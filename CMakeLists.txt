@@ -4,6 +4,9 @@ project(EIM VERSION 0.0.0)
 set(CMAKE_CXX_STANDARD 20)
 
 add_definitions(-DJUCE_PLUGINHOST_VST3 -DLIBUS_NO_SSL -DUWS_NO_ZLIB -DLIBUS_USE_LIBUV)
+if(MSVC)
+    add_definitions(-D_WIN32_WINNT=0x0601)
+endif(MSVC)
 
 file(GLOB SRC_FILES "src/*.cpp" "src/*.h")
 
