@@ -1,0 +1,56 @@
+.tracks {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  .wrapper {
+    display: flex;
+  }
+
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    width: 200px;
+    min-height: 100%;
+
+    li {
+      position: relative;
+      counter-increment: track-li;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+      .color {
+        width: 6px;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        position: absolute;
+      }
+
+      .title {
+        display: flex;
+        align-items: center;
+        button {
+          padding: 0;
+          line-height: 1.4;
+          min-width: 24px;
+          margin-right: 4px;
+        }
+
+        .solo::before {
+          content: counter(track-li);
+        }
+      }
+
+      h4 {
+        margin: 0;
+      }
+    }
+  }
+
+  .playlist {
+    flex: 1;
+    min-height: 100%;
+  }
+}

@@ -1,0 +1,70 @@
+.app-bar {
+  display: flex;
+  left: 0;
+  right: 0;
+  top: 0;
+  align-items: center;
+  z-index: 10;
+
+  & > div {
+    display: flex;
+    width: 100%;
+  }
+
+  section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  
+    .microsecond {
+      font-size: medium;
+      font-weight: normal;
+      letter-spacing: -2px;
+    }
+  }
+
+  .info-block {
+    height: inherit;
+    margin-right: 12px;
+    text-align: center;
+
+    sub {
+      display: block;
+      font-weight: lighter;
+      line-height: 0.8;
+      margin-top: -2px;
+      font-size: 10px;
+    }
+  }
+
+  .center-section {
+    margin: 0 auto;
+    .time {
+      font-weight: bold;
+      font-size: 22px;
+      letter-spacing: -1px;
+  
+      .minute::after, .second::after {
+        content: ':';
+        display: inline-block;
+        margin: 0 1px;
+        font-weight: normal;
+      }
+    }
+  }
+
+  .right-section {
+    .bpm {
+      font-weight: bold;
+      font-size: 22px;
+      letter-spacing: -1px;
+  
+      .integer::after {
+        content: '.';
+        display: inline-block;
+        margin: 0 1px;
+        font-weight: normal;
+      }
+    }
+  }
+}
