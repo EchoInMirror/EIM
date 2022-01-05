@@ -9,7 +9,7 @@ const BottomBar: React.FC = () => {
       id='bottom-bar'
       elevation={3}
       className='bottom-bar'
-      sx={{ borderTop: theme => '1px solid ' + theme.palette.secondary.main, background: theme => theme.palette.background.light, zIndex: 2 }}
+      sx={{ borderTop: theme => '1px solid ' + theme.palette.secondary.main, background: theme => theme.palette.background.bright, zIndex: 2 }}
       component='footer'
     >
       某个轨道的插件和效果器

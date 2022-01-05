@@ -8,7 +8,7 @@ if(MSVC)
     add_definitions(-D_WIN32_WINNT=0x0601)
 endif(MSVC)
 
-file(GLOB SRC_FILES "src/*.cpp" "src/*.h")
+file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp")
 
 add_subdirectory(boost-cmake)
 

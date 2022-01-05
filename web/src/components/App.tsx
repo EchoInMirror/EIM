@@ -25,8 +25,9 @@ const App: React.FC = () => {
         background: {
           default: '#21222c',
           paper: '#21222c',
-          light: '#282a36',
-          lighter: '#343746'
+          bright: '#282a36',
+          brighter: '#343746',
+          brightest: '#6272a4'
         }
       }
     },
@@ -37,7 +38,7 @@ const App: React.FC = () => {
       <CssBaseline />
       <AppBar />
       <SideBar />
-      <Box className='main-content' sx={{ background: theme => theme.palette.background.light }}>
+      <Box className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
         <Tracks />
         <BottomBar />
       </Box>
