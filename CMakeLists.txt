@@ -2,15 +2,23 @@ cmake_minimum_required(VERSION 3.22)
 project(EIM VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME ON)
+set(Boost_INCLUDE_DIR ${_VCPKG_INSTALLED_DIR}/x64-windows-static/include)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_definitions(-DJUCE_PLUGINHOST_VST3 -DLIBUS_NO_SSL -DUWS_NO_ZLIB -DLIBUS_USE_LIBUV)
+add_definitions(-DJUCE_PLUGINHOST_VST3)
 if(MSVC)
     add_definitions(-D_WIN32_WINNT=0x0601)
 endif(MSVC)
 
-file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp")
+find_package(Boost COMPONENTS system REQUIRED)
+if (Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    link_directories(${Boost_LIBRARY_DIRS})
+endif ()
 
-add_subdirectory(boost-cmake)
+file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp")
 
 add_subdirectory(JUCE)
 juce_add_gui_app(EIM PRODUCT_NAME)
@@ -25,7 +33,7 @@ target_compile_definitions(EIM
 
 target_link_libraries(EIM
     PRIVATE
-        Boost::boost
+        ${Boost_LIBRARIES}
         juce::juce_gui_extra
         juce::juce_audio_utils
     PUBLIC

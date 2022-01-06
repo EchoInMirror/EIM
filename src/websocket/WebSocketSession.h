@@ -12,7 +12,15 @@ public:
 
     void doWrite();
     void doRead();
-    template<class Body, class Allocator> void run(boost::beast::http::request<Body, boost::beast::http::basic_fields<Allocator>> req);
+    template<class Body, class Allocator> void run(boost::beast::http::request<Body, boost::beast::http::basic_fields<Allocator>> req) {
+        ws.set_option(boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
+
+        ws.set_option(boost::beast::websocket::stream_base::decorator([](boost::beast::websocket::response_type& res) {
+            res.set(boost::beast::http::field::server, std::string(BOOST_BEAST_VERSION_STRING) + " websocket-chat-multi");
+        }));
+
+        ws.async_accept(req, boost::beast::bind_front_handler(&WebSocketSession::onAccept, shared_from_this()));
+    }
     void onAccept(boost::beast::error_code ec);
     void onRead(boost::beast::error_code ec, std::size_t);
     void onWrite(boost::beast::error_code ec, std::size_t);

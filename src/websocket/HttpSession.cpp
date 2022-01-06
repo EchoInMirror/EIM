@@ -54,7 +54,7 @@ template<class Body, class Allocator, class Send> void handleRequest(boost::beas
         return res;
     };
 
-    auto const notFound = [&req](beast::string_view target) {
+    auto const notFound = [&req](boost::beast::string_view target) {
         http::response<http::string_body> res{ http::status::not_found, req.version() };
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
@@ -64,7 +64,7 @@ template<class Body, class Allocator, class Send> void handleRequest(boost::beas
         return res;
     };
 
-    auto const serverError = [&req](beast::string_view what) {
+    auto const serverError = [&req](boost::beast::string_view what) {
         http::response<http::string_body> res{ http::status::internal_server_error, req.version() };
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
@@ -76,26 +76,26 @@ template<class Body, class Allocator, class Send> void handleRequest(boost::beas
 
     if (req.method() != http::verb::get && req.method() != http::verb::head) return send(badRequest("Unknown HTTP-method"));
 
-    if (req.target().empty() || req.target()[0] != '/' || req.target().find("..") != beast::string_view::npos)
+    if (req.target().empty() || req.target()[0] != '/' || req.target().find("..") != boost::beast::string_view::npos)
         return send(badRequest("Illegal request-target"));
 
     std::string path = pathJoin(doc_root, req.target());
     if (req.target().back() == '/') path.append("index.html");
 
-    beast::error_code ec;
+    boost::beast::error_code ec;
     http::file_body::value_type body;
-    body.open(path.c_str(), beast::file_mode::scan, ec);
+    body.open(path.c_str(), boost::beast::file_mode::scan, ec);
 
     if (ec == boost::system::errc::no_such_file_or_directory) return send(notFound(req.target()));
 
-    if (ec) return send(server_error(ec.message()));
+    if (ec) return send(serverError(ec.message()));
 
     auto const size = body.size();
 
     if (req.method() == http::verb::head) {
         http::response<http::empty_body> res{ http::status::ok, req.version() };
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, mime_type(path));
+        res.set(http::field::content_type, getMimeType(path));
         res.content_length(size);
         res.keep_alive(req.keep_alive());
         return send(std::move(res));
@@ -107,7 +107,7 @@ template<class Body, class Allocator, class Send> void handleRequest(boost::beas
         std::make_tuple(http::status::ok, req.version())
     };
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-    res.set(http::field::content_type, mime_type(path));
+    res.set(http::field::content_type, getMimeType(path));
     res.content_length(size);
     res.keep_alive(req.keep_alive());
     return send(std::move(res));
@@ -124,13 +124,13 @@ struct HttpSession::SendLambda {
         auto sp = boost::make_shared<http::message<isRequest, Body, Fields>>(std::move(msg));
 
         auto self2 = self.shared_from_this();
-        http::async_write(self.stream, *sp, [self2, sp](beast::error_code ec, std::size_t bytes) {
-            self2->on_write(ec, bytes, sp->need_eof());
+        http::async_write(self.stream, *sp, [self2, sp](boost::beast::error_code ec, std::size_t bytes) {
+            self2->onWrite(ec, bytes, sp->need_eof());
         });
     }
 };
 
-HttpSession::HttpSession(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<SharedState> const& state): state(state), stream(std::move(socket)) {
+HttpSession::HttpSession(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<SharedState> const& state): state(state), stream(boost::beast::unlimited_rate_policy(), std::move(socket)) {
 }
 
 void HttpSession::doRead() {

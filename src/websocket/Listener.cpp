@@ -1,6 +1,7 @@
 #include "Listener.h"
 
 Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint) : ioc(ioc), acceptor(ioc) {
+    state = boost::make_shared<SharedState>(".");
     boost::beast::error_code ec;
 
     acceptor.open(endpoint.protocol(), ec);
@@ -22,6 +23,6 @@ void Listener::doAccept() {
 
 void Listener::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket) {
     if (ec) return;
-    std::make_shared<HttpSession>(std::move(socket), state)->doRead();
+    boost::make_shared<HttpSession>(std::move(socket), state)->doRead();
     doAccept();
 }
