@@ -1,7 +1,7 @@
 #include "Track.h"
 #include "ProcessorBase.h"
 
-Track::Track(): SynchronizedAudioProcessorGraph()  {
+Track::Track(std::string name, std::string color): SynchronizedAudioProcessorGraph(), name(name), color(color) {
 	setChannelLayoutOfBus(true, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	setChannelLayoutOfBus(false, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	auto input = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode));

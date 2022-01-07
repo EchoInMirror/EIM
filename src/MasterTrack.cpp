@@ -6,7 +6,7 @@ MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph() {
 	knownPluginListXMLFile = juce::File::getCurrentWorkingDirectory().getChildFile("knownPlugins.xml");
 	if (knownPluginListXMLFile.exists()) {
 		auto xml = juce::XmlDocument::parse(knownPluginListXMLFile.loadFileAsString());
-		list.recreateFromXml(*xml.get());
+		knownPluginList.recreateFromXml(*xml.get());
 		xml.reset();
 	} else scanPlugins();
 
@@ -20,8 +20,8 @@ MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph() {
 	setPlayConfigDetails(0, 2, sampleRate, bufferSize);
 	prepareToPlay(sampleRate, bufferSize);
 
-	auto track = createTrack()->getProcessor();
-	((Track*)track)->setGenerator(loadPlugin(0));
+	/*auto track = createTrack()->getProcessor();
+	((Track*)track)->setGenerator(loadPlugin(0));*/
 }
 
 void MasterTrack::noteOn(int note, int velocity) {
@@ -38,12 +38,11 @@ void MasterTrack::noteOff(int note) {
 
 void MasterTrack::scanPlugins() {
 	auto file = "C:\\Program Files\\Common Files\\VST3\\Arturia\\pigments.vst3";
-	auto formats = manager.getFormats();
 	bool flag = false;
-	for (auto it = formats.begin(); it != formats.end(); it++) {
-		if ((*it)->fileMightContainThisPluginType(file)) {
+	for (auto it : manager.getFormats()) {
+		if (it->fileMightContainThisPluginType(file)) {
 			auto arr = new juce::OwnedArray<juce::PluginDescription>();
-			if (list.scanAndAddFile(file, true, *arr, **it)) {
+			if (knownPluginList.scanAndAddFile(file, true, *arr, *it)) {
 				flag = true;
 				break;
 			}
@@ -51,18 +50,23 @@ void MasterTrack::scanPlugins() {
 	}
 
 	if (flag) {
-		list.createXml().release()->writeTo(knownPluginListXMLFile);
+		knownPluginList.createXml().release()->writeTo(knownPluginListXMLFile);
 	}
 }
 
-std::unique_ptr<PluginWrapper> MasterTrack::loadPlugin(int id) {
+std::unique_ptr<PluginWrapper> MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc) {
 	juce::String err;
-	auto instance = manager.createPluginInstance(*list.getType(id), getSampleRate(), getBlockSize(), err);
-	return std::make_unique<PluginWrapper>(std::move(instance));
+	return std::make_unique<PluginWrapper>(std::move(manager.createPluginInstance(*desc, getSampleRate(), getBlockSize(), err)));
 }
 
-juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack() {
-	auto track = std::make_unique<Track>();
+void MasterTrack::loadPluginAsync(std::unique_ptr<juce::PluginDescription> desc, MasterTrack::PluginCreationCallback callback) {
+	manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(), [callback](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
+		callback(std::make_unique<PluginWrapper>(std::move(instance)), err.toStdString());
+	});
+}
+
+juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, std::string color) {
+	auto track = std::make_unique<Track>(name, color);
 	track->setRateAndBufferSizeDetails(getSampleRate(), getBlockSize());
 	track->prepareToPlay(getSampleRate(), getBlockSize());
 	auto node = addNode(std::move(track));

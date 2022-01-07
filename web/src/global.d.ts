@@ -1,5 +1,6 @@
-/* eslint-disable no-unused-vars */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { TypeBackground } from '@mui/material/styles/createPalette'
+import Client from './Client'
 
 /* eslint-disable no-unused-vars */
 declare module '@mui/material/styles/createPalette' {
@@ -7,5 +8,13 @@ declare module '@mui/material/styles/createPalette' {
     bright: string
     brighter: string
     brightest: string
+  }
+}
+
+declare global {
+  const $client: Client
+
+  interface Window {
+    $client: Client
   }
 }

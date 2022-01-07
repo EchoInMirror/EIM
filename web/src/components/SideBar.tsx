@@ -1,32 +1,74 @@
 import './SideBar.less'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import TreeView from '@mui/lab/TreeView'
 import TreeItem from '@mui/lab/TreeItem'
 import { Paper, useTheme, alpha, Toolbar, Button } from '@mui/material'
 import { FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight } from '@mui/icons-material'
 
+import type { TreeItemProps } from '@mui/lab/TreeItem'
+
 // eslint-disable-next-line react/jsx-key
 const icons = [<FavoriteOutlined />, <SettingsInputHdmiOutlined />]
 
-const Explorer: React.FC<{ type: number }> = ({ type }) => {
-  useEffect(() => {
+type TreeNode = Record<string, boolean>
 
-  }, [type])
+const DraggableTreeItem: React.FC<TreeItemProps> = props => (
+  <TreeItem
+    ref={props.draggable
+      ? useCallback((elt: Element) => elt?.addEventListener('focusin', e => e.stopImmediatePropagation()), [])
+      : props.ref}
+    {...props}
+  />
+)
+
+const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type, tree, parent }) => {
+  const nodes = []
+  const subTrees = useMemo<Record<string, TreeNode>>(() => ({ }), [])
+  const [, update] = useState(0)
+  for (const name in tree) {
+    const cur = parent + '/' + name
+    const [trueName, data] = name.split('#EIM#', 2)
+    nodes.push((
+      <DraggableTreeItem
+        key={cur}
+        nodeId={cur}
+        label={trueName}
+        draggable={!tree[name]}
+        onDragStart={e => {
+          e.dataTransfer.setData('application/json', JSON.stringify({ eim: true, type: 'loadPlugin', data: data }))
+          e.stopPropagation()
+        }}
+        onClick={() => {
+          if (subTrees[name]) return
+          $client.getExplorerData(type, cur.replace(/^\//, '')).then(it => {
+            subTrees[name] = it
+            update(flag => flag + 1)
+          })
+        }}
+      >
+        {tree[name] && (subTrees[name] ? <Item tree={subTrees[name]} parent={cur} type={type} /> : <TreeItem nodeId={cur + '$$EMPTY'} />)}
+      </DraggableTreeItem>
+    ))
+  }
+  return (
+    <>
+      {nodes}
+    </>
+  )
+}
+
+const Explorer: React.FC<{ type: number }> = ({ type }) => {
+  const [tree, setTree] = useState<TreeNode>({})
+  useEffect(() => {
+    $client.getExplorerData(type, '').then(setTree)
+  }, [])
   return (
     <TreeView
       defaultCollapseIcon={<ExpandMore />}
       defaultExpandIcon={<ChevronRight />}
-      sx={{ flexGrow: 1, overflowY: 'auto' }}
+      sx={{ flexGrow: 1, overflow: 'auto', whiteSpace: 'nowrap' }}
     >
-      <TreeItem nodeId='1' label="Applications">
-        <TreeItem nodeId="2" label="Calendar" />
-      </TreeItem>
-      <TreeItem nodeId="5" label="Documents">
-        <TreeItem nodeId="10" label="OSS" />
-        <TreeItem nodeId="6" label="MUI">
-          <TreeItem nodeId="8" label="index.js" />
-        </TreeItem>
-      </TreeItem>
+      <Item tree={tree} parent='' type={type} />
     </TreeView>
   )
 }

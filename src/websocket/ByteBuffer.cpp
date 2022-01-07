@@ -1,4 +1,5 @@
 #include "ByteBuffer.h"
+#include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/buffer_traits.hpp>
 
 char ByteBuffer::readInt8() {
@@ -21,8 +22,39 @@ long int ByteBuffer::readInt32() {
 
 long long ByteBuffer::readInt64() {
 	long long val = *(boost::asio::buffer_cast<long long*>(data()));
-	consume(sizeof(long long));
+	consume(sizeof(unsigned long long));
 	return val;
+}
+
+unsigned char ByteBuffer::readUInt8() {
+	unsigned char val = *(boost::asio::buffer_cast<unsigned char*>(data()));
+	consume(sizeof(unsigned char));
+	return val;
+}
+
+unsigned short ByteBuffer::readUInt16() {
+	unsigned short val = *(boost::asio::buffer_cast<unsigned short*>(data()));
+	consume(sizeof(unsigned short));
+	return val;
+}
+
+unsigned long int ByteBuffer::readUInt32() {
+	unsigned long int val = *(boost::asio::buffer_cast<unsigned long int*>(data()));
+	consume(sizeof(unsigned long int));
+	return val;
+}
+
+unsigned long long ByteBuffer::readUInt64() {
+	unsigned long long val = *(boost::asio::buffer_cast<unsigned long long*>(data()));
+	consume(sizeof(unsigned long long));
+	return val;
+}
+
+std::string ByteBuffer::readString() {
+	auto len = readUInt32();
+	std::string result(boost::asio::buffer_cast<const char*>(data()), len);
+	consume(sizeof(const char) * len);
+	return result;
 }
 
 void ByteBuffer::writeInt8(char val) {
@@ -43,4 +75,36 @@ void ByteBuffer::writeInt32(long int val) {
 void ByteBuffer::writeInt64(long long val) {
 	*boost::asio::buffer_cast<long long*>(prepare(sizeof(long long))) = val;
 	commit(sizeof(long long));
+}
+
+void ByteBuffer::writeUInt8(unsigned char val) {
+	*boost::asio::buffer_cast<unsigned char*>(prepare(sizeof(unsigned char))) = val;
+	commit(sizeof(unsigned char));
+}
+
+void ByteBuffer::writeUInt16(unsigned short val) {
+	*boost::asio::buffer_cast<unsigned short*>(prepare(sizeof(unsigned short))) = val;
+	commit(sizeof(unsigned short));
+}
+
+void ByteBuffer::writeUInt32(unsigned long int val) {
+	*boost::asio::buffer_cast<long int*>(prepare(sizeof(unsigned long int))) = val;
+	commit(sizeof(unsigned long int));
+}
+
+void ByteBuffer::writeUInt64(unsigned long long val) {
+	*boost::asio::buffer_cast<unsigned long long*>(prepare(sizeof(unsigned long long))) = val;
+	commit(sizeof(unsigned long long));
+}
+
+void ByteBuffer::writeString(std::string val) {
+	auto len = val.length();
+	writeUInt32(len);
+	auto size = sizeof(const char) * len;
+	val.copy(boost::asio::buffer_cast<char*>(prepare(size)), len);
+	commit(size);
+}
+
+void ByteBuffer::writeString(juce::String val) {
+	writeString(val.toStdString());
 }

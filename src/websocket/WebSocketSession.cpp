@@ -3,6 +3,7 @@
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include "../Main.h"
+#include "Packets.h"
 
 WebSocketSession::~WebSocketSession() { state->leave(this); }
 
@@ -14,32 +15,20 @@ void WebSocketSession::doRead() { ws.async_read(buffer, boost::beast::bind_front
 void WebSocketSession::onAccept(boost::beast::error_code ec) {
     if (ec) return;
     state->join(this);
-    auto buf = boost::make_shared<ByteBuffer>();
-    buf->writeInt8(0);
+    doRead();
+    auto buf = makePacket(1);
     buf->writeInt16(1);
     send(buf);
 }
 void WebSocketSession::onRead(boost::beast::error_code ec, std::size_t) {
     if (ec) return;
-
-    int note;
-    switch (buffer.readInt8()) {
-    case 0:
-        note = buffer.readInt8();
-        ((GuiAppApplication*)juce::JUCEApplication::getInstance())->mainWindow->masterTrack->noteOn(note, buffer.readInt8());
-        break;
-    case 1:
-        note = buffer.readInt8();
-        ((GuiAppApplication*)juce::JUCEApplication::getInstance())->mainWindow->masterTrack->noteOff(note);
-        break;
-    }
+    ((GuiAppApplication*)juce::JUCEApplication::getInstance())->handlePacket(this);
     doRead();
 }
 void WebSocketSession::onWrite(boost::beast::error_code ec, std::size_t) {
     if (ec) return;
     queue.erase(queue.begin());
-    if (queue.empty()) doRead();
-    else doWrite();
+    if (!queue.empty()) doWrite();
 }
 void WebSocketSession::send(boost::shared_ptr<ByteBuffer> data) {
     boost::asio::post(ws.get_executor(), boost::beast::bind_front_handler(&WebSocketSession::onSend, shared_from_this(), data));

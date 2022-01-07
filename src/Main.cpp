@@ -6,7 +6,8 @@ void GuiAppApplication::initialise(const juce::String& commandLine) {
     mainWindow.reset(new MainWindow());
     auto address = boost::asio::ip::make_address("0.0.0.0");
 
-    boost::make_shared<Listener>(ioc, boost::asio::ip::tcp::endpoint{address, 8088})->doAccept();
+    listener = boost::make_shared<Listener>(ioc, boost::asio::ip::tcp::endpoint{address, 8088});
+    listener->doAccept();
 
     v.reserve(4);
     for (auto i = 0; i < 4; i++) { v.emplace_back([this] { ioc.run(); }).detach();  }

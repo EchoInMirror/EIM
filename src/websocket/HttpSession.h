@@ -19,7 +19,6 @@ private:
 
     void onRead(boost::beast::error_code ec, std::size_t);
     void onWrite(boost::beast::error_code ec, std::size_t, bool close);
-
 public:
     void doRead();
     HttpSession(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<SharedState> const& state);

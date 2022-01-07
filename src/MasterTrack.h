@@ -6,6 +6,12 @@
 
 class MasterTrack: private SynchronizedAudioProcessorGraph {
 public:
+    std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
+    juce::KnownPluginList knownPluginList;
+
+    using PluginCreationCallback = std::function<void(std::unique_ptr<PluginWrapper>, const std::string&)>;
+    // using std::function<void(std::unique_ptr<AudioPluginInstance>, const String&)> PluginCreateCallback;
+
     MasterTrack();
     ~MasterTrack() {
         deviceManager.closeAudioDevice();
@@ -15,14 +21,13 @@ public:
     void removeTrack(int id);
     void noteOn(int note, int velocity);
     void noteOff(int note);
-    juce::AudioProcessorGraph::Node::Ptr createTrack();
-    std::unique_ptr<PluginWrapper> loadPlugin(int id);
+    juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
+    std::unique_ptr<PluginWrapper> loadPlugin(std::unique_ptr<juce::PluginDescription> desc);
+    void loadPluginAsync(std::unique_ptr<juce::PluginDescription> desc, PluginCreationCallback callback);
 private:
     double startTime = 0;
     int sampleRate = 96000, bufferSize = 1024;
     juce::File knownPluginListXMLFile;
-    std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
-    juce::KnownPluginList list;
     juce::AudioProcessorGraph::NodeID outputNodeID;
     juce::AudioPluginFormatManager manager;
     juce::AudioDeviceManager deviceManager;

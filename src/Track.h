@@ -6,7 +6,11 @@
 
 class Track: public SynchronizedAudioProcessorGraph {
 public:
-    Track();
+    Track(std::string name, std::string color);
+    juce::Uuid uuid;
+    std::string name;
+    std::string color;
+
     juce::MidiBuffer midiBuffer;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
