@@ -17,7 +17,7 @@ void GuiAppApplication::handlePacket(WebSocketSession* session) {
 			if (path.empty()) {
 				std::unordered_set<juce::String> map;
 				for (auto& it : mainWindow->masterTrack->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
-				out->writeUInt32(map.size());
+				out->writeUInt32((unsigned long)map.size());
 				for (auto& it : map) out->writeString(it);
 				out->writeUInt32(0);
 			} else {
@@ -26,7 +26,7 @@ void GuiAppApplication::handlePacket(WebSocketSession* session) {
 				for (auto& it : mainWindow->masterTrack->knownPluginList.getTypes()) {
 					if (path == it.manufacturerName) arr.emplace_back(it.name + "#EIM#" + it.fileOrIdentifier);
 				}
-				out->writeUInt32(arr.size());
+				out->writeUInt32((unsigned long)arr.size());
 				for (auto& it : arr) out->writeString(it);
 			}
 			session->send(out);
@@ -37,7 +37,7 @@ void GuiAppApplication::handlePacket(WebSocketSession* session) {
 		auto replyId = buf.readInt32();
 		auto name = buf.readString();
 		auto color = buf.readString();
-		auto pos = buf.readUInt8();
+		buf.readUInt8();
 		auto identifier = buf.readString();
 		auto track = mainWindow->masterTrack->createTrack(name, color);
 		if (!identifier.empty()) {
@@ -59,13 +59,25 @@ void GuiAppApplication::handlePacket(WebSocketSession* session) {
 	case ServerboundPacket::ServerboundRefresh:
 		syncTrackInfo();
 		break;
+	case ServerboundPacket::ServerboundMidiMessage:
+		//MidiHelpers::initialByte(0x90, channel),
+			//noteNumber & 127, MidiHelpers::validVelocity(velocity)
+		auto id = buf.readUInt8();
+		auto byte1 = buf.readUInt8();
+		auto byte2 = buf.readUInt8();
+		auto byte3 = buf.readUInt8();
+		auto& tracks = mainWindow->masterTrack->tracks;
+		DBG("" << id << " " << byte1 << " " << byte2 << " " << byte3);
+		if (tracks.size() <= id) return;
+		((Track*)tracks[id]->getProcessor())->getMidiMessageCollector()
+			.addMessageToQueue(juce::MidiMessage(byte1, byte2, byte3, juce::Time::getMillisecondCounterHiRes() * 0.001));
 	}
 }
 
 void GuiAppApplication::syncTrackInfo() {
 	auto &tracks = mainWindow->masterTrack->tracks;
 	auto buf = makePacket(ClientboundPacket::ClientboundSyncTrackInfo);
-	buf->writeInt8(tracks.size());
+	buf->writeInt8((char)tracks.size());
 	for (auto& it : tracks) {
 		auto track = (Track*) it->getProcessor();
 		buf->writeString(track->uuid.toString());

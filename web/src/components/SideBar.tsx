@@ -2,6 +2,7 @@ import './SideBar.less'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import TreeView from '@mui/lab/TreeView'
 import TreeItem from '@mui/lab/TreeItem'
+import { Resizable } from 're-resizable'
 import { Paper, useTheme, alpha, Toolbar, Button } from '@mui/material'
 import { FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight } from '@mui/icons-material'
 
@@ -75,37 +76,54 @@ const Explorer: React.FC<{ type: number }> = ({ type }) => {
 
 const AppBar: React.FC = () => {
   const theme = useTheme()
+  const [width, setWidth] = useState(0)
   const [type, setType] = useState(1)
   return (
     <nav className='side-bar' style={{ zIndex: theme.zIndex.appBar - 1 }}>
       <Paper square elevation={3} sx={{ background: theme.palette.background.bright }}>
         <Toolbar />
         <ul className='types'>
-          {icons.map((icon, i) => (
-            <Button
-              key={i}
-              component='li'
-              onClick={() => setType(i)}
-              sx={{
-                color: i === type ? '#fff' : theme.palette.background.brightest,
-                borderRadius: 0,
-                boxShadow: i === type ? 'inset 2px 0px ' + theme.palette.primary.main : undefined,
-                backgroundColor: i === type ? alpha(theme.palette.primary.main, 0.2) : undefined,
-                '&:hover': {
-                  color: '#fff',
-                  backgroundColor: i === type ? alpha(theme.palette.primary.main, 0.2) : 'inherit'
-                }
-              }}
-            >
-              {icon}
-            </Button>
-          ))}
+          {icons.map((icon, i) => {
+            const cur = i === type && width
+            return (
+              <Button
+                key={i}
+                component='li'
+                onClick={() => {
+                  setType(i)
+                  if (width) {
+                    if (cur) setWidth(0)
+                  } else setWidth(200)
+                }}
+                sx={{
+                  color: cur ? '#fff' : theme.palette.background.brightest,
+                  borderRadius: 0,
+                  boxShadow: cur ? 'inset 2px 0px ' + theme.palette.primary.main : undefined,
+                  backgroundColor: cur ? alpha(theme.palette.primary.main, 0.2) : undefined,
+                  '&:hover': {
+                    color: '#fff',
+                    backgroundColor: cur ? alpha(theme.palette.primary.main, 0.2) : 'inherit'
+                  }
+                }}
+              >
+                {icon}
+              </Button>
+            )
+          })}
         </ul>
       </Paper>
-      <div className='explorer'>
+      <Resizable
+        onResizeStop={(e, __, ___, d) => (e as MouseEvent).pageX >= 150 && setWidth(width + d.width)}
+        onResize={e => (e as MouseEvent).pageX < 150 && setWidth(0)}
+        size={{ width } as unknown as { width: number, height: number }}
+        minWidth={200}
+        maxWidth='60vw'
+        enable={{ right: true }}
+        style={{ display: width ? undefined : 'none' }}
+      >
         <Toolbar />
         <Explorer type={type} key={type} />
-      </div>
+      </Resizable>
     </nav>
   )
 }

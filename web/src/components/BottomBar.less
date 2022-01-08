@@ -1,4 +1,54 @@
 .bottom-bar {
-  height: 200px;
   width: 100%;
+
+  footer {
+    height: 100%;
+  }
+
+  .editor {
+    height: 100%;
+    display: flex;
+
+    .scrollable {
+      overflow-y: auto;
+      display: flex;
+      align-items: flex-start;
+      flex: 1;
+
+      .notes {
+        flex: 1;
+      }
+    }
+
+    .keyboard {
+      display: flex;
+      flex-direction: column-reverse;
+
+      button {
+        width: 60px;
+        height: 18px;
+        border-radius: 0;
+        background-color: #eee;
+        font-size: 12px;
+        font-weight: lighter;
+        letter-spacing: -1px;
+        justify-content: right;
+        line-height: 0;
+        color: #000;
+
+        &:nth-child(12n+2), &:nth-child(12n+4), &:nth-child(12n+7), &:nth-child(12n+9), &:nth-child(12n+11) {
+          color: #fff;
+          background-color: #21222c;
+        }
+
+        &:nth-child(12n+5), &:nth-child(12n+12) {
+          box-shadow: 0 1px #bbb inset;
+        }
+
+        &:nth-child(12n+1) {
+          background-color: #ccc;
+        }
+      }
+    }
+  }
 }

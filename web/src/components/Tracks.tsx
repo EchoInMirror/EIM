@@ -1,23 +1,20 @@
 import './Tracks.less'
 import ByteBuffer from 'bytebuffer'
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import LoadingButton from '@mui/lab/LoadingButton'
-import { Paper, Box, Toolbar, Button, useTheme, Slider, Stack, IconButton } from '@mui/material'
+import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton } from '@mui/material'
 import { VolumeUp } from '@mui/icons-material'
-import { ClientboundPacket } from '../Client'
-
-interface TrackInfo {
-  uuid: string
-  name: string
-  muted: boolean
-  solo: boolean
-  color: string
-  volume: number
-}
+import { ClientboundPacket, TrackInfo } from '../Client'
+import { GlobalDataContext, ReducerTypes } from '../reducer'
 
 const Track: React.FC<{ info: TrackInfo }> = ({ info }) => {
+  const [state, dispatch] = useContext(GlobalDataContext)
   return (
-    <li>
+    <Box
+      component='li'
+      onClick={() => dispatch({ type: ReducerTypes.ChangeActiveTrack, activeTrack: info.uuid })}
+      sx={state.activeTrack === info.uuid ? { backgroundColor: theme => theme.palette.background.brighter } : undefined}
+    >
       <div className='color' style={{ backgroundColor: info.color }} />
       <div className='title'>
         <Button className='solo' variant='outlined' />
@@ -25,10 +22,13 @@ const Track: React.FC<{ info: TrackInfo }> = ({ info }) => {
       </div>
       <div>
         <Stack spacing={1} direction='row' alignItems='center'>
-          <IconButton size='small'><VolumeUp fontSize='small' /></IconButton><Slider size='small' valueLabelDisplay='auto' value={info.volume} />
+          <IconButton size='small' sx={{ marginLeft: '-4px' }}>
+            <VolumeUp fontSize='small' />
+          </IconButton>
+          <Slider size='small' valueLabelDisplay='auto' value={info.volume} sx={{ margin: '0!important' }} />
         </Stack>
       </div>
-    </li>
+    </Box>
   )
 }
 
@@ -42,22 +42,8 @@ const readTrack = (buf: ByteBuffer): TrackInfo => ({
 })
 
 const Tracks: React.FC = () => {
-  const theme = useTheme()
-  const ref = useRef<HTMLDivElement | null>(null)
   const [tracks, setTracks] = useState<TrackInfo[]>([])
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (!ref.current) return
-    const fn = () => {
-      const elm = document.getElementById('bottom-bar')
-      if (!elm) return
-      if (ref.current) ref.current.style.height = (window.innerHeight - ref.current.offsetTop - elm.clientHeight) + 'px'
-    }
-    fn()
-    document.addEventListener('resize', fn)
-    return () => document.removeEventListener('resize', fn)
-  }, [ref.current])
 
   useEffect(() => {
     $client.refresh()
@@ -66,6 +52,7 @@ const Tracks: React.FC = () => {
       const arr: TrackInfo[] = []
       while (len-- > 0) arr.push(readTrack(buf))
       console.log(arr)
+      $client.tracks = arr
       setTracks(arr)
     })
     return () => $client.off(ClientboundPacket.SyncTrackInfo)
@@ -74,8 +61,8 @@ const Tracks: React.FC = () => {
   return (
     <main className='tracks'>
       <Toolbar />
-      <div ref={ref} className='wrapper'>
-        <Paper square elevation={3} component='ol' sx={{ background: 'inherit', zIndex: 1 }}>
+      <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
+        <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1 }}>
           {tracks.map(it => <Track info={it} key={it.uuid} />)}
           <LoadingButton
             loading={loading}
@@ -94,8 +81,8 @@ const Tracks: React.FC = () => {
             新增轨道
           </LoadingButton>
         </Paper>
-        <Box className='playlist' sx={{ backgroundColor: theme.palette.background.default }}>Play list</Box>
-      </div>
+        <Box className='playlist'>Play list</Box>
+      </Box>
     </main>
   )
 }

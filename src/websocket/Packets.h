@@ -7,7 +7,8 @@ enum ServerboundPacket {
 	ServerboundReply,
 	ServerboundGetExplorerData,
 	ServerboundCreateTrack,
-	ServerboundRefresh
+	ServerboundRefresh,
+	ServerboundMidiMessage
 };
 
 enum ClientboundPacket {

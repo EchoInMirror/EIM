@@ -30,11 +30,36 @@ void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) 
 }
 
 void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
+	juce::AudioPlayHead::CurrentPositionInfo thePositionInfo;
+	auto head = getPlayHead();
+	if (head) {
+		head->getCurrentPosition(thePositionInfo);
+		if (thePositionInfo.isPlaying) {
+			auto startTime = thePositionInfo.timeInSeconds;
+			auto endTime = startTime + buffer.getNumSamples() / getSampleRate();
+			// auto sampleLength = 1.0 / getSampleRate();
+			for (auto it = midiSequence.begin() + midiSequence.getNextIndexAtTime(startTime); it < midiSequence.begin() && (*it)->message.getTimeStamp() < endTime; it++) {
+				auto samplePosition = (int)std::round(((*it)->message.getTimeStamp() - startTime) * getSampleRate());
+				midiMessages.addEvent((*it)->message, samplePosition);
+			}
+		}
+	}
 	messageCollector.removeNextBlockOfMessages(midiMessages, buffer.getNumSamples());
 	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
 }
 
 void Track::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {
+	juce::AudioPlayHead::CurrentPositionInfo thePositionInfo;
+	getPlayHead()->getCurrentPosition(thePositionInfo);
+	if (thePositionInfo.isPlaying) {
+		auto startTime = thePositionInfo.timeInSeconds;
+		auto endTime = startTime + buffer.getNumSamples() / getSampleRate();
+		// auto sampleLength = 1.0 / getSampleRate();
+		for (auto it = midiSequence.begin() + midiSequence.getNextIndexAtTime(startTime); it < midiSequence.begin() && (*it)->message.getTimeStamp() < endTime; it++) {
+			auto samplePosition = (int) std::round(((*it)->message.getTimeStamp() - startTime) * getSampleRate());
+			midiMessages.addEvent((*it)->message, samplePosition);
+		}
+	}
 	messageCollector.removeNextBlockOfMessages(midiMessages, buffer.getNumSamples());
 	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
 }

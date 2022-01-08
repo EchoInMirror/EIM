@@ -24,18 +24,6 @@ MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph() {
 	((Track*)track)->setGenerator(loadPlugin(0));*/
 }
 
-void MasterTrack::noteOn(int note, int velocity) {
-	auto msg = juce::MidiMessage::noteOn(1, note, (juce::uint8)velocity);
-	msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
-	((Track*)tracks[0]->getProcessor())->getMidiMessageCollector().addMessageToQueue(msg);
-}
-
-void MasterTrack::noteOff(int note) {
-	auto msg = juce::MidiMessage::noteOff(1, note);
-	msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
-	((Track*)tracks[0]->getProcessor())->getMidiMessageCollector().addMessageToQueue(msg);
-}
-
 void MasterTrack::scanPlugins() {
 	auto file = "C:\\Program Files\\Common Files\\VST3\\Arturia\\pigments.vst3";
 	bool flag = false;

@@ -1,15 +1,24 @@
 import ByteBuffer from 'bytebuffer'
 import { colors } from '@mui/material'
 
+export interface TrackInfo {
+  uuid: string
+  name: string
+  muted: boolean
+  solo: boolean
+  color: string
+  volume: number
+}
+
 const colorValues: string[] = []
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 for (const name in colors) colorValues.push((colors as any)[name][400])
 
 export enum ServerboundPacket {
   Reply,
   GetExplorerData,
   CreateTrack,
-  Refresh
+  Refresh,
+  MidiMessage
 }
 
 export enum ClientboundPacket {
@@ -29,6 +38,7 @@ export default class Client {
   private replyId = 0
   private events: Record<number, (buf: ByteBuffer) => void> = { }
   private replies: Record<number, (buf: ByteBuffer) => void> = { }
+  public tracks: TrackInfo[] = []
 
   constructor (address: string, callback: () => void) {
     this.ws = new WebSocket(address)
@@ -82,14 +92,16 @@ export default class Client {
     return result
   }
 
-  public async createTrack (pos: number, identifier: string, name = '轨道', color = colorValues[Math.random() * colorValues.length | 0]) {
+  public async createTrack (pos: number, identifier: string, name = '轨道' + (this.tracks.length + 1), color = colorValues[Math.random() * colorValues.length | 0]) {
     const [packet, promise] = this.buildNeedReplyPack(ServerboundPacket.CreateTrack)
     this.send(packet.writeIString(name).writeIString(color).writeUint8(pos).writeIString(identifier))
     const err = (await promise).readIString()
     if (err) throw new Error(err)
   }
 
-  public refresh () {
-    this.send(this.buildPack(ServerboundPacket.Refresh))
+  public refresh () { this.send(this.buildPack(ServerboundPacket.Refresh)) }
+
+  public midiMessage (trackId: number, byte1: number, byte2: number, byte3: number) {
+    this.send(this.buildPack(ServerboundPacket.MidiMessage).writeUint8(trackId).writeInt8(byte1).writeInt8(byte2).writeInt8(byte3))
   }
 }

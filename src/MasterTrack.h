@@ -10,7 +10,6 @@ public:
     juce::KnownPluginList knownPluginList;
 
     using PluginCreationCallback = std::function<void(std::unique_ptr<PluginWrapper>, const std::string&)>;
-    // using std::function<void(std::unique_ptr<AudioPluginInstance>, const String&)> PluginCreateCallback;
 
     MasterTrack();
     ~MasterTrack() {
@@ -19,8 +18,6 @@ public:
 
     void scanPlugins();
     void removeTrack(int id);
-    void noteOn(int note, int velocity);
-    void noteOff(int note);
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
     std::unique_ptr<PluginWrapper> loadPlugin(std::unique_ptr<juce::PluginDescription> desc);
     void loadPluginAsync(std::unique_ptr<juce::PluginDescription> desc, PluginCreationCallback callback);
