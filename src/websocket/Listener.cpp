@@ -2,8 +2,7 @@
 #include "Packets.h"
 #include "../Main.h"
 
-Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint) : ioc(ioc), acceptor(ioc) {
-    state = boost::make_shared<SharedState>(".");
+Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint) : ioc(ioc), acceptor(ioc), state(boost::make_shared<SharedState>(".")) {
     boost::beast::error_code ec;
 
     acceptor.open(endpoint.protocol(), ec);
@@ -27,4 +26,24 @@ void Listener::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socke
     if (ec) return;
     boost::make_shared<HttpSession>(std::move(socket), state)->doRead();
     doAccept();
+}
+
+void Listener::syncTrackInfo() {
+    auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracks;
+    auto buf = makePacket(ClientboundPacket::ClientboundSyncTrackInfo);
+    buf->writeInt8((char)tracks.size());
+    for (auto& it : tracks) {
+        auto track = (Track*)it->getProcessor();
+        buf->writeString(track->uuid.toString());
+        buf->writeString(track->name);
+        buf->writeString(track->color);
+        buf->writeUInt8(80);
+        buf->writeBoolean(false);
+        buf->writeBoolean(false);
+    }
+    state->send(buf);
+}
+
+void Listener::broadcastProjectStatus() {
+    state->send(makeProjectStatusPacket());
 }

@@ -14,8 +14,11 @@ public:
 	unsigned short readUInt16();
 	unsigned long int readUInt32();
 	unsigned long long readUInt64();
+	float readFloat();
+	double readDouble();
 	std::string readString();
 
+	void writeBoolean(bool val);
 	void writeInt8(char val);
 	void writeInt16(short val);
 	void writeInt32(long int val);
@@ -24,6 +27,8 @@ public:
 	void writeUInt16(unsigned short val);
 	void writeUInt32(unsigned long int val);
 	void writeUInt64(unsigned long long val);
+	void writeFloat(float val);
+	void writeDouble(double val);
 	void writeString(std::string val);
 	void writeString(juce::String val);
 };

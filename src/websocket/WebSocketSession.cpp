@@ -16,13 +16,11 @@ void WebSocketSession::onAccept(boost::beast::error_code ec) {
     if (ec) return;
     state->join(this);
     doRead();
-    auto buf = makePacket(1);
-    buf->writeInt16(1);
-    send(buf);
+    send(makeProjectStatusPacket());
 }
 void WebSocketSession::onRead(boost::beast::error_code ec, std::size_t) {
     if (ec) return;
-    ((GuiAppApplication*)juce::JUCEApplication::getInstance())->handlePacket(this);
+    EIMApplication::getEIMInstance()->handlePacket(this);
     doRead();
 }
 void WebSocketSession::onWrite(boost::beast::error_code ec, std::size_t) {

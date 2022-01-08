@@ -1,7 +1,7 @@
 #include "Main.h"
 #include <string>
 
-void GuiAppApplication::initialise(const juce::String& commandLine) {
+void EIMApplication::initialise(const juce::String& commandLine) {
     juce::ignoreUnused(commandLine);
     mainWindow.reset(new MainWindow());
     auto address = boost::asio::ip::make_address("0.0.0.0");
@@ -13,11 +13,15 @@ void GuiAppApplication::initialise(const juce::String& commandLine) {
     for (auto i = 0; i < 4; i++) { v.emplace_back([this] { ioc.run(); }).detach();  }
 }
 
-void GuiAppApplication::shutdown() { mainWindow = nullptr; }
+void EIMApplication::shutdown() { mainWindow = nullptr; }
 
-void GuiAppApplication::systemRequestedQuit() {
+void EIMApplication::systemRequestedQuit() {
     ioc.stop();
     quit();
+}
+
+EIMApplication* EIMApplication::getEIMInstance() {
+    return ((EIMApplication*)juce::JUCEApplication::getInstance());
 }
 
 MainWindow::MainWindow(): juce::DocumentWindow("Echo In Mirror", juce::Colours::lightgrey, juce::DocumentWindow::allButtons) {
@@ -30,4 +34,4 @@ MainWindow::MainWindow(): juce::DocumentWindow("Echo In Mirror", juce::Colours::
 }
 void MainWindow::closeButtonPressed() { juce::JUCEApplication::getInstance()->systemRequestedQuit(); }
 
-START_JUCE_APPLICATION(GuiAppApplication)
+START_JUCE_APPLICATION(EIMApplication)

@@ -8,6 +8,7 @@ public:
     virtual void setProcessingPrecision(ProcessingPrecision newPrecision);
     void prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) override;
     virtual void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize);
+    void setPlayHead(juce::AudioPlayHead* newPlayHead) override;
 private:
     juce::AudioProcessorGraph::Node::Ptr begin, end;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SynchronizedAudioProcessorGraph)

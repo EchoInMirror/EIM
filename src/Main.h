@@ -14,9 +14,11 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 
-class GuiAppApplication : public juce::JUCEApplication {
+class EIMApplication : public juce::JUCEApplication {
 public:
-    GuiAppApplication() {}
+    EIMApplication() {}
+    std::unique_ptr<MainWindow> mainWindow;
+    boost::shared_ptr<Listener> listener;
 
     const juce::String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }
     const juce::String getApplicationVersion() override { return JUCE_APPLICATION_VERSION_STRING; }
@@ -27,10 +29,8 @@ public:
     void shutdown() override;
     void systemRequestedQuit() override;
     void handlePacket(WebSocketSession* buf);
-    void syncTrackInfo();
+    static EIMApplication* getEIMInstance();
 private:
-    std::unique_ptr<MainWindow> mainWindow;
     boost::asio::io_context ioc{ 4 };
     std::vector<std::thread> v;
-    boost::shared_ptr<Listener> listener;
 };

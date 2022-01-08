@@ -13,10 +13,12 @@ enum ServerboundPacket {
 
 enum ClientboundPacket {
 	ClientboundReply,
-	ClientboundProjectInfo,
+	ClientboundProjectStatus,
 	ClientboundSyncTrackInfo
 };
 
 boost::shared_ptr<ByteBuffer> makePacket(unsigned int id);
 
 boost::shared_ptr<ByteBuffer> makeReplyPacket(unsigned int id);
+
+boost::shared_ptr<ByteBuffer> makeProjectStatusPacket();

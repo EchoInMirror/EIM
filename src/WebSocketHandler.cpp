@@ -2,7 +2,7 @@
 #include "websocket/Packets.h"
 #include "websocket/WebSocketSession.h"
 
-void GuiAppApplication::handlePacket(WebSocketSession* session) {
+void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
 	switch (buf.readUInt8()) {
 	case ServerboundPacket::ServerboundReply:
@@ -53,15 +53,13 @@ void GuiAppApplication::handlePacket(WebSocketSession* session) {
 				});
 			}
 		}
-		syncTrackInfo();
+		listener->syncTrackInfo();
 		break;
 	}
 	case ServerboundPacket::ServerboundRefresh:
-		syncTrackInfo();
+		listener->syncTrackInfo();
 		break;
 	case ServerboundPacket::ServerboundMidiMessage:
-		//MidiHelpers::initialByte(0x90, channel),
-			//noteNumber & 127, MidiHelpers::validVelocity(velocity)
 		auto id = buf.readUInt8();
 		auto byte1 = buf.readUInt8();
 		auto byte2 = buf.readUInt8();
@@ -72,20 +70,4 @@ void GuiAppApplication::handlePacket(WebSocketSession* session) {
 		((Track*)tracks[id]->getProcessor())->getMidiMessageCollector()
 			.addMessageToQueue(juce::MidiMessage(byte1, byte2, byte3, juce::Time::getMillisecondCounterHiRes() * 0.001));
 	}
-}
-
-void GuiAppApplication::syncTrackInfo() {
-	auto &tracks = mainWindow->masterTrack->tracks;
-	auto buf = makePacket(ClientboundPacket::ClientboundSyncTrackInfo);
-	buf->writeInt8((char)tracks.size());
-	for (auto& it : tracks) {
-		auto track = (Track*) it->getProcessor();
-		buf->writeString(track->uuid.toString());
-		buf->writeString(track->name);
-		buf->writeString(track->color);
-		buf->writeUInt8(80);
-		buf->writeUInt8(false);
-		buf->writeUInt8(false);
-	}
-	listener->state->send(buf);
 }

@@ -50,11 +50,27 @@ unsigned long long ByteBuffer::readUInt64() {
 	return val;
 }
 
+float ByteBuffer::readFloat() {
+	float val = *(boost::asio::buffer_cast<float*>(data()));
+	consume(sizeof(float));
+	return val;
+}
+
+double ByteBuffer::readDouble() {
+	double val = *(boost::asio::buffer_cast<double*>(data()));
+	consume(sizeof(double));
+	return val;
+}
+
 std::string ByteBuffer::readString() {
 	auto len = readUInt32();
 	std::string result(boost::asio::buffer_cast<const char*>(data()), len);
 	consume(sizeof(const char) * len);
 	return result;
+}
+
+void ByteBuffer::writeBoolean(bool val) {
+	writeUInt8(val);
 }
 
 void ByteBuffer::writeInt8(char val) {
@@ -97,9 +113,19 @@ void ByteBuffer::writeUInt64(unsigned long long val) {
 	commit(sizeof(unsigned long long));
 }
 
+void ByteBuffer::writeFloat(float val) {
+	*boost::asio::buffer_cast<float*>(prepare(sizeof(float))) = val;
+	commit(sizeof(float));
+}
+
+void ByteBuffer::writeDouble(double val) {
+	*boost::asio::buffer_cast<double*>(prepare(sizeof(double))) = val;
+	commit(sizeof(double));
+}
+
 void ByteBuffer::writeString(std::string val) {
 	auto len = val.length();
-	writeUInt32(len);
+	writeUInt32((unsigned long) len);
 	auto size = sizeof(const char) * len;
 	val.copy(boost::asio::buffer_cast<char*>(prepare(size)), len);
 	commit(size);

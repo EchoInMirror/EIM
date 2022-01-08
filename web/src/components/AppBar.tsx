@@ -1,7 +1,8 @@
 import './AppBar.less'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { AppBar as MuiAppBar, Toolbar } from '@mui/material'
 import { PlayArrow, Stop } from '@mui/icons-material'
+import { ClientboundPacket } from '../Client'
 
 const LeftSection: React.FC = () => {
   return (
@@ -58,27 +59,29 @@ const CenterSection: React.FC = () => {
   )
 }
 
-const RightSection: React.FC = () => {
-  return (
-    <section className='right-section'>
-      <div className='info-block'>
-        <div className='bpm'>
-          <span className='integer'>140</span>
-          <span className='decimal'>00</span>
-        </div>
-        <sub>BPM</sub>
-      </div>
-    </section>
-  )
-}
-
 const AppBar: React.FC = () => {
+  const [bpm, setBPM] = useState(120)
+  useEffect(() => {
+    $client.on(ClientboundPacket.ProjectStatus, buf => {
+      setBPM(buf.readDouble())
+      console.log(buf.readDouble(), !!buf.readUint8(), buf.readUint8(), buf.readUint8(), buf.readUint16())
+    })
+    return () => $client.off(ClientboundPacket.ProjectStatus)
+  }, [])
   return (
     <MuiAppBar position='fixed' className='app-bar'>
       <Toolbar>
         <LeftSection />
         <CenterSection />
-        <RightSection />
+        <section className='right-section'>
+          <div className='info-block'>
+            <div className='bpm'>
+              <span className='integer'>{bpm | 0}</span>
+              <span className='decimal'>{(bpm - bpm | 0).toFixed(2).slice(2)}</span>
+            </div>
+            <sub>BPM</sub>
+          </div>
+        </section>
       </Toolbar>
     </MuiAppBar>
   )

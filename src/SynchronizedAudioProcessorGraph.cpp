@@ -14,3 +14,8 @@ void SynchronizedAudioProcessorGraph::setRateAndBufferSizeDetails(double newSamp
 	AudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
 	for (auto it : getNodes()) it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
 }
+
+void SynchronizedAudioProcessorGraph::setPlayHead(juce::AudioPlayHead* newPlayHead) {
+	AudioProcessorGraph::setPlayHead(newPlayHead);
+	for (auto it : getNodes()) it->getProcessor()->setPlayHead(newPlayHead);
+}

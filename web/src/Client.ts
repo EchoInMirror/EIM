@@ -23,7 +23,7 @@ export enum ServerboundPacket {
 
 export enum ClientboundPacket {
   Reply,
-  ProjectInfo,
+  ProjectStatus,
   SyncTrackInfo
 }
 
@@ -57,10 +57,13 @@ export default class Client {
           }
           break
         }
-        case ClientboundPacket.ProjectInfo:
+        case ClientboundPacket.ProjectStatus:
           this.littleEndian = buf.readUint8() === 1 && !buf.readUint8()
-          callback()
-          break
+          if (callback) {
+            callback()
+            callback = null as any
+          }
+        // eslint-disable-next-line no-fallthrough
         default: this.events[event]?.(buf)
       }
     }

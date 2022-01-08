@@ -11,8 +11,8 @@ public:
     std::string name;
     std::string color;
 
-    juce::MidiBuffer midiBuffer;
-    juce::MidiMessageSequence midiSequence;
+    const juce::MidiBuffer midiBuffer;
+    const juce::MidiMessageSequence midiSequence;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
     void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) override;

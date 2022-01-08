@@ -1,7 +1,9 @@
 #include "MasterTrack.h"
+#include "Main.h"
 
-MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph() {
+MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph(), juce::AudioPlayHead() {
 	manager.addDefaultFormats();
+	setPlayHead(this);
 
 	knownPluginListXMLFile = juce::File::getCurrentWorkingDirectory().getChildFile("knownPlugins.xml");
 	if (knownPluginListXMLFile.exists()) {
@@ -17,8 +19,8 @@ MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph() {
 	graphPlayer.setProcessor(this);
 	outputNodeID = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
 
-	setPlayConfigDetails(0, 2, sampleRate, bufferSize);
-	prepareToPlay(sampleRate, bufferSize);
+	setPlayConfigDetails(0, 2, 96000, 1024);
+	prepareToPlay(getSampleRate(), getBlockSize());
 }
 
 void MasterTrack::scanPlugins() {
@@ -63,4 +65,15 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, 
 
 void MasterTrack::removeTrack(int id) {
 	removeNode(tracks[id]);
+}
+
+bool MasterTrack::getCurrentPosition(CurrentPositionInfo& result) {
+	result = currentPositionInfo;
+	return true;
+}
+
+void MasterTrack::transportPlay(bool shouldStartPlaying) {
+	if (currentPositionInfo.isPlaying == shouldStartPlaying) return;
+	currentPositionInfo.isPlaying = shouldStartPlaying;
+	EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
 }
