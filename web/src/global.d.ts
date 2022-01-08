@@ -8,6 +8,8 @@ declare module '@mui/material/styles/createPalette' {
     bright: string
     brighter: string
     brightest: string
+    keyboardBlackKey: string
+    keyboardWhiteKey: string
   }
 }
 

@@ -19,9 +19,6 @@ MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph() {
 
 	setPlayConfigDetails(0, 2, sampleRate, bufferSize);
 	prepareToPlay(sampleRate, bufferSize);
-
-	/*auto track = createTrack()->getProcessor();
-	((Track*)track)->setGenerator(loadPlugin(0));*/
 }
 
 void MasterTrack::scanPlugins() {

@@ -96,12 +96,12 @@ const AppBar: React.FC = () => {
                   } else setWidth(200)
                 }}
                 sx={{
-                  color: cur ? '#fff' : theme.palette.background.brightest,
+                  color: cur ? theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main : alpha(theme.palette.primary.main, 0.5),
                   borderRadius: 0,
                   boxShadow: cur ? 'inset 2px 0px ' + theme.palette.primary.main : undefined,
                   backgroundColor: cur ? alpha(theme.palette.primary.main, 0.2) : undefined,
                   '&:hover': {
-                    color: '#fff',
+                    color: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main,
                     backgroundColor: cur ? alpha(theme.palette.primary.main, 0.2) : 'inherit'
                   }
                 }}

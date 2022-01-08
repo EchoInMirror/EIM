@@ -51,7 +51,6 @@ const Tracks: React.FC = () => {
       let len = buf.readUint8()
       const arr: TrackInfo[] = []
       while (len-- > 0) arr.push(readTrack(buf))
-      console.log(arr)
       $client.tracks = arr
       setTracks(arr)
     })

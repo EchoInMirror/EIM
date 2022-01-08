@@ -1,10 +1,9 @@
 import './AppBar.less'
 import React from 'react'
-import { AppBar as MuiAppBar, Toolbar, useTheme } from '@mui/material'
+import { AppBar as MuiAppBar, Toolbar } from '@mui/material'
 import { PlayArrow, Stop } from '@mui/icons-material'
 
-const LeftSetion: React.FC = () => {
-  const theme = useTheme()
+const LeftSection: React.FC = () => {
   return (
     <section className='left-section'>
       <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 964.59 907.06' width='46' height='46'>
@@ -13,10 +12,10 @@ const LeftSetion: React.FC = () => {
             <path fill='none' transform='rotate(-50.26 768.342 413.676)' d='M529.38 17.84h477.94v791.67H529.38z' />
           </clipPath>
           <clipPath id='clip-path-2' transform='translate(-15.78 -45.41)'>
-            <path className='cls-1' transform='rotate(-50.26 231.226 586.306)' d='M-7.48 190.81h477.42v791H-7.48z' />
+            <path transform='rotate(-50.26 231.226 586.306)' d='M-7.48 190.81h477.42v791H-7.48z' />
           </clipPath>
         </defs>
-        <g fill={theme.palette.primary.main}>
+        <g fill='currentColor'>
           <g clipPath='url(#clip-path)'>
             <path d='M423.3 421.06L369 341.54a359.49 359.49 0 0 0-26 28.08l-.23.29 56.23 82.3a264.12 264.12 0 0 1 16.61-22.27q3.75-4.56 7.69-8.88zM395 318.68l53.39 78.23A259.37 259.37 0 0 1 479 374.73l-53.23-78A352.94 352.94 0 0 0 395 318.68zM455.72 279.7l53.81 78.85a261.91 261.91 0 0 1 207.31-2.83l62.34-75C677 228 556.17 228.86 455.72 279.7z' transform='translate(-15.78 -45.41)' />
             <path d='M835.25 454.16c61 93.47 57.13 219.43-18 309.75C725.06 874.84 560.37 890 449.44 797.78c-93.56-77.79-119-207.13-69.32-312.28L321.06 399c-100.45 149.48-73.42 353.73 68.07 471.36 151 125.54 375.17 104.9 500.7-46.1 108.63-130.66 107.8-316.13 7.76-445z' transform='translate(-15.78 -45.41)' />
@@ -34,7 +33,7 @@ const LeftSetion: React.FC = () => {
   )
 }
 
-const CenterSetion: React.FC = () => {
+const CenterSection: React.FC = () => {
   return (
     <section className='center-section'>
       <div className='info-block'>
@@ -59,7 +58,7 @@ const CenterSetion: React.FC = () => {
   )
 }
 
-const RightSetion: React.FC = () => {
+const RightSection: React.FC = () => {
   return (
     <section className='right-section'>
       <div className='info-block'>
@@ -75,11 +74,11 @@ const RightSetion: React.FC = () => {
 
 const AppBar: React.FC = () => {
   return (
-    <MuiAppBar position='fixed' sx={{ background: theme => theme.palette.background.brighter }} className='app-bar'>
+    <MuiAppBar position='fixed' className='app-bar'>
       <Toolbar>
-        <LeftSetion />
-        <CenterSetion />
-        <RightSetion />
+        <LeftSection />
+        <CenterSection />
+        <RightSection />
       </Toolbar>
     </MuiAppBar>
   )

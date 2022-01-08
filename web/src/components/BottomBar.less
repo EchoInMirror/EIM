@@ -1,5 +1,6 @@
 .bottom-bar {
   width: 100%;
+  z-index: 1;
 
   footer {
     height: 100%;
@@ -11,24 +12,45 @@
 
     .scrollable {
       overflow-y: auto;
-      display: flex;
-      align-items: flex-start;
       flex: 1;
+      z-index: 1;
+
+      & > div {
+        display: flex;
+      }
+
+      .notes-wrapper {
+        flex: 1;
+        position: relative;
+      }
 
       .notes {
-        flex: 1;
+        position: absolute;
+        top: 0;
+        left: 0;
+        div {
+          position: absolute;
+          height: 18px;
+          top: 0;
+          left: 0;
+          width: 40px;
+          border-radius: 2px;
+          cursor: pointer;
+        }
       }
     }
 
     .keyboard {
       display: flex;
+      margin-top: -1px;
+      z-index: 1;
       flex-direction: column-reverse;
 
       button {
         width: 60px;
         height: 18px;
         border-radius: 0;
-        background-color: #eee;
+        background-color: var(--keyboard-white-key-color);
         font-size: 12px;
         font-weight: lighter;
         letter-spacing: -1px;
@@ -38,7 +60,7 @@
 
         &:nth-child(12n+2), &:nth-child(12n+4), &:nth-child(12n+7), &:nth-child(12n+9), &:nth-child(12n+11) {
           color: #fff;
-          background-color: #21222c;
+          background-color: var(--keyboard-black-key-color);
         }
 
         &:nth-child(12n+5), &:nth-child(12n+12) {
