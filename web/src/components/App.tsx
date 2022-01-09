@@ -7,6 +7,7 @@ import './App.less'
 import React, { useEffect, useReducer } from 'react'
 import { CssBaseline, Paper } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
+import { SnackbarProvider } from 'notistack'
 import type { PaletteOptions } from '@mui/material/styles/createPalette'
 import { zhCN } from '@mui/material/locale'
 
@@ -52,14 +53,16 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <GlobalDataContext.Provider value={useReducer(reducer, initialState) as any}>
-        <AppBar />
-        <SideBar />
-        <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
-          <Tracks />
-          <BottomBar />
-        </Paper>
-      </GlobalDataContext.Provider>
+      <SnackbarProvider>
+        <GlobalDataContext.Provider value={useReducer(reducer, initialState) as any}>
+          <AppBar />
+          <SideBar />
+          <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
+            <Tracks />
+            <BottomBar />
+          </Paper>
+        </GlobalDataContext.Provider>
+      </SnackbarProvider>
     </ThemeProvider>
   )
 }

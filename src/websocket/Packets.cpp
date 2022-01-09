@@ -20,10 +20,11 @@ boost::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
 	auto buf = makePacket(ClientboundPacket::ClientboundProjectStatus);
 	buf->writeInt16(1);
 	buf->writeDouble(info.bpm);
-	buf->writeDouble(info.ppqPosition);
+	buf->writeDouble(info.timeInSeconds);
+	buf->writeInt64(juce::Time::currentTimeMillis());
 	buf->writeBoolean(info.isPlaying);
-	buf->writeUInt8(info.timeSigNumerator);
-	buf->writeUInt8(info.timeSigDenominator);
+	buf->writeUInt8((unsigned char)info.timeSigNumerator);
+	buf->writeUInt8((unsigned char)info.timeSigDenominator);
 	buf->writeUInt16((unsigned short)masterTrack->getSampleRate());
 	return buf;
 }

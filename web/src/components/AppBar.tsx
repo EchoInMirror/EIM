@@ -1,8 +1,10 @@
 import './AppBar.less'
-import React, { useState, useEffect } from 'react'
-import { AppBar as MuiAppBar, Toolbar } from '@mui/material'
-import { PlayArrow, Stop } from '@mui/icons-material'
+import React, { useEffect, useRef, useState } from 'react'
+import useGlobalData, { ReducerTypes } from '../reducer'
+import { AppBar as MuiAppBar, Toolbar, IconButton, TextField } from '@mui/material'
+import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { ClientboundPacket } from '../Client'
+import { useSnackbar } from 'notistack'
 
 const LeftSection: React.FC = () => {
   return (
@@ -35,13 +37,30 @@ const LeftSection: React.FC = () => {
 }
 
 const CenterSection: React.FC = () => {
+  const [state] = useGlobalData()
+  const timeRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!timeRef.current) return
+    const update = (time: number) => {
+      (timeRef.current!.firstElementChild as HTMLSpanElement).innerText = (time / 60 | 0).toString().padStart(2, '0')
+      ;(timeRef.current!.firstElementChild!.nextElementSibling as HTMLSpanElement).innerText = (time % 60 | 0).toString().padStart(2, '0')
+      ;(timeRef.current!.lastElementChild as HTMLSpanElement).innerText = (time - (time | 0)).toFixed(3).slice(2)
+    }
+    update(state.currentTime)
+    if (!state.isPlaying) return
+    const timer = setInterval(() => {
+      if (!timeRef.current) return
+      update(state.currentTime + (Date.now() - state.startTime) / 1000)
+    }, 16)
+    return () => clearInterval(timer)
+  }, [state.startTime, timeRef.current, state.isPlaying, state.currentTime])
   return (
     <section className='center-section'>
       <div className='info-block'>
-        <div className='time'>
-          <span className='minute'>0</span>
-          <span className='second'>00</span>
-          <span className='microsecond'>000</span>
+        <div className='time' ref={timeRef}>
+          <span className='minute' />
+          <span className='second' />
+          <span className='microsecond' />
         </div>
         <sub>秒</sub>
       </div>
@@ -53,18 +72,46 @@ const CenterSection: React.FC = () => {
         </div>
         <sub>小节</sub>
       </div>
-      <PlayArrow fontSize='large' />
-      <Stop fontSize='large' />
+      <IconButton
+        color='inherit'
+        onClick={() => $client.setProjectStatus(0, 0, !state.isPlaying, 0, 0)}
+      >
+        {state.isPlaying ? <Pause fontSize='large' /> : <PlayArrow fontSize='large' />}
+      </IconButton>
+      <IconButton
+        color='inherit'
+        onClick={() => $client.setProjectStatus(0, 0, false, 0, 0)}
+      >
+        <Stop fontSize='large' />
+      </IconButton>
     </section>
   )
 }
 
 const AppBar: React.FC = () => {
-  const [bpm, setBPM] = useState(120)
+  const [state, dispatch] = useGlobalData()
+  const [bpmInteger, setBPMInteger] = useState('120')
+  const [bpmDecimal, setBPMDecimal] = useState('00')
+  const { enqueueSnackbar } = useSnackbar()
+  const updateBPM = () => {
+    $client.setProjectStatus(+bpmInteger + (+bpmDecimal / 100), 0, false, 0, 0)
+    enqueueSnackbar('操作成功!', { variant: 'success' })
+  }
   useEffect(() => {
     $client.on(ClientboundPacket.ProjectStatus, buf => {
-      setBPM(buf.readDouble())
-      console.log(buf.readDouble(), !!buf.readUint8(), buf.readUint8(), buf.readUint8(), buf.readUint16())
+      const bpm = buf.readDouble()
+      dispatch({
+        type: ReducerTypes.SetProjectStatus,
+        bpm,
+        currentTime: buf.readDouble(),
+        startTime: buf.readInt64(),
+        isPlaying: !!buf.readUint8(),
+        timeSigNumerator: buf.readUint8(),
+        timeSigDenominator: buf.readUint8()
+      })
+      buf.readUint16()
+      setBPMInteger((bpm | 0).toString())
+      setBPMDecimal((bpm - bpm | 0).toFixed(2).slice(2))
     })
     return () => $client.off(ClientboundPacket.ProjectStatus)
   }, [])
@@ -75,9 +122,36 @@ const AppBar: React.FC = () => {
         <CenterSection />
         <section className='right-section'>
           <div className='info-block'>
+            <div>
+              <span>{state.timeSigNumerator}</span>/
+              <span>{state.timeSigDenominator}</span>
+            </div>
+            <sub>拍号</sub>
+          </div>
+          <div className='info-block'>
             <div className='bpm'>
-              <span className='integer'>{bpm | 0}</span>
-              <span className='decimal'>{(bpm - bpm | 0).toFixed(2).slice(2)}</span>
+              <TextField
+                variant='standard'
+                className='integer'
+                onChange={e => {
+                  const val = parseInt(e.target.value)
+                  setBPMInteger((isNaN(val) ? 120 : Math.max(Math.min(val, 220), 10)).toString())
+                }}
+                onKeyDown={e => e.keyCode === 13 && updateBPM()}
+                onBlur={updateBPM}
+                value={bpmInteger}
+              />.
+              <TextField
+                variant='standard'
+                className='decimal'
+                value={bpmDecimal}
+                onBlur={updateBPM}
+                onKeyDown={e => e.keyCode === 13 && updateBPM()}
+                onChange={e => {
+                  const val = parseInt(e.target.value)
+                  setBPMDecimal((isNaN(val) ? 0 : Math.min(val, 99)).toString().padStart(2, '0'))
+                }}
+              />
             </div>
             <sub>BPM</sub>
           </div>

@@ -7,16 +7,29 @@ set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_INCLUDE_DIR ${_VCPKG_INSTALLED_DIR}/x64-windows-static/include)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_definitions(-DJUCE_PLUGINHOST_VST3)
+add_definitions(-DJUCE_PLUGINHOST_VST3 -DJUCE_PLUGINHOST_VST)
 if(MSVC)
     add_definitions(-D_WIN32_WINNT=0x0601)
 endif(MSVC)
+
+set(vst2sdkPath ${CMAKE_CURRENT_BINARY_DIR}/vst2sdk)
+set(vst2sdkDownloadPath ${vst2sdkPath}/pluginterfaces/vst2.x)
+if(NOT EXISTS ${vst2sdkDownloadPath})
+    message(STATUS "Downloading VST2SDK...")
+    set(vst2sdkDownloadUrl https://raw.githubusercontent.com/juce-framework/JUCE/cf4f12a452611e46d29e4549ce69adac345706b7/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/vst2.x)
+    file(DOWNLOAD ${vst2sdkDownloadUrl}/aeffect.h ${vst2sdkDownloadPath}/aeffect.h SHOW_PROGRESS)
+    file(DOWNLOAD ${vst2sdkDownloadUrl}/aeffectx.h ${vst2sdkDownloadPath}/aeffectx.h SHOW_PROGRESS)
+    file(DOWNLOAD ${vst2sdkDownloadUrl}/vstfxstore.h ${vst2sdkDownloadPath}/vstfxstore.h SHOW_PROGRESS)
+    message(STATUS "Downloaded VST2SDK.")
+endif()
 
 find_package(Boost COMPONENTS system REQUIRED)
 if (Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     link_directories(${Boost_LIBRARY_DIRS})
 endif ()
+
+include_directories(${vst2sdkPath})
 
 file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp")
 

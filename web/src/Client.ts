@@ -15,6 +15,7 @@ for (const name in colors) colorValues.push((colors as any)[name][400])
 
 export enum ServerboundPacket {
   Reply,
+  SetProjectStatus,
   GetExplorerData,
   CreateTrack,
   Refresh,
@@ -105,6 +106,11 @@ export default class Client {
   public refresh () { this.send(this.buildPack(ServerboundPacket.Refresh)) }
 
   public midiMessage (trackId: number, byte1: number, byte2: number, byte3: number) {
-    this.send(this.buildPack(ServerboundPacket.MidiMessage).writeUint8(trackId).writeInt8(byte1).writeInt8(byte2).writeInt8(byte3))
+    this.send(this.buildPack(ServerboundPacket.MidiMessage).writeUint8(trackId).writeUint8(byte1).writeUint8(byte2).writeUint8(byte3))
+  }
+
+  public setProjectStatus (bpm: number, time: number, isPlaying: boolean, timeSigNumerator: number, timeSigDenominator: number) {
+    this.send(this.buildPack(ServerboundPacket.SetProjectStatus).writeDouble(bpm).writeDouble(time).writeUint8(+isPlaying)
+      .writeUint8(timeSigNumerator).writeUint8(timeSigDenominator).writeUint16(96000))
   }
 }

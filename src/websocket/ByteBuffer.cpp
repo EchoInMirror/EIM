@@ -2,6 +2,10 @@
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/buffer_traits.hpp>
 
+bool ByteBuffer::readBoolean() {
+	return (bool)readUInt8();
+}
+
 char ByteBuffer::readInt8() {
 	char val = *(boost::asio::buffer_cast<char*>(data()));
 	consume(sizeof(char));

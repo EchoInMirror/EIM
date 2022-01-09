@@ -9,6 +9,8 @@ public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     juce::KnownPluginList knownPluginList;
+    double startTime = 0;
+    double endTime = 0;
 
     using PluginCreationCallback = std::function<void(std::unique_ptr<PluginWrapper>, const std::string&)>;
 
@@ -17,9 +19,12 @@ public:
 
     void scanPlugins();
     void removeTrack(int id);
+    void stopAllNotes();
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
     std::unique_ptr<PluginWrapper> loadPlugin(std::unique_ptr<juce::PluginDescription> desc);
     void loadPluginAsync(std::unique_ptr<juce::PluginDescription> desc, PluginCreationCallback callback);
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }
@@ -27,7 +32,6 @@ public:
     virtual void transportRecord(bool shouldStartRecording) override { juce::ignoreUnused(shouldStartRecording); }
     virtual void transportRewind() override { }
 private:
-    double startTime = 0;
     juce::File knownPluginListXMLFile;
     juce::AudioProcessorGraph::NodeID outputNodeID;
     juce::AudioPluginFormatManager manager;

@@ -1,14 +1,14 @@
 import './Tracks.less'
 import ByteBuffer from 'bytebuffer'
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect } from 'react'
 import LoadingButton from '@mui/lab/LoadingButton'
 import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton } from '@mui/material'
 import { VolumeUp } from '@mui/icons-material'
 import { ClientboundPacket, TrackInfo } from '../Client'
-import { GlobalDataContext, ReducerTypes } from '../reducer'
+import useGlobalData, { ReducerTypes } from '../reducer'
 
 const Track: React.FC<{ info: TrackInfo }> = ({ info }) => {
-  const [state, dispatch] = useContext(GlobalDataContext)
+  const [state, dispatch] = useGlobalData()
   return (
     <Box
       component='li'

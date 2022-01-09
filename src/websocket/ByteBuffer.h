@@ -6,6 +6,8 @@
 class ByteBuffer: public boost::beast::flat_buffer {
 public:
 	ByteBuffer() : boost::beast::flat_buffer() {};
+
+	bool readBoolean();
 	char readInt8();
 	short readInt16();
 	long int readInt32();

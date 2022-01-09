@@ -11,8 +11,8 @@ public:
     std::string name;
     std::string color;
 
-    const juce::MidiBuffer midiBuffer;
-    const juce::MidiMessageSequence midiSequence;
+    juce::MidiBuffer midiBuffer;
+    juce::MidiMessageSequence midiSequence;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
     void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) override;
@@ -20,6 +20,9 @@ public:
     void setGenerator(std::unique_ptr<PluginWrapper>);
     juce::MidiMessageCollector& getMidiMessageCollector() noexcept { return messageCollector; }
 private:
+    juce::CriticalSection processLock;
+    int samplesPlayed = 0;
+    double nextStartTime = 0;
     juce::AudioProcessorGraph::NodeID midiIn;
     juce::AudioProcessorGraph::Node::Ptr begin, end;
     juce::MidiMessageCollector messageCollector;

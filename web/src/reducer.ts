@@ -1,12 +1,19 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { createContext } from 'react'
+import { createContext, useContext } from 'react'
 
 export enum ReducerTypes {
-  ChangeActiveTrack
+  ChangeActiveTrack,
+  SetProjectStatus
 }
 
 export const initialState = {
-  activeTrack: ''
+  activeTrack: '',
+  bpm: 120,
+  isPlaying: false,
+  timeSigNumerator: 4,
+  timeSigDenominator: 4,
+  startTime: Date.now(),
+  currentTime: 0
 }
 
 export interface Action { type: ReducerTypes, [key: string]: any }
@@ -18,7 +25,16 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
         ...state,
         activeTrack: action.activeTrack
       }
-
+    case ReducerTypes.SetProjectStatus:
+      return {
+        ...state,
+        bpm: action.bpm,
+        isPlaying: action.isPlaying,
+        currentTime: action.currentTime,
+        timeSigNumerator: action.timeSigNumerator,
+        timeSigDenominator: action.timeSigDenominator,
+        startTime: action.startTime
+      }
     default:
       return state
   }
@@ -26,3 +42,5 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const GlobalDataContext = createContext([initialState, (_action: Action) => { }] as const)
+
+export default () => useContext(GlobalDataContext)

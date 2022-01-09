@@ -15,6 +15,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    font-weight: bold;
+    font-size: 22px;
+    letter-spacing: -0.7px;
   
     .microsecond, .decimal {
       font-size: medium;
@@ -40,9 +43,6 @@
   .center-section {
     margin: 0 auto;
     .time {
-      font-weight: bold;
-      font-size: 22px;
-      letter-spacing: -1px;
   
       .minute::after, .second::after {
         content: ':';
@@ -55,15 +55,32 @@
 
   .right-section {
     .bpm {
-      font-weight: bold;
-      font-size: 22px;
-      letter-spacing: -1px;
-  
-      .integer::after {
-        content: '.';
-        display: inline-block;
-        margin: 0 1px;
-        font-weight: normal;
+      display: flex;
+      align-items: baseline;
+
+      .MuiTextField-root {
+        color: inherit;
+        width: 3rem;
+      }
+
+      .integer input {
+        font-weight: bold;
+        font-size: 22px;
+        letter-spacing: -0.7px;
+        text-align: right;
+        padding: 0;
+      }
+
+      .decimal {
+        width: 1.5rem;
+      }
+
+      .MuiInput-root {
+        color: inherit;
+
+        &::before, &::after {
+          display: none;
+        }
       }
     }
   }

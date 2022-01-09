@@ -5,8 +5,43 @@
 void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
 	switch (buf.readUInt8()) {
-	case ServerboundPacket::ServerboundReply:
+	case ServerboundPacket::ServerboundReply: break;
+	case ServerboundPacket::ServerboundSetProjectStatus: {
+		auto& master = mainWindow->masterTrack;
+		auto& info = master->currentPositionInfo;
+		auto bpm = buf.readDouble();
+		auto time = buf.readDouble();
+		auto isPlaying = buf.readBoolean();
+		auto timeSigNumerator = buf.readUInt8();
+		auto timeSigDenominator = buf.readUInt8();
+		buf.readUInt16();
+		auto shouldUpdate = false;
+		if (bpm > 10) {
+			info.bpm = bpm;
+			shouldUpdate = true;
+		}
+		if (time > 0.000001) {
+			master->startTime = time + juce::Time::getMillisecondCounterHiRes() * 0.001;
+			info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
+			shouldUpdate = true;
+		}
+		if (isPlaying != info.isPlaying) {
+			info.isPlaying = isPlaying;
+			info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
+			if (!isPlaying) master->stopAllNotes();
+			shouldUpdate = true;
+		}
+		if (timeSigNumerator > 0) {
+			info.timeSigNumerator = timeSigNumerator;
+			shouldUpdate = true;
+		}
+		if (timeSigDenominator > 0) {
+			info.timeSigDenominator = timeSigDenominator;
+			shouldUpdate = true;
+		}
+		if (shouldUpdate) listener->broadcastProjectStatus();
 		break;
+	}
 	case ServerboundPacket::ServerboundGetExplorerData: {
 		auto replyId = buf.readUInt32();
 		auto type = buf.readUInt8();

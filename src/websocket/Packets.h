@@ -5,6 +5,7 @@
 
 enum ServerboundPacket {
 	ServerboundReply,
+	ServerboundSetProjectStatus,
 	ServerboundGetExplorerData,
 	ServerboundCreateTrack,
 	ServerboundRefresh,
