@@ -5,6 +5,7 @@ import { AppBar as MuiAppBar, Toolbar, IconButton, TextField } from '@mui/materi
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { ClientboundPacket } from '../Client'
 import { useSnackbar } from 'notistack'
+import { playHeadRef } from './BottomBar'
 
 const LeftSection: React.FC = () => {
   return (
@@ -38,27 +39,39 @@ const LeftSection: React.FC = () => {
 
 const CenterSection: React.FC = () => {
   const [state] = useGlobalData()
-  const timeRef = useRef<HTMLDivElement | null>(null)
+  const timeRef = useRef<HTMLSpanElement | null>(null)
+  const barRef = useRef<HTMLSpanElement | null>(null)
   useEffect(() => {
-    if (!timeRef.current) return
+    if (!timeRef.current || !barRef.current) return
+    const minutesNode = timeRef.current as HTMLSpanElement
+    const secondsNode = minutesNode.nextElementSibling as HTMLSpanElement
+    const msNode = secondsNode.nextElementSibling as HTMLSpanElement
+    const barsNode = barRef.current as HTMLSpanElement
+    const beatsNode = barsNode.nextElementSibling as HTMLSpanElement
+    const stepsNode = beatsNode.nextElementSibling as HTMLSpanElement
     const update = (time: number) => {
-      (timeRef.current!.firstElementChild as HTMLSpanElement).innerText = (time / 60 | 0).toString().padStart(2, '0')
-      ;(timeRef.current!.firstElementChild!.nextElementSibling as HTMLSpanElement).innerText = (time % 60 | 0).toString().padStart(2, '0')
-      ;(timeRef.current!.lastElementChild as HTMLSpanElement).innerText = (time - (time | 0)).toFixed(3).slice(2)
+      minutesNode.innerText = (time / 60 | 0).toString().padStart(2, '0')
+      secondsNode.innerText = (time % 60 | 0).toString().padStart(2, '0')
+      msNode.innerText = (time - (time | 0)).toFixed(3).slice(2)
+      const beats = time / 60 * state.bpm
+      barsNode.innerText = (1 + beats / state.timeSigNumerator | 0).toString().padStart(2, '0')
+      beatsNode.innerText = (1 + (beats | 0) % state.timeSigNumerator).toString().padStart(2, '0')
+      stepsNode.innerText = (1 + (beats - (beats | 0)) * (16 / state.timeSigDenominator) | 0).toString()
+      if (playHeadRef.current) playHeadRef.current.style.transform = `translateX(${384 * beats | 0}px)`
     }
     update(state.currentTime)
     if (!state.isPlaying) return
     const timer = setInterval(() => {
-      if (!timeRef.current) return
+      if (!timeRef.current || !barRef.current) return
       update(state.currentTime + (Date.now() - state.startTime) / 1000)
-    }, 16)
+    }, 40)
     return () => clearInterval(timer)
-  }, [state.startTime, timeRef.current, state.isPlaying, state.currentTime])
+  }, [state.startTime, timeRef.current, state.isPlaying, state.currentTime, barRef.current, state.bpm, state.timeSigNumerator, state.timeSigDenominator])
   return (
     <section className='center-section'>
       <div className='info-block'>
-        <div className='time' ref={timeRef}>
-          <span className='minute' />
+        <div className='time'>
+          <span className='minute' ref={timeRef} />
           <span className='second' />
           <span className='microsecond' />
         </div>
@@ -66,9 +79,9 @@ const CenterSection: React.FC = () => {
       </div>
       <div className='info-block'>
         <div className='time'>
-          <span className='minute'>0</span>
-          <span className='second'>00</span>
-          <span className='microsecond'>000</span>
+          <span className='minute' ref={barRef} />
+          <span className='second' />
+          <span className='microsecond' />
         </div>
         <sub>小节</sub>
       </div>
@@ -80,7 +93,7 @@ const CenterSection: React.FC = () => {
       </IconButton>
       <IconButton
         color='inherit'
-        onClick={() => $client.setProjectStatus(0, 0, false, 0, 0)}
+        onClick={() => $client.setProjectStatus(0, -2, false, 0, 0)}
       >
         <Stop fontSize='large' />
       </IconButton>
@@ -99,9 +112,11 @@ const AppBar: React.FC = () => {
   }
   useEffect(() => {
     $client.on(ClientboundPacket.ProjectStatus, buf => {
+      const ppq = buf.readUint16()
       const bpm = buf.readDouble()
       dispatch({
         type: ReducerTypes.SetProjectStatus,
+        ppq,
         bpm,
         currentTime: buf.readDouble(),
         startTime: buf.readInt64(),

@@ -8,6 +8,7 @@ export enum ReducerTypes {
 
 export const initialState = {
   activeTrack: '',
+  ppq: 96,
   bpm: 120,
   isPlaying: false,
   timeSigNumerator: 4,
@@ -28,6 +29,7 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
     case ReducerTypes.SetProjectStatus:
       return {
         ...state,
+        ppq: action.ppq,
         bpm: action.bpm,
         isPlaying: action.isPlaying,
         currentTime: action.currentTime,

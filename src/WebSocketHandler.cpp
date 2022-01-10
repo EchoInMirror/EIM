@@ -21,8 +21,13 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 			shouldUpdate = true;
 		}
 		if (time > 0.000001) {
-			master->startTime = time + juce::Time::getMillisecondCounterHiRes() * 0.001;
-			info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
+			info.timeInSeconds = time;
+			info.timeInSamples = (juce::int64)(master->getSampleRate() * time);
+			shouldUpdate = true;
+		}
+		if (time <= -1) {
+			info.timeInSeconds = 0;
+			info.timeInSamples = 0;
 			shouldUpdate = true;
 		}
 		if (isPlaying != info.isPlaying) {
@@ -102,7 +107,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto& tracks = mainWindow->masterTrack->tracks;
 		DBG("" << id << " " << byte1 << " " << byte2 << " " << byte3);
 		if (tracks.size() <= id) return;
-		((Track*)tracks[id]->getProcessor())->getMidiMessageCollector()
-			.addMessageToQueue(juce::MidiMessage(byte1, byte2, byte3, juce::Time::getMillisecondCounterHiRes() * 0.001));
+		((Track*)tracks[id]->getProcessor())->messageCollector.addMessageToQueue(juce::MidiMessage(byte1, byte2, byte3, juce::Time::getMillisecondCounterHiRes() * 0.001));
 	}
 }

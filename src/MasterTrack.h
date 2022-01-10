@@ -9,8 +9,8 @@ public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     juce::KnownPluginList knownPluginList;
-    double startTime = 0;
     double endTime = 0;
+    short ppq = 96;
 
     using PluginCreationCallback = std::function<void(std::unique_ptr<PluginWrapper>, const std::string&)>;
 

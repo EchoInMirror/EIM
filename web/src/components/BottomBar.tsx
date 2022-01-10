@@ -1,9 +1,11 @@
 import './BottomBar.less'
-import React, { useEffect } from 'react'
+import React, { useEffect, createRef } from 'react'
 import { Resizable } from 're-resizable'
 import { PlayArrowRounded } from '@mui/icons-material'
 import { Paper, Button, Box, useTheme, alpha } from '@mui/material'
 import useGlobalData from '../reducer'
+
+export const playHeadRef = createRef<HTMLSpanElement>()
 
 const keyNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const keys: JSX.Element[] = []
@@ -83,8 +85,8 @@ const Editor: React.FC = () => {
         当前轨道: {$client.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
       </Box>
       <Paper square elevation={3} className='scrollable'>
-        <Paper square elevation={3} className='ruler'>
-          <span className='play-head'>
+        <Paper square elevation={3} className='ruler' sx={{ width: 1500 }}>
+          <span className='play-head' ref={playHeadRef}>
             <PlayArrowRounded />
           </span>
         </Paper>
@@ -96,7 +98,7 @@ const Editor: React.FC = () => {
             className='notes-wrapper'
             style={{ transform: 'translateX(-500px)' }}
             sx={{
-              '& > div': {
+              '& .notes div': {
                 boxShadow: theme => theme.shadows[1],
                 backgroundColor: theme => theme.palette.primary.main
               }
@@ -107,7 +109,7 @@ const Editor: React.FC = () => {
               <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
               <rect fill='url(#editor-grid-x)' x='0' y='0' width='100%' height='100%' />
             </svg>
-            <div style={{ left: 1200 }} />
+            <div className='notes'><div style={{ left: 1200 }} /></div>
           </Box>
         </div>
       </Paper>

@@ -1,7 +1,8 @@
 #include "Track.h"
 #include "ProcessorBase.h"
+#include "MasterTrack.h"
 
-Track::Track(std::string name, std::string color): SynchronizedAudioProcessorGraph(), name(name), color(color) {
+Track::Track(std::string name, std::string color, MasterTrack* masterTrack): SynchronizedAudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
 	setChannelLayoutOfBus(true, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	setChannelLayoutOfBus(false, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	auto input = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode));
@@ -29,40 +30,36 @@ void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) 
 	messageCollector.reset(newSampleRate);
 }
 
-void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
-	juce::AudioPlayHead::CurrentPositionInfo thePositionInfo;
-	getPlayHead()->getCurrentPosition(thePositionInfo);
-	if (thePositionInfo.isPlaying) {
-		midiMessages.addEvents(midiBuffer, thePositionInfo.timeInSamples, buffer.getNumSamples(), -thePositionInfo.timeInSamples);
-		/*
-		auto startTime = thePositionInfo.timeInSeconds;
-		auto endTime = startTime + buffer.getNumSamples() / getSampleRate();
-		DBG("" << startTime);
-		auto gg = midiSequence.getNextIndexAtTime(startTime);
-		auto t = 0;
-		for (auto it = midiSequence.begin() + gg; it < midiSequence.end() && (*it)->message.getTimeStamp() <= endTime; it++) {
-			auto samplePosition = (int)juce::roundToInt(((*it)->message.getTimeStamp() - startTime) * getSampleRate());
-			midiMessages.addEvent((*it)->message, samplePosition);
-			t++;
+void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages) {
+	auto& info = masterTrack->currentPositionInfo;
+	if (info.isPlaying) {
+		auto startTime = info.ppqPosition;
+		auto totalTime = sampleCount / getSampleRate() / 60.0 * info.bpm * masterTrack->ppq;
+		auto endTime = startTime + totalTime;
+		double curTime;
+		for (auto it = midiSequence.begin() + midiSequence.getNextIndexAtTime(startTime);
+			it < midiSequence.end() && (curTime = (*it)->message.getTimeStamp()) < endTime; it++) {
+			midiMessages.addEvent((*it)->message, juce::roundToInt((curTime - startTime) / totalTime * sampleCount));
 		}
-		DBG(" " << gg << " " << t);*/
 	}
-	messageCollector.removeNextBlockOfMessages(midiMessages, buffer.getNumSamples());
+	messageCollector.removeNextBlockOfMessages(midiMessages, sampleCount);
+}
+
+void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
+	addMidiEventsToBuffer(buffer.getNumSamples(), midiMessages);
 	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
 }
 
 void Track::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {
-	juce::AudioPlayHead::CurrentPositionInfo thePositionInfo;
-	getPlayHead()->getCurrentPosition(thePositionInfo);
-	if (thePositionInfo.isPlaying) {
-		auto startTime = thePositionInfo.timeInSeconds;
-		auto endTime = startTime + buffer.getNumSamples() / getSampleRate();
-		// auto sampleLength = 1.0 / getSampleRate();
-		for (auto it = midiSequence.begin() + midiSequence.getNextIndexAtTime(startTime); it < midiSequence.begin() && (*it)->message.getTimeStamp() < endTime; it++) {
-			auto samplePosition = (int) std::round(((*it)->message.getTimeStamp() - startTime) * getSampleRate());
-			midiMessages.addEvent((*it)->message, samplePosition);
-		}
-	}
-	messageCollector.removeNextBlockOfMessages(midiMessages, buffer.getNumSamples());
+	addMidiEventsToBuffer(buffer.getNumSamples(), midiMessages);
 	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
+}
+
+void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
+	for (auto node : seq) {
+		if (!node->message.isNoteOnOrOff()) continue;
+		juce::MidiMessage msg = node->message;
+		msg.setTimeStamp(juce::roundToInt(msg.getTimeStamp() / timeFormat * masterTrack->ppq));
+		midiSequence.addEvent(msg, 0);
+	}
 }

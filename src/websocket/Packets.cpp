@@ -19,6 +19,7 @@ boost::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
 	auto &info = masterTrack->currentPositionInfo;
 	auto buf = makePacket(ClientboundPacket::ClientboundProjectStatus);
 	buf->writeInt16(1);
+	buf->writeUInt16(masterTrack->ppq);
 	buf->writeDouble(info.bpm);
 	buf->writeDouble(info.timeInSeconds);
 	buf->writeInt64(juce::Time::currentTimeMillis());
