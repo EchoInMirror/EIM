@@ -5,6 +5,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 class MasterTrack;
+class ByteBuffer;
 
 class Track: public SynchronizedAudioProcessorGraph {
 public:
@@ -20,6 +21,7 @@ public:
 
     void setGenerator(std::unique_ptr<PluginWrapper>);
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
+    void writeMidiData(ByteBuffer* buf);
 private:
     MasterTrack* masterTrack;
     juce::CriticalSection processLock;

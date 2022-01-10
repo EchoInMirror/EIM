@@ -1,5 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { TypeBackground } from '@mui/material/styles/createPalette'
+import { Action, initialState } from './reducer'
 import Client from './Client'
 
 /* eslint-disable no-unused-vars */
@@ -15,8 +16,12 @@ declare module '@mui/material/styles/createPalette' {
 
 declare global {
   const $client: Client
+  const $globalData: typeof initialState
+  const $dispatch: (action: Action) => void
 
   interface Window {
     $client: Client
+    $globalData: typeof initialState
+    $dispatch: (action: Action) => void
   }
 }

@@ -1,6 +1,8 @@
 #include "Track.h"
 #include "ProcessorBase.h"
 #include "MasterTrack.h"
+#include "Main.h"
+#include "websocket/Packets.h"
 
 Track::Track(std::string name, std::string color, MasterTrack* masterTrack): SynchronizedAudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
 	setChannelLayoutOfBus(true, 0, juce::AudioChannelSet::canonicalChannelSet(2));
@@ -61,5 +63,29 @@ void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
 		juce::MidiMessage msg = node->message;
 		msg.setTimeStamp(juce::roundToInt(msg.getTimeStamp() / timeFormat * masterTrack->ppq));
 		midiSequence.addEvent(msg, 0);
+	}
+	auto buf = makeTrackMidiDataPacket(1);
+	writeMidiData(buf.get());
+	EIMApplication::getEIMInstance()->listener->state->send(buf);
+}
+
+void Track::writeMidiData(ByteBuffer* buf) {
+	buf->writeString(uuid.toString());
+	std::vector<std::tuple<juce::uint8, juce::uint8, juce::uint32, juce::uint32>> arr;
+	midiSequence.updateMatchedPairs();
+	for (auto& it : midiSequence) {
+		if (!it->message.isNoteOn() || !it->noteOffObject) continue;
+		arr.emplace_back(std::make_tuple(it->message.getNoteNumber(), it->message.getVelocity(), (juce::uint32) it->message.getTimeStamp(),
+			(juce::uint32)(it->noteOffObject->message.getTimeStamp() - it->message.getTimeStamp())));
+	}
+	buf->writeUInt16((unsigned char) arr.size());
+	juce::uint8 key, vel;
+	juce::uint32 on, off;
+	for (auto& it : arr) {
+		std::tie(key, vel, on, off) = it;
+		buf->writeUInt8(key);
+		buf->writeUInt8(vel);
+		buf->writeUInt32(on);
+		buf->writeUInt32(off);
 	}
 }

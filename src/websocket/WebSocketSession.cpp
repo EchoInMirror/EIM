@@ -17,6 +17,7 @@ void WebSocketSession::onAccept(boost::beast::error_code ec) {
     state->join(this);
     doRead();
     send(makeProjectStatusPacket());
+    send(makeAllTrackMidiDataPacket());
 }
 void WebSocketSession::onRead(boost::beast::error_code ec, std::size_t) {
     if (ec) return;

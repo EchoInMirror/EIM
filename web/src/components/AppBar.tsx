@@ -5,7 +5,7 @@ import { AppBar as MuiAppBar, Toolbar, IconButton, TextField } from '@mui/materi
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { ClientboundPacket } from '../Client'
 import { useSnackbar } from 'notistack'
-import { playHeadRef } from './BottomBar'
+import { playHeadRef, barLength } from './BottomBar'
 
 const LeftSection: React.FC = () => {
   return (
@@ -57,14 +57,14 @@ const CenterSection: React.FC = () => {
       barsNode.innerText = (1 + beats / state.timeSigNumerator | 0).toString().padStart(2, '0')
       beatsNode.innerText = (1 + (beats | 0) % state.timeSigNumerator).toString().padStart(2, '0')
       stepsNode.innerText = (1 + (beats - (beats | 0)) * (16 / state.timeSigDenominator) | 0).toString()
-      if (playHeadRef.current) playHeadRef.current.style.transform = `translateX(${384 * beats | 0}px)`
+      if (playHeadRef.current) playHeadRef.current.style.transform = `translateX(${barLength * beats | 0}px)`
     }
     update(state.currentTime)
     if (!state.isPlaying) return
     const timer = setInterval(() => {
       if (!timeRef.current || !barRef.current) return
       update(state.currentTime + (Date.now() - state.startTime) / 1000)
-    }, 40)
+    }, 30)
     return () => clearInterval(timer)
   }, [state.startTime, timeRef.current, state.isPlaying, state.currentTime, barRef.current, state.bpm, state.timeSigNumerator, state.timeSigDenominator])
   return (

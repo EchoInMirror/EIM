@@ -2,7 +2,7 @@ import './Tracks.less'
 import ByteBuffer from 'bytebuffer'
 import React, { useState, useEffect } from 'react'
 import LoadingButton from '@mui/lab/LoadingButton'
-import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton } from '@mui/material'
+import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider } from '@mui/material'
 import { VolumeUp } from '@mui/icons-material'
 import { ClientboundPacket, TrackInfo } from '../Client'
 import useGlobalData, { ReducerTypes } from '../reducer'
@@ -50,7 +50,11 @@ const Tracks: React.FC = () => {
     $client.on(ClientboundPacket.SyncTrackInfo, buf => {
       let len = buf.readUint8()
       const arr: TrackInfo[] = []
-      while (len-- > 0) arr.push(readTrack(buf))
+      $client.trackNameToIndex = { }
+      while (len-- > 0) {
+        const it = readTrack(buf)
+        $client.trackNameToIndex[it.uuid] = arr.push(it) - 1
+      }
       $client.tracks = arr
       setTracks(arr)
     })
@@ -62,7 +66,7 @@ const Tracks: React.FC = () => {
       <Toolbar />
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
         <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1 }}>
-          {tracks.map(it => <Track info={it} key={it.uuid} />)}
+          {tracks.map(it => <React.Fragment key={it.uuid}><Track info={it} /><Divider /></React.Fragment>)}
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}

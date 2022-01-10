@@ -13,7 +13,6 @@ MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph(), juce::AudioPlayHe
 	} else scanPlugins();
 
 	endTime = currentPositionInfo.timeSigNumerator * ppq;
-	DBG(endTime);
 
 	setup = deviceManager.getAudioDeviceSetup();
 	deviceManager.initialiseWithDefaultDevices(0, 2);

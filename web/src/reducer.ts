@@ -3,8 +3,12 @@ import { createContext, useContext } from 'react'
 
 export enum ReducerTypes {
   ChangeActiveTrack,
-  SetProjectStatus
+  SetProjectStatus,
+  SetTrackMidiData
 }
+
+export type TrackMidiNoteData = [number, number, number, number]
+export type TrackMidiData = Record<string, { notes: TrackMidiNoteData[] }>
 
 export const initialState = {
   activeTrack: '',
@@ -14,7 +18,8 @@ export const initialState = {
   timeSigNumerator: 4,
   timeSigDenominator: 4,
   startTime: Date.now(),
-  currentTime: 0
+  currentTime: 0,
+  trackMidiData: { } as TrackMidiData
 }
 
 export interface Action { type: ReducerTypes, [key: string]: any }
@@ -36,6 +41,11 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
         timeSigNumerator: action.timeSigNumerator,
         timeSigDenominator: action.timeSigDenominator,
         startTime: action.startTime
+      }
+    case ReducerTypes.SetTrackMidiData:
+      return {
+        ...state,
+        trackMidiData: action.trackMidiData
       }
     default:
       return state

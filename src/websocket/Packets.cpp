@@ -29,3 +29,17 @@ boost::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
 	buf->writeUInt16((unsigned short)masterTrack->getSampleRate());
 	return buf;
 }
+
+boost::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size) {
+	auto buf = makePacket(ClientboundPacket::ClientboundTrackMidiData);
+	buf->writeUInt8((unsigned char) size);
+	return buf;
+}
+
+boost::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket() {
+	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+	auto& tracks = masterTrack->tracks;
+	auto buf = makeTrackMidiDataPacket(tracks.size());
+	for (auto& it : tracks) ((Track*)it->getProcessor())->writeMidiData(buf.get());
+	return buf;
+}

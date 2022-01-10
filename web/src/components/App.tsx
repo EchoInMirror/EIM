@@ -50,11 +50,13 @@ const App: React.FC = () => {
     document.documentElement.style.setProperty('--keyboard-black-key-color', theme.palette.background!.keyboardBlackKey)
     document.documentElement.style.setProperty('--keyboard-white-key-color', theme.palette.background!.keyboardWhiteKey)
   }, [theme.palette.background!.paper, theme.palette.background!.keyboardBlackKey, theme.palette.background!.keyboardWhiteKey])
+  const ctx = useReducer(reducer, initialState) as any
+  window.$dispatch = ctx[1]
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SnackbarProvider>
-        <GlobalDataContext.Provider value={useReducer(reducer, initialState) as any}>
+        <GlobalDataContext.Provider value={ctx}>
           <AppBar />
           <SideBar />
           <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>

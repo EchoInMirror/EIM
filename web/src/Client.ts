@@ -1,5 +1,6 @@
 import ByteBuffer from 'bytebuffer'
 import { colors } from '@mui/material'
+import { ReducerTypes } from './reducer'
 
 export interface TrackInfo {
   uuid: string
@@ -25,7 +26,8 @@ export enum ServerboundPacket {
 export enum ClientboundPacket {
   Reply,
   ProjectStatus,
-  SyncTrackInfo
+  SyncTrackInfo,
+  TrackMidiData
 }
 
 export enum ExplorerType {
@@ -40,6 +42,7 @@ export default class Client {
   private events: Record<number, (buf: ByteBuffer) => void> = { }
   private replies: Record<number, (buf: ByteBuffer) => void> = { }
   public tracks: TrackInfo[] = []
+  public trackNameToIndex: Record<string, number> = {}
 
   constructor (address: string, callback: () => void) {
     this.ws = new WebSocket(address)
@@ -64,9 +67,22 @@ export default class Client {
             callback()
             callback = null as any
           }
-        // eslint-disable-next-line no-fallthrough
-        default: this.events[event]?.(buf)
+          break
+        case ClientboundPacket.TrackMidiData: {
+          let len = buf.readUint8()
+          const trackMidiData = { ...$globalData.trackMidiData }
+          while (len-- > 0) {
+            const key = buf.readIString()
+            trackMidiData[key] = { notes: [] }
+            const { notes } = trackMidiData[key]
+            let cnt = buf.readUint16()
+            while (cnt-- > 0) notes.push([buf.readUint8(), buf.readUint8(), buf.readUint32(), buf.readUint32()])
+          }
+          $dispatch({ type: ReducerTypes.SetTrackMidiData, trackMidiData })
+          break
+        }
       }
+      this.events[event]?.(buf)
     }
   }
 
