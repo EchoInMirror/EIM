@@ -1,13 +1,17 @@
 import './Tracks.less'
 import ByteBuffer from 'bytebuffer'
-import React, { useState, useEffect } from 'react'
 import LoadingButton from '@mui/lab/LoadingButton'
-import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider } from '@mui/material'
-import { VolumeUp } from '@mui/icons-material'
+import VolumeUp from '@mui/icons-material/VolumeUp'
+import PlayRuler from './PlayRuler'
+import React, { useState, useEffect, createRef } from 'react'
+import useGlobalData, { ReducerTypes, TrackMidiNoteData } from '../reducer'
+import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme } from '@mui/material'
 import { ClientboundPacket, TrackInfo } from '../Client'
-import useGlobalData, { ReducerTypes } from '../reducer'
 
-const Track: React.FC<{ info: TrackInfo }> = ({ info }) => {
+export let barLength = 0
+export const playHeadRef = createRef<HTMLDivElement>()
+
+const TrackActions: React.FC<{ info: TrackInfo }> = ({ info }) => {
   const [state, dispatch] = useGlobalData()
   return (
     <Box
@@ -32,6 +36,39 @@ const Track: React.FC<{ info: TrackInfo }> = ({ info }) => {
   )
 }
 
+const Track: React.FC<{ data: TrackMidiNoteData[], width: number, ppq: number }> = ({ data, width, ppq }) => {
+  return (
+    <div className='notes'>
+      {data && data.map((it, i) => (
+        <div
+          key={i}
+          style={{
+            bottom: (it[0] / 132 * 100) + '%',
+            left: it[2] / ppq * width * 4,
+            width: it[3] / ppq * width * 4
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+const Grid: React.FC<{ timeSigNumerator: number, width: number }> = ({ width, timeSigNumerator }) => {
+  const theme = useTheme()
+  const rectsX = []
+  for (let i = 1; i < timeSigNumerator; i++) rectsX.push(<rect width='1' height='3240' x={width * i * 4} y='0' key={i} />)
+  return (
+    <svg xmlns='http://www.w3.org/2000/svg' width='0' height='0' style={{ position: 'absolute' }}>
+      <defs>
+        <pattern id='playlist-grid' x='0' y='0' width={width * timeSigNumerator * 4} height='3240' patternUnits='userSpaceOnUse'>
+          <rect width='1' height='3240' x='0' y='0' fill={alpha(theme.palette.divider, 0.44)} />
+          <g fill={theme.palette.divider}>{rectsX}</g>
+        </pattern>
+      </defs>
+    </svg>
+  )
+}
+
 const readTrack = (buf: ByteBuffer): TrackInfo => ({
   uuid: buf.readIString(),
   name: buf.readIString(),
@@ -42,8 +79,11 @@ const readTrack = (buf: ByteBuffer): TrackInfo => ({
 })
 
 const Tracks: React.FC = () => {
+  const [state] = useGlobalData()
   const [tracks, setTracks] = useState<TrackInfo[]>([])
   const [loading, setLoading] = useState(false)
+  const [height] = useState(70)
+  const [noteWidth] = useState(6)
 
   useEffect(() => {
     $client.refresh()
@@ -61,12 +101,16 @@ const Tracks: React.FC = () => {
     return () => $client.off(ClientboundPacket.SyncTrackInfo)
   }, [])
 
+  barLength = noteWidth * 4
+
   return (
     <main className='tracks'>
       <Toolbar />
+      <PlayRuler headRef={playHeadRef} width={1500} />
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
-        <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1 }}>
-          {tracks.map(it => <React.Fragment key={it.uuid}><Track info={it} /><Divider /></React.Fragment>)}
+        <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1, '& li': { height } }}>
+          <Divider />
+          {tracks.map(it => <React.Fragment key={it.uuid}><TrackActions info={it} /><Divider /></React.Fragment>)}
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}
@@ -84,7 +128,20 @@ const Tracks: React.FC = () => {
             新增轨道
           </LoadingButton>
         </Paper>
-        <Box className='playlist'>Play list</Box>
+        <Box className='playlist' sx={{ '& .notes': { height }, '& .notes div': { height: height / 132 + 'px' } }}>
+          <div>
+            <Grid timeSigNumerator={state.timeSigNumerator} width={noteWidth} />
+            <svg xmlns='http://www.w3.org/2000/svg' width='2200' height='100%' style={{ position: 'absolute' }}>
+              <rect fill='url(#playlist-grid)' x='0' y='0' width='100%' height='100%' />
+            </svg>
+            {tracks.map(it => (
+              <div key={it.uuid} style={{ backgroundColor: alpha(it.color, 0.1) }}>
+                <Track data={state.trackMidiData[it.uuid]?.notes} ppq={state.ppq} width={noteWidth} />
+                <Divider />
+              </div>
+            ))}
+          </div>
+        </Box>
       </Box>
     </main>
   )

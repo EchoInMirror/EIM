@@ -1,11 +1,12 @@
 import './AppBar.less'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import useGlobalData, { ReducerTypes } from '../reducer'
-import { AppBar as MuiAppBar, Toolbar, IconButton, TextField } from '@mui/material'
+import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem } from '@mui/material'
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { ClientboundPacket } from '../Client'
 import { useSnackbar } from 'notistack'
-import { playHeadRef, barLength } from './BottomBar'
+import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './BottomBar'
+import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 
 const LeftSection: React.FC = () => {
   return (
@@ -57,7 +58,8 @@ const CenterSection: React.FC = () => {
       barsNode.innerText = (1 + beats / state.timeSigNumerator | 0).toString().padStart(2, '0')
       beatsNode.innerText = (1 + (beats | 0) % state.timeSigNumerator).toString().padStart(2, '0')
       stepsNode.innerText = (1 + (beats - (beats | 0)) * (16 / state.timeSigDenominator) | 0).toString()
-      if (playHeadRef.current) playHeadRef.current.style.transform = `translateX(${barLength * beats | 0}px)`
+      if (bottomBarPlayHeadRef.current) bottomBarPlayHeadRef.current.style.transform = `translateX(${bottomBarLength * beats | 0}px)`
+      if (tracksPlayHeadRef.current) tracksPlayHeadRef.current.style.transform = `translateX(${tracksLength * beats | 0}px)`
     }
     update(state.currentTime)
     if (!state.isPlaying) return
@@ -105,11 +107,36 @@ const AppBar: React.FC = () => {
   const [state, dispatch] = useGlobalData()
   const [bpmInteger, setBPMInteger] = useState('120')
   const [bpmDecimal, setBPMDecimal] = useState('00')
+  const [beatsAnchor, setBeatsAnchor] = useState<HTMLElement | undefined>()
   const { enqueueSnackbar } = useSnackbar()
-  const updateBPM = () => {
-    $client.setProjectStatus(+bpmInteger + (+bpmDecimal / 100), 0, false, 0, 0)
+
+  const updateBPM = (e: any) => {
+    const bpm = +bpmInteger + (+bpmDecimal / 100)
+    if (bpm === state.bpm) return
+    e.target.blur()
+    $client.setProjectStatus(bpm, 0, false, 0, 0)
     enqueueSnackbar('操作成功!', { variant: 'success' })
   }
+
+  const beats = useMemo(() => {
+    const arr: JSX.Element[] = []
+    for (let i = 1; i <= 16; i++) {
+      arr.push((
+        <MenuItem
+          key={i}
+          onClick={() => {
+            setBeatsAnchor(undefined)
+            $client.setProjectStatus(0, 0, false, i, 0)
+            enqueueSnackbar('操作成功!', { variant: 'success' })
+          }}
+        >
+          {i}
+        </MenuItem>
+      ))
+    }
+    return arr
+  }, [])
+
   useEffect(() => {
     $client.on(ClientboundPacket.ProjectStatus, buf => {
       const ppq = buf.readUint16()
@@ -130,6 +157,7 @@ const AppBar: React.FC = () => {
     })
     return () => $client.off(ClientboundPacket.ProjectStatus)
   }, [])
+
   return (
     <MuiAppBar position='fixed' className='app-bar'>
       <Toolbar>
@@ -137,10 +165,11 @@ const AppBar: React.FC = () => {
         <CenterSection />
         <section className='right-section'>
           <div className='info-block'>
-            <div>
-              <span>{state.timeSigNumerator}</span>/
+            <div className='beats'>
+              <span onClick={(e: any) => setBeatsAnchor(e.target)}>{state.timeSigNumerator}</span>/
               <span>{state.timeSigDenominator}</span>
             </div>
+            <Menu anchorEl={beatsAnchor} open={!!beatsAnchor} onClose={() => setBeatsAnchor(undefined)}>{beats}</Menu>
             <sub>拍号</sub>
           </div>
           <div className='info-block'>
@@ -152,7 +181,7 @@ const AppBar: React.FC = () => {
                   const val = parseInt(e.target.value)
                   setBPMInteger((isNaN(val) ? 120 : Math.max(Math.min(val, 220), 10)).toString())
                 }}
-                onKeyDown={e => e.keyCode === 13 && updateBPM()}
+                onKeyDown={e => e.keyCode === 13 && updateBPM(e)}
                 onBlur={updateBPM}
                 value={bpmInteger}
               />.
@@ -161,7 +190,7 @@ const AppBar: React.FC = () => {
                 className='decimal'
                 value={bpmDecimal}
                 onBlur={updateBPM}
-                onKeyDown={e => e.keyCode === 13 && updateBPM()}
+                onKeyDown={e => e.keyCode === 13 && updateBPM(e)}
                 onChange={e => {
                   const val = parseInt(e.target.value)
                   setBPMDecimal((isNaN(val) ? 0 : Math.min(val, 99)).toString().padStart(2, '0'))

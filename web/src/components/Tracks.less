@@ -3,6 +3,7 @@
   display: flex;
   height: 0;
   flex-direction: column;
+  overflow: hidden;
 
   .wrapper {
     overflow: auto;
@@ -53,8 +54,30 @@
     }
   }
 
+  .play-ruler {
+    position: relative;
+    left: 200px;
+    top: 0;
+
+    .play-head {
+      margin-left: -11px;
+    }
+  }
+
   .playlist {
     flex: 1;
     min-height: 100%;
+    width: 0;
+    overflow: hidden;
+    position: relative;
+
+    .notes {
+      position: relative;
+
+      div {
+        position: absolute;
+        background-color: #fff;
+      }
+    }
   }
 }
