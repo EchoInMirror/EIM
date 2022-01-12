@@ -71,14 +71,21 @@ export default class Client {
         case ClientboundPacket.TrackMidiData: {
           let len = buf.readUint8()
           const trackMidiData = { ...$globalData.trackMidiData }
+          let maxNoteTime = 0
           while (len-- > 0) {
             const key = buf.readIString()
             trackMidiData[key] = { notes: [] }
             const { notes } = trackMidiData[key]
             let cnt = buf.readUint16()
-            while (cnt-- > 0) notes.push([buf.readUint8(), buf.readUint8(), buf.readUint32(), buf.readUint32()])
+            while (cnt-- > 0) {
+              let startTime: number
+              let endTime: number
+              notes.push([buf.readUint8(), buf.readUint8(), startTime = buf.readUint32(), endTime = buf.readUint32()])
+              const curTime = startTime + endTime
+              if (curTime > maxNoteTime) maxNoteTime = curTime
+            }
           }
-          $dispatch({ type: ReducerTypes.SetTrackMidiData, trackMidiData })
+          $dispatch({ type: ReducerTypes.SetTrackMidiData, trackMidiData, maxNoteTime })
           break
         }
       }

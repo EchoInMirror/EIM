@@ -18,7 +18,7 @@
       z-index: 1;
       margin-top: @rule-height;
 
-      & > div {
+      .wrapper {
         display: flex;
       }
 
@@ -26,6 +26,8 @@
         flex: 1;
         position: relative;
         user-select: none;
+        width: 0;
+        overflow: hidden;
 
         .notes div {
           border-radius: 2px;
@@ -33,6 +35,11 @@
           position: absolute;
         }
       }
+    }
+
+    .grid {
+      position: absolute;
+      width: inherit;
     }
 
     .keyboard {

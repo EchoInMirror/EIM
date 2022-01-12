@@ -5,11 +5,26 @@
   position: absolute;
   top: 1px;
   z-index: 2;
+  width: calc(100% - 200px);
+
+  .scrollbar {
+    user-select: none;
+    .scrollbar-thumb {
+      cursor: grab;
+      height: 10px;
+      border-radius: 10px;
+      background: var(--scrollbar-color);
+
+      &:active {
+        cursor: grabbing;
+      }
+    }
+  }
 
   .play-head {
     position: relative;
     margin-left: 53px;
-    top: 20px;
+    top: 10px;
     &::before {
       position: absolute;
       background-color: currentColor;

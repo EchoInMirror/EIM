@@ -3,7 +3,7 @@ import ByteBuffer from 'bytebuffer'
 import LoadingButton from '@mui/lab/LoadingButton'
 import VolumeUp from '@mui/icons-material/VolumeUp'
 import PlayRuler from './PlayRuler'
-import React, { useState, useEffect, createRef } from 'react'
+import React, { useState, useEffect, createRef, useRef } from 'react'
 import useGlobalData, { ReducerTypes, TrackMidiNoteData } from '../reducer'
 import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme } from '@mui/material'
 import { ClientboundPacket, TrackInfo } from '../Client'
@@ -36,7 +36,7 @@ const TrackActions: React.FC<{ info: TrackInfo }> = ({ info }) => {
   )
 }
 
-const Track: React.FC<{ data: TrackMidiNoteData[], width: number, ppq: number }> = ({ data, width, ppq }) => {
+const Track: React.FC<{ data: TrackMidiNoteData[], width: number }> = ({ data, width }) => {
   return (
     <div className='notes'>
       {data && data.map((it, i) => (
@@ -44,8 +44,8 @@ const Track: React.FC<{ data: TrackMidiNoteData[], width: number, ppq: number }>
           key={i}
           style={{
             bottom: (it[0] / 132 * 100) + '%',
-            left: it[2] / ppq * width * 4,
-            width: it[3] / ppq * width * 4
+            left: it[2] * width,
+            width: it[3] * width
           }}
         />
       ))}
@@ -83,7 +83,8 @@ const Tracks: React.FC = () => {
   const [tracks, setTracks] = useState<TrackInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [height] = useState(70)
-  const [noteWidth] = useState(6)
+  const [noteWidth] = useState(0.4)
+  const playListRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     $client.refresh()
@@ -101,12 +102,13 @@ const Tracks: React.FC = () => {
     return () => $client.off(ClientboundPacket.SyncTrackInfo)
   }, [])
 
-  barLength = noteWidth * 4
+  barLength = noteWidth * state.ppq
+  const beatWidth = barLength / (16 / state.timeSigDenominator)
 
   return (
     <main className='tracks'>
       <Toolbar />
-      <PlayRuler headRef={playHeadRef} width={1500} />
+      <PlayRuler headRef={playHeadRef} noteWidth={noteWidth} movableRef={playListRef} />
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
         <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1, '& li': { height } }}>
           <Divider />
@@ -128,15 +130,15 @@ const Tracks: React.FC = () => {
             新增轨道
           </LoadingButton>
         </Paper>
-        <Box className='playlist' sx={{ '& .notes': { height }, '& .notes div': { height: height / 132 + 'px' } }}>
-          <div>
-            <Grid timeSigNumerator={state.timeSigNumerator} width={noteWidth} />
-            <svg xmlns='http://www.w3.org/2000/svg' width='2200' height='100%' style={{ position: 'absolute' }}>
+        <Box className='playlist' sx={{ '& .notes': { height }, '& .notes div': { height: height / 132 + 'px' } }} ref={playListRef}>
+          <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth }}>
+            <Grid timeSigNumerator={state.timeSigNumerator} width={beatWidth} />
+            <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
               <rect fill='url(#playlist-grid)' x='0' y='0' width='100%' height='100%' />
             </svg>
             {tracks.map(it => (
               <div key={it.uuid} style={{ backgroundColor: alpha(it.color, 0.1) }}>
-                <Track data={state.trackMidiData[it.uuid]?.notes} ppq={state.ppq} width={noteWidth} />
+                <Track data={state.trackMidiData[it.uuid]?.notes} width={noteWidth} />
                 <Divider />
               </div>
             ))}

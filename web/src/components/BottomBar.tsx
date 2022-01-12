@@ -55,31 +55,31 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
   )
 }
 
-const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, ppq: number, color: string }> =
-  ({ data, width, ppq, color }) => {
-    const ref = useRef<HTMLDivElement | null>(null)
-    useEffect(() => {
-      const cur = ref.current
-      if (!cur || !data) return
-      cur.innerText = ''
-      data.forEach(it => {
-        const elm = document.createElement('div')
-        elm.style.bottom = (it[0] / 132 * 100) + '%'
-        elm.style.left = (it[2] / ppq * width * 4) + 'px'
-        elm.style.width = (it[3] / ppq * width * 4) + 'px'
-        elm.style.backgroundColor = alpha(color, 0.4 + 0.6 * it[1] / 127)
-        cur.appendChild(elm)
-      })
-    }, [data, width, ppq, color])
-    return (
-      <div className='notes' key={width} ref={ref} />
-    )
-  }
+const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, color: string }> = ({ data, width, color }) => {
+  const ref = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const cur = ref.current
+    if (!cur || !data) return
+    cur.innerText = ''
+    data.forEach(it => {
+      const elm = document.createElement('div')
+      elm.style.bottom = (it[0] / 132 * 100) + '%'
+      elm.style.left = (it[2] * width) + 'px'
+      elm.style.width = (it[3] * width) + 'px'
+      elm.style.backgroundColor = alpha(color, 0.4 + 0.6 * it[1] / 127)
+      cur.appendChild(elm)
+    })
+  }, [data, width, color])
+  return (
+    <div className='notes' ref={ref} />
+  )
+}
 
 const Editor: React.FC = () => {
-  const [beatWidth] = useState(10)
+  const [noteWidth] = useState(0.4)
   const [noteHeight] = useState(14)
   const [state] = useGlobalData()
+  const editorRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     let pressedKeys: number[] = []
@@ -109,7 +109,8 @@ const Editor: React.FC = () => {
     }
   }, [state.activeTrack])
 
-  barLength = beatWidth * 4
+  barLength = noteWidth * state.ppq
+  const beatWidth = barLength / (16 / state.timeSigDenominator)
 
   return (
     <div className='editor'>
@@ -117,8 +118,8 @@ const Editor: React.FC = () => {
         当前轨道: {$client.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
       </Box>
       <Paper square elevation={3} className='scrollable'>
-        <PlayRuler headRef={playHeadRef} width={1500} />
-        <div>
+        <PlayRuler headRef={playHeadRef} noteWidth={noteWidth} movableRef={editorRef} />
+        <div className='wrapper'>
           <Paper
             square
             elevation={6}
@@ -128,8 +129,8 @@ const Editor: React.FC = () => {
             {keys}
           </Paper>
           <Box
+            ref={editorRef}
             className='notes-wrapper'
-            style={{ transform: 'translateX(0px)' }}
             sx={{
               '& .notes div': {
                 boxShadow: theme => theme.shadows[1],
@@ -138,17 +139,18 @@ const Editor: React.FC = () => {
               }
             }}
           >
-            <EditorGrid width={beatWidth} height={noteHeight} timeSigNumerator={state.timeSigNumerator} timeSigDenominator={state.timeSigDenominator} />
-            <svg xmlns='http://www.w3.org/2000/svg' width='2200' height='100%' style={{ position: 'absolute' }}>
-              <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
-              <rect fill='url(#editor-grid-x)' x='0' y='0' width='100%' height='100%' />
-            </svg>
-            <Notes
-              data={state.trackMidiData[state.activeTrack]?.notes}
-              width={beatWidth}
-              ppq={state.ppq}
-              color={$client.tracks[$client.trackNameToIndex[state.activeTrack]]?.color || ''}
-            />
+            <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth }}>
+              <EditorGrid width={beatWidth} height={noteHeight} timeSigNumerator={state.timeSigNumerator} timeSigDenominator={state.timeSigDenominator} />
+              <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
+                <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
+                <rect fill='url(#editor-grid-x)' x='0' y='0' width='100%' height='100%' />
+              </svg>
+              <Notes
+                data={state.trackMidiData[state.activeTrack]?.notes}
+                width={noteWidth}
+                color={$client.tracks[$client.trackNameToIndex[state.activeTrack]]?.color || ''}
+              />
+            </div>
           </Box>
         </div>
       </Paper>

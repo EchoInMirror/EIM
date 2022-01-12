@@ -4,7 +4,8 @@ import { createContext, useContext } from 'react'
 export enum ReducerTypes {
   ChangeActiveTrack,
   SetProjectStatus,
-  SetTrackMidiData
+  SetTrackMidiData,
+  SetMaxNoteTime
 }
 
 export type TrackMidiNoteData = [number, number, number, number]
@@ -19,6 +20,7 @@ export const initialState = {
   timeSigDenominator: 4,
   startTime: Date.now(),
   currentTime: 0,
+  maxNoteTime: 0,
   trackMidiData: { } as TrackMidiData
 }
 
@@ -45,8 +47,16 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
     case ReducerTypes.SetTrackMidiData:
       return {
         ...state,
+        maxNoteTime: action.maxNoteTime,
         trackMidiData: action.trackMidiData
       }
+    case ReducerTypes.SetMaxNoteTime:
+      return state.maxNoteTime === action.maxNoteTime
+        ? state
+        : {
+            ...state,
+            maxNoteTime: action.maxNoteTime
+          }
     default:
       return state
   }
