@@ -4,12 +4,24 @@
   height: 0;
   flex-direction: column;
   overflow: hidden;
+  background: inherit;
 
   .wrapper {
     overflow: auto;
     display: flex;
     flex: 1;
     align-items: flex-start;
+    z-index: 2;
+  }
+
+  .scale-slider {
+    background: inherit;
+    position: absolute;
+    margin-left: 20px;
+    width: 180px;
+    top: 4px;
+    z-index: 2;
+    padding-right: 20px;
   }
 
   ol {
@@ -58,10 +70,6 @@
     position: relative;
     left: 200px;
     top: 0;
-
-    .play-head {
-      margin-left: -11px;
-    }
   }
 
   .playlist {
@@ -71,11 +79,15 @@
     overflow: hidden;
     position: relative;
 
-    & > div { padding-bottom: 36.5px; }
+    & > div {
+      min-width: 100%;
+      padding-bottom: 36.5px;
+    }
 
     .grid {
       position: absolute;
       width: inherit;
+      min-width: 100%;
     }
 
     .notes {
@@ -83,7 +95,6 @@
 
       div {
         position: absolute;
-        background-color: #fff;
       }
     }
   }

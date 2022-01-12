@@ -78,12 +78,14 @@ const readTrack = (buf: ByteBuffer): TrackInfo => ({
   solo: !!buf.readUint8()
 })
 
+const noteWidths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1, 1.5, 2, 3, 4.5]
+
 const Tracks: React.FC = () => {
   const [state] = useGlobalData()
   const [tracks, setTracks] = useState<TrackInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [height] = useState(70)
-  const [noteWidth] = useState(0.4)
+  const [noteWidth, setNoteWidth] = useState(0.4)
   const playListRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
@@ -109,6 +111,15 @@ const Tracks: React.FC = () => {
     <main className='tracks'>
       <Toolbar />
       <PlayRuler headRef={playHeadRef} noteWidth={noteWidth} movableRef={playListRef} />
+      <div className='scale-slider'>
+        <Toolbar />
+        <Slider
+          min={0}
+          max={9}
+          defaultValue={3}
+          onChange={(_, val) => setNoteWidth(noteWidths[val as number])}
+        />
+      </div>
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
         <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1, '& li': { height } }}>
           <Divider />
@@ -137,10 +148,10 @@ const Tracks: React.FC = () => {
               <rect fill='url(#playlist-grid)' x='0' y='0' width='100%' height='100%' />
             </svg>
             {tracks.map(it => (
-              <div key={it.uuid} style={{ backgroundColor: alpha(it.color, 0.1) }}>
+              <Box key={it.uuid} sx={{ backgroundColor: alpha(it.color, 0.1), '& .notes div': { backgroundColor: it.color } }}>
                 <Track data={state.trackMidiData[it.uuid]?.notes} width={noteWidth} />
                 <Divider />
-              </div>
+              </Box>
             ))}
           </div>
         </Box>

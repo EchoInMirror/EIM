@@ -4,6 +4,8 @@
   width: 100%;
   z-index: 1;
 
+  & > div > div { z-index: 1; }
+
   footer {
     height: 100%;
   }
@@ -11,6 +13,26 @@
   .editor {
     height: 100%;
     display: flex;
+
+    .actions {
+      width: 200px;
+      z-index: 2;
+    }
+
+    .scale-slider {
+      margin-top: 4px;
+      margin-left: 20px;
+      width: 160px;
+      display: block;
+    }
+
+    .bar-numbers {
+      padding-left: 64px;
+    }
+
+    .play-head {
+      margin-left: 53px;
+    }
 
     .scrollable {
       overflow: hidden auto;
@@ -40,12 +62,13 @@
     .grid {
       position: absolute;
       width: inherit;
+      min-width: 100%;
     }
 
     .keyboard {
       display: flex;
       margin-top: -1px;
-      z-index: 1;
+      z-index: 2;
       flex-direction: column-reverse;
 
       button {

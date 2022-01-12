@@ -3,7 +3,7 @@ import React, { useEffect, createRef, useRef, useState } from 'react'
 import useGlobalData, { TrackMidiNoteData } from '../reducer'
 import PlayRuler from './PlayRuler'
 import { Resizable } from 're-resizable'
-import { Paper, Button, Box, useTheme, alpha } from '@mui/material'
+import { Paper, Button, Box, useTheme, alpha, Slider } from '@mui/material'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
@@ -17,6 +17,8 @@ for (let i = 0; i < 132; i++) {
   else if (name.length === 2) elm = <i>{elm}</i>
   keys.push(<Button key={i} data-eim-keyboard-key={i}>{elm}</Button>)
 }
+
+const noteWidths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1, 1.5, 2, 3, 4.5]
 
 const scales = [true, false, true, false, true, true, false, true, false, true, false, true].reverse()
 
@@ -76,7 +78,7 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, color: string 
 }
 
 const Editor: React.FC = () => {
-  const [noteWidth] = useState(0.4)
+  const [noteWidth, setNoteWidth] = useState(0.4)
   const [noteHeight] = useState(14)
   const [state] = useGlobalData()
   const editorRef = useRef<HTMLElement | null>(null)
@@ -114,7 +116,14 @@ const Editor: React.FC = () => {
 
   return (
     <div className='editor'>
-      <Box className='actions' sx={{ backgroundColor: theme => theme.palette.background.bright, width: 200, zIndex: 1 }}>
+      <Box className='actions' sx={{ backgroundColor: theme => theme.palette.background.bright }}>
+        <Slider
+          min={0}
+          max={9}
+          defaultValue={3}
+          className='scale-slider'
+          onChange={(_, val) => setNoteWidth(noteWidths[val as number])}
+        />
         当前轨道: {$client.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
       </Box>
       <Paper square elevation={3} className='scrollable'>

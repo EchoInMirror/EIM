@@ -21,10 +21,31 @@
     }
   }
 
+  .bar-numbers {
+    width: 100%;
+    position: absolute;
+    white-space: nowrap;
+    height: 1.3rem;
+    bottom: 0;
+    font-size: 12px;
+    font-weight: lighter;
+    overflow: hidden;
+
+    & > span {
+      display: inline-block;
+
+      &:nth-child(4n + 1) {
+        font-size: 1rem;
+        font-weight: bold;
+      }
+    }
+  }
+
   .play-head {
     position: relative;
-    margin-left: 53px;
-    top: 10px;
+    top: 0;
+    margin-left: -11px;
+
     &::before {
       position: absolute;
       background-color: currentColor;

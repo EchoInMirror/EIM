@@ -7,6 +7,13 @@ let movingPos = 0
 let curElement: HTMLDivElement | undefined
 
 const map: Record<number, React.RefObject<HTMLElement | null>> = { }
+const map2: Record<number, React.RefObject<HTMLElement | null>> = { }
+const map3: Record<number, React.RefObject<HTMLElement | null>> = { }
+
+const barNumbers: JSX.Element[] = []
+for (let i = 1; i < 1000; i++) {
+  barNumbers.push(<span key={i}>{i}</span>)
+}
 
 const mousemove = (e: MouseEvent) => {
   if (!curElement) return
@@ -16,9 +23,14 @@ const mousemove = (e: MouseEvent) => {
   const max = target.parentElement!.clientWidth - target.clientWidth
   val = Math.max(Math.min(val, max), 0)
   target.style.transform = `translateX(${val}px)`
-  const movable = map[target.dataset.scrollbarId as any]?.current as HTMLElement
+  const id = target.dataset.scrollbarId as any
+  const movable = map[id]?.current as HTMLElement
   if (!movable) return
-  movable.scrollLeft = val / max * (movable.scrollWidth - movable.clientWidth)
+  const val2 = movable.scrollLeft = val / max * (movable.scrollWidth - movable.clientWidth)
+  const movable2 = map2[id]?.current as HTMLElement
+  if (movable2) movable2.scrollLeft = val2
+  const movable3 = map3[id]?.current as HTMLElement
+  if (movable3) movable3.style.left = `-${val2}px`
 }
 const mousedown = (e: any) => {
   if (e.target?.className !== 'scrollbar-thumb') return
@@ -34,9 +46,14 @@ document.addEventListener('mouseup', mouseup)
 document.addEventListener('mousedown', mousedown)
 
 let id = 0
-const PlayRuler: React.FC<{ headRef: React.Ref<HTMLDivElement>, noteWidth: number, movableRef: React.RefObject<HTMLElement | null> }> = ({ headRef, noteWidth, movableRef }) => {
+const PlayRuler: React.FC<{
+  headRef: React.Ref<HTMLDivElement>
+  noteWidth: number
+  movableRef: React.RefObject<HTMLElement | null>
+}> = ({ headRef, noteWidth, movableRef }) => {
   const [state] = useGlobalData()
   const ref = useRef<HTMLDivElement | null>(null)
+  const ref2 = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     const elm = ref.current
     if (!elm) return
@@ -52,7 +69,13 @@ const PlayRuler: React.FC<{ headRef: React.Ref<HTMLDivElement>, noteWidth: numbe
   const curId = useMemo(() => id++, [])
   useEffect(() => {
     map[curId] = movableRef
-    return () => { delete map[curId] }
+    map2[curId] = ref2
+    map3[curId] = headRef as any
+    return () => {
+      delete map[curId]
+      delete map2[curId]
+      delete map3[curId]
+    }
   }, [movableRef])
 
   return (
@@ -60,9 +83,8 @@ const PlayRuler: React.FC<{ headRef: React.Ref<HTMLDivElement>, noteWidth: numbe
       <Box className='scrollbar' ref={ref} sx={{ '& div': { boxShadow: theme => theme.shadows[3] } }}>
         <div className='scrollbar-thumb' data-scrollbar-id={curId} />
       </Box>
-      <div className='play-head' ref={headRef}>
-        <PlayArrowRounded />
-      </div>
+      <Box className='bar-numbers' ref={ref2} sx={{ '& > span': { width: noteWidth * state.ppq * 4 } }}>{barNumbers}</Box>
+      <div className='play-head' ref={headRef}><PlayArrowRounded /></div>
     </Paper>
   )
 }
