@@ -91,10 +91,20 @@ const PlayRuler: React.FC<{
 
   return (
     <Paper square elevation={3} className='play-ruler' sx={{ background: theme => theme.palette.background.bright }}>
-      <Box className='scrollbar' ref={ref} sx={{ '& div': { boxShadow: theme => theme.shadows[3] } }}>
+      <Box className='scrollbar' ref={ref}>
         <div className='scrollbar-thumb' data-scrollbar-id={curId} ref={ref3} />
       </Box>
-      <Box className='bar-numbers' ref={ref2} sx={{ '& > span': { width: noteWidth * state.ppq * 4 } }}>{barNumbers}</Box>
+      <Box
+        className='bar-numbers'
+        ref={ref2}
+        sx={{ '& > span': { width: noteWidth * state.ppq * 4 } }}
+        onClick={e => {
+          const rect = e.currentTarget!.firstElementChild!.getBoundingClientRect()
+          $client.setProjectStatus(0, Math.max(e.pageX - rect.left, 0) / noteWidth / state.ppq / state.bpm * 60, state.isPlaying, 0, 0)
+        }}
+      >
+        {barNumbers}
+      </Box>
       <div className='play-head' ref={headRef}><PlayArrowRounded /></div>
     </Paper>
   )

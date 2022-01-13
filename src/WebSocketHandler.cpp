@@ -20,14 +20,9 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 			info.bpm = bpm;
 			shouldUpdate = true;
 		}
-		if (time > 0.000001) {
+		if (time > -1) {
 			info.timeInSeconds = time;
 			info.timeInSamples = (juce::int64)(master->getSampleRate() * time);
-			shouldUpdate = true;
-		}
-		if (time <= -1) {
-			info.timeInSeconds = 0;
-			info.timeInSamples = 0;
 			shouldUpdate = true;
 		}
 		if (isPlaying != info.isPlaying) {

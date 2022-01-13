@@ -41,6 +41,18 @@
     }
   }
 
+  .left-section {
+    .MuiSlider-root {
+      width: 160px;
+      margin-left: 30px;
+      
+      .MuiSlider-track { border: none; }
+      .MuiSlider-thumb { background-color: #fff; }
+      &:before { box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
+      &:hover, &.Mui-focusVisible, &.Mui-active { box-shadow: none; }
+    }
+  }
+
   .center-section {
     margin: 0 auto;
     .time {

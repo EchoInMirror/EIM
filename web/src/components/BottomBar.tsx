@@ -169,7 +169,7 @@ const Editor: React.FC = () => {
 
 const BottomBar: React.FC = () => {
   return (
-    <Resizable enable={{ top: true }} className='bottom-bar' maxHeight='80vh'>
+    <Resizable enable={{ top: true }} className='bottom-bar' maxHeight='80vh' minHeight={0}>
       <Paper
         square
         id='bottom-bar'
