@@ -1,7 +1,7 @@
 #include "MasterTrack.h"
 #include "Main.h"
 
-MasterTrack::MasterTrack(): SynchronizedAudioProcessorGraph(), juce::AudioPlayHead() {
+MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	manager.addDefaultFormats();
 	setPlayHead(this);
 
@@ -58,22 +58,16 @@ void MasterTrack::loadPluginAsync(std::unique_ptr<juce::PluginDescription> desc,
 juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, std::string color) {
 	juce::MidiFile file;
 	auto track = std::make_unique<Track>(name, color, this);
+	auto trackVal = track.get();
 	track->setRateAndBufferSizeDetails(getSampleRate(), getBlockSize());
 	track->prepareToPlay(getSampleRate(), getBlockSize());
 	juce::FileInputStream theStream(juce::File("E:/Midis/UTMR&C VOL 1-14 [MIDI FILES] for other DAWs FINAL by Hunter UT/VOL 1/1. Sean Tyas & Darren Porter - Relentless LD.mid"));
 	file.readFrom(theStream);
 	file.getTimeFormat();
-	// file.convertTimestampTicksToSeconds();
-	/* double sampleRate = getSampleRate();
-	auto t = file.getTrack(1);
-	for (int i = 0; i < t->getNumEvents(); i++) {
-		auto& m = t->getEventPointer(i)->message;
-		int sampleOffset = (int)(sampleRate * m.getTimeStamp());
-		track->midiBuffer.addEvent(m, sampleOffset);
-	}*/
 	track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
 	endTime = juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator) * ppq;
 	auto node = addNode(std::move(track));
+	trackVal->currentNode = node;
 	tracks.push_back(node);
 	addConnection({ { node->nodeID, 0 }, { outputNodeID, 0 } });
 	addConnection({ { node->nodeID, 1 }, { outputNodeID, 1 } });
@@ -95,23 +89,27 @@ void MasterTrack::transportPlay(bool shouldStartPlaying) {
 	EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
 }
 
+void MasterTrack::calcPositionInfo() {
+	if (!currentPositionInfo.isPlaying) return;
+	currentPositionInfo.timeInSeconds = ((double)currentPositionInfo.timeInSamples) / getSampleRate();
+	currentPositionInfo.ppqPosition = currentPositionInfo.timeInSeconds / 60.0 * currentPositionInfo.bpm * ppq;
+	if (endTime >= currentPositionInfo.ppqPosition) return;
+	currentPositionInfo.timeInSeconds = 0;
+	currentPositionInfo.timeInSamples = 0;
+	currentPositionInfo.ppqPosition = 0;
+	EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
+}
+
 void MasterTrack::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
-	if (currentPositionInfo.isPlaying) {
-		currentPositionInfo.timeInSeconds = ((double)currentPositionInfo.timeInSamples) / getSampleRate();
-		currentPositionInfo.ppqPosition = currentPositionInfo.timeInSeconds / 60.0 * currentPositionInfo.bpm * ppq;
-		if (endTime < currentPositionInfo.ppqPosition) {
-			currentPositionInfo.timeInSeconds = 0;
-			currentPositionInfo.timeInSamples = 0;
-			currentPositionInfo.ppqPosition = 0;
-			EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
-		}
-	}
-	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
+	calcPositionInfo();
+	AudioProcessorGraph::processBlock(buffer, midiMessages);
 	if (currentPositionInfo.isPlaying) currentPositionInfo.timeInSamples += buffer.getNumSamples();
 }
 
 void MasterTrack::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {
-	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
+	calcPositionInfo();
+	AudioProcessorGraph::processBlock(buffer, midiMessages);
+	if (currentPositionInfo.isPlaying) currentPositionInfo.timeInSamples += buffer.getNumSamples();
 }
 
 void MasterTrack::stopAllNotes() {

@@ -4,7 +4,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 
-class MasterTrack: public SynchronizedAudioProcessorGraph, public juce::AudioPlayHead {
+class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead {
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
@@ -38,6 +38,8 @@ private:
     juce::AudioDeviceManager deviceManager;
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     juce::AudioProcessorPlayer graphPlayer;
+
+    void calcPositionInfo();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrack)
 };

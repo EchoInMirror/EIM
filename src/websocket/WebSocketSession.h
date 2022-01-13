@@ -10,6 +10,7 @@ public:
     explicit WebSocketSession(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<SharedState> const& state) : ws(std::move(socket)), state(state) {}
     ~WebSocketSession();
     ByteBuffer buffer;
+    boost::shared_ptr<SharedState> state;
 
     void doWrite();
     void doRead();
@@ -29,6 +30,5 @@ public:
     void send(boost::shared_ptr<ByteBuffer> ss);
 private:
     boost::beast::websocket::stream<boost::beast::tcp_stream> ws;
-    boost::shared_ptr<SharedState> state;
     std::vector<boost::shared_ptr<ByteBuffer>> queue;
 };

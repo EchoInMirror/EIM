@@ -18,8 +18,8 @@ public:
  
     //==============================================================================
     const juce::String getName() const override                  { return {}; }
-    bool acceptsMidi() const override                            { return false; }
-    bool producesMidi() const override                           { return false; }
+    bool acceptsMidi() const override                            { return true; }
+    bool producesMidi() const override                           { return true; }
     double getTailLengthSeconds() const override                 { return 0; }
  
     //==============================================================================

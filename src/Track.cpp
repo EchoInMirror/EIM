@@ -4,7 +4,7 @@
 #include "Main.h"
 #include "websocket/Packets.h"
 
-Track::Track(std::string name, std::string color, MasterTrack* masterTrack): SynchronizedAudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
+Track::Track(std::string name, std::string color, MasterTrack* masterTrack): AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
 	setChannelLayoutOfBus(true, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	setChannelLayoutOfBus(false, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	auto input = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode));
@@ -18,6 +18,7 @@ Track::Track(std::string name, std::string color, MasterTrack* masterTrack): Syn
 	addConnection({ { begin->nodeID, 0 }, { end->nodeID, 0 } });
 	addConnection({ { begin->nodeID, 1 }, { end->nodeID, 1 } });
 	addConnection({ { midiIn, juce::AudioProcessorGraph::midiChannelIndex }, { midiOut, juce::AudioProcessorGraph::midiChannelIndex } });
+	chain.get<1>().setGainLinear(1);
 }
 
 void Track::setGenerator(std::unique_ptr<PluginWrapper> instance) {
@@ -28,7 +29,8 @@ void Track::setGenerator(std::unique_ptr<PluginWrapper> instance) {
 }
 
 void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
-	SynchronizedAudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
+	AudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
+	for (auto it : getNodes()) it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
 	messageCollector.reset(newSampleRate);
 }
 
@@ -49,12 +51,14 @@ void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessage
 
 void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
 	addMidiEventsToBuffer(buffer.getNumSamples(), midiMessages);
-	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
+	AudioProcessorGraph::processBlock(buffer, midiMessages);
+	auto inoutBlock = juce::dsp::AudioBlock<float>(buffer).getSubsetChannelBlock(0, (size_t)2);
+	chain.process(juce::dsp::ProcessContextReplacing<float>(inoutBlock));
 }
 
 void Track::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {
 	addMidiEventsToBuffer(buffer.getNumSamples(), midiMessages);
-	SynchronizedAudioProcessorGraph::processBlock(buffer, midiMessages);
+	AudioProcessorGraph::processBlock(buffer, midiMessages);
 }
 
 void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
@@ -67,6 +71,14 @@ void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
 	auto buf = makeTrackMidiDataPacket(1);
 	writeMidiData(buf.get());
 	EIMApplication::getEIMInstance()->listener->state->send(buf);
+}
+
+void Track::writeTrackInfo(ByteBuffer* buf) {
+	buf->writeString(name);
+	buf->writeString(color);
+	buf->writeFloat(chain.get<1>().getGainLinear());
+	buf->writeBoolean(currentNode->isBypassed());
+	buf->writeBoolean(false);
 }
 
 void Track::writeMidiData(ByteBuffer* buf) {
@@ -88,4 +100,28 @@ void Track::writeMidiData(ByteBuffer* buf) {
 		buf->writeUInt32(on);
 		buf->writeUInt32(off);
 	}
+}
+
+void Track::setProcessingPrecision(ProcessingPrecision newPrecision) {
+	AudioProcessorGraph::setProcessingPrecision(newPrecision);
+	for (auto it : getNodes()) it->getProcessor()->setProcessingPrecision(newPrecision);
+}
+
+void Track::prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) {
+	AudioProcessorGraph::prepareToPlay(sampleRate, estimatedSamplesPerBlock);
+	chain.prepare({ sampleRate, (juce::uint32)estimatedSamplesPerBlock, 2 });
+	for (auto it : getNodes()) it->getProcessor()->prepareToPlay(sampleRate, estimatedSamplesPerBlock);
+}
+
+void Track::setPlayHead(juce::AudioPlayHead* newPlayHead) {
+	AudioProcessorGraph::setPlayHead(newPlayHead);
+	for (auto it : getNodes()) it->getProcessor()->setPlayHead(newPlayHead);
+}
+
+void Track::setMuted(bool val) {
+	if (!currentNode) return;
+	auto msg = juce::MidiMessage::allNotesOff(1);
+	msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
+	messageCollector.addMessageToQueue(msg);
+	currentNode->setBypassed(val);
 }

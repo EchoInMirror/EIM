@@ -2,6 +2,7 @@ import './Tracks.less'
 import ByteBuffer from 'bytebuffer'
 import LoadingButton from '@mui/lab/LoadingButton'
 import VolumeUp from '@mui/icons-material/VolumeUp'
+import VolumeMute from '@mui/icons-material/VolumeMute'
 import PlayRuler from './PlayRuler'
 import React, { useState, useEffect, createRef, useRef } from 'react'
 import useGlobalData, { ReducerTypes, TrackMidiNoteData } from '../reducer'
@@ -11,8 +12,10 @@ import { ClientboundPacket, TrackInfo } from '../Client'
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
 
-const TrackActions: React.FC<{ info: TrackInfo }> = ({ info }) => {
+const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, index }) => {
   const [state, dispatch] = useGlobalData()
+  const [volume, setVolume] = useState(100)
+  useEffect(() => setVolume(info.volume * 100), [info.volume])
   return (
     <Box
       component='li'
@@ -26,10 +29,22 @@ const TrackActions: React.FC<{ info: TrackInfo }> = ({ info }) => {
       </div>
       <div>
         <Stack spacing={1} direction='row' alignItems='center'>
-          <IconButton size='small' sx={{ marginLeft: '-4px' }}>
-            <VolumeUp fontSize='small' />
+          <IconButton size='small' sx={{ marginLeft: '-4px' }} onClick={() => $client.updateTrackInfo(index, undefined, undefined, -1, !info.muted, info.solo)}>
+            {info.muted ? <VolumeMute fontSize='small' /> : <VolumeUp fontSize='small' />}
           </IconButton>
-          <Slider size='small' valueLabelDisplay='auto' value={info.volume} sx={{ margin: '0!important' }} />
+          <Slider
+            size='small'
+            valueLabelDisplay='auto'
+            value={volume}
+            sx={{ margin: '0!important' }}
+            max={150}
+            min={0}
+            valueLabelFormat={val => `${Math.round(val)}% ${val > 0 ? (Math.log10(val / 100) * 20).toFixed(2) + '分贝' : '静音'}`}
+            onChange={(_, val) => {
+              setVolume(val as number)
+              $client.updateTrackInfo(index, undefined, undefined, (val as number) / 100, info.muted, info.solo)
+            }}
+          />
         </Stack>
       </div>
     </Box>
@@ -69,11 +84,11 @@ const Grid: React.FC<{ timeSigNumerator: number, width: number }> = ({ width, ti
   )
 }
 
-const readTrack = (buf: ByteBuffer): TrackInfo => ({
-  uuid: buf.readIString(),
+const readTrack = (buf: ByteBuffer, uuid = buf.readIString()): TrackInfo => ({
+  uuid,
   name: buf.readIString(),
   color: buf.readIString(),
-  volume: buf.readUint8(),
+  volume: buf.readFloat(),
   muted: !!buf.readUint8(),
   solo: !!buf.readUint8()
 })
@@ -100,6 +115,11 @@ const Tracks: React.FC = () => {
       }
       $client.tracks = arr
       setTracks(arr)
+    }).on(ClientboundPacket.UpdateTrackInfo, buf => {
+      const id = buf.readUint8()
+      if (!$client.tracks[id]) return
+      $client.tracks[id] = readTrack(buf, $client.tracks[id].uuid)
+      setTracks([...$client.tracks])
     })
     return () => $client.off(ClientboundPacket.SyncTrackInfo)
   }, [])
@@ -123,7 +143,7 @@ const Tracks: React.FC = () => {
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
         <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1, '& li': { height } }}>
           <Divider />
-          {tracks.map(it => <React.Fragment key={it.uuid}><TrackActions info={it} /><Divider /></React.Fragment>)}
+          {tracks.map((it, i) => <React.Fragment key={it.uuid}><TrackActions info={it} index={i} /><Divider /></React.Fragment>)}
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}

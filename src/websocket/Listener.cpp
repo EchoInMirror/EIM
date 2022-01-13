@@ -35,11 +35,7 @@ void Listener::syncTrackInfo() {
     for (auto& it : tracks) {
         auto track = (Track*)it->getProcessor();
         buf->writeString(track->uuid.toString());
-        buf->writeString(track->name);
-        buf->writeString(track->color);
-        buf->writeUInt8(80);
-        buf->writeBoolean(false);
-        buf->writeBoolean(false);
+        track->writeTrackInfo(buf.get());
     }
     state->send(buf);
 }

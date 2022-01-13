@@ -39,7 +39,7 @@ boost::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size) {
 boost::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket() {
 	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
 	auto& tracks = masterTrack->tracks;
-	auto buf = makeTrackMidiDataPacket(tracks.size());
+	auto buf = makeTrackMidiDataPacket((int)tracks.size());
 	for (auto& it : tracks) ((Track*)it->getProcessor())->writeMidiData(buf.get());
 	return buf;
 }

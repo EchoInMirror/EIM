@@ -20,14 +20,16 @@ export enum ServerboundPacket {
   GetExplorerData,
   CreateTrack,
   Refresh,
-  MidiMessage
+  MidiMessage,
+  UpdateTrackInfo
 }
 
 export enum ClientboundPacket {
   Reply,
   ProjectStatus,
   SyncTrackInfo,
-  TrackMidiData
+  TrackMidiData,
+  UpdateTrackInfo
 }
 
 export enum ExplorerType {
@@ -93,7 +95,11 @@ export default class Client {
     }
   }
 
-  public on (id: ClientboundPacket, cb: (buf: ByteBuffer) => void) { this.events[id] = cb }
+  public on (id: ClientboundPacket, cb: (buf: ByteBuffer) => void) {
+    this.events[id] = cb
+    return this
+  }
+
   public off (id: ClientboundPacket) { delete this.events[id] }
 
   public send (buf: ByteBuffer) { this.ws.send(buf.flip().toArrayBuffer()) }
@@ -135,5 +141,10 @@ export default class Client {
   public setProjectStatus (bpm: number, time: number, isPlaying: boolean, timeSigNumerator: number, timeSigDenominator: number) {
     this.send(this.buildPack(ServerboundPacket.SetProjectStatus).writeDouble(bpm).writeDouble(time).writeUint8(+isPlaying)
       .writeUint8(timeSigNumerator).writeUint8(timeSigDenominator).writeUint16(96000))
+  }
+
+  public updateTrackInfo (id: number, name = '', color = '', volume = -1, muted = false, solo = false) {
+    this.send(this.buildPack(ServerboundPacket.UpdateTrackInfo).writeUint8(id).writeIString(name).writeIString(color)
+      .writeFloat(volume).writeUint8(+muted).writeUint8(+solo))
   }
 }

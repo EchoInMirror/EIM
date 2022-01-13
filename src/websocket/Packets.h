@@ -9,14 +9,16 @@ enum ServerboundPacket {
 	ServerboundGetExplorerData,
 	ServerboundCreateTrack,
 	ServerboundRefresh,
-	ServerboundMidiMessage
+	ServerboundMidiMessage,
+	ServerboundUpdateTrackInfo
 };
 
 enum ClientboundPacket {
 	ClientboundReply,
 	ClientboundProjectStatus,
 	ClientboundSyncTrackInfo,
-	ClientboundTrackMidiData
+	ClientboundTrackMidiData,
+	ClientboundUpdateTrackInfo
 };
 
 boost::shared_ptr<ByteBuffer> makePacket(unsigned int id);

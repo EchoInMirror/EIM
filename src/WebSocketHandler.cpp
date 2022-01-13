@@ -94,14 +94,42 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 	case ServerboundPacket::ServerboundRefresh:
 		listener->syncTrackInfo();
 		break;
-	case ServerboundPacket::ServerboundMidiMessage:
+	case ServerboundPacket::ServerboundMidiMessage: {
 		auto id = buf.readUInt8();
 		auto byte1 = buf.readUInt8();
 		auto byte2 = buf.readUInt8();
 		auto byte3 = buf.readUInt8();
 		auto& tracks = mainWindow->masterTrack->tracks;
-		DBG("" << id << " " << byte1 << " " << byte2 << " " << byte3);
 		if (tracks.size() <= id) return;
 		((Track*)tracks[id]->getProcessor())->messageCollector.addMessageToQueue(juce::MidiMessage(byte1, byte2, byte3, juce::Time::getMillisecondCounterHiRes() * 0.001));
+		break;
+	}
+	case ServerboundPacket::ServerboundUpdateTrackInfo: {
+		auto id = buf.readUInt8();
+		auto& tracks = mainWindow->masterTrack->tracks;
+		if (tracks.size() <= id) return;
+		auto track = (Track*)tracks[id]->getProcessor();
+		auto name = buf.readString();
+		if (!name.empty()) track->name = name;
+		auto color = buf.readString();
+		if (!color.empty()) track->color = color;
+		auto volume = buf.readFloat();
+		if (volume > -1) track->chain.get<1>().setGainLinear(volume);
+		auto flag = false;
+		auto muted = buf.readBoolean();
+		if (muted != tracks[id]->isBypassed()) {
+			track->setMuted(muted);
+			flag = true;
+		}
+		buf.readBoolean();
+		if (flag || session->state->size() > 1) {
+			auto out = makePacket(ClientboundPacket::ClientboundUpdateTrackInfo);
+			out->writeUInt8(id);
+			track->writeTrackInfo(out.get());
+			if (flag) session->state->send(out);
+			else session->state->sendExclude(out, session);
+		}
+		break;
+	}
 	}
 }

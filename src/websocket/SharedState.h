@@ -16,6 +16,8 @@ public:
     void join(WebSocketSession* session);
     void leave(WebSocketSession* session);
     void send(boost::shared_ptr<ByteBuffer> message);
+    void sendExclude(boost::shared_ptr<ByteBuffer> message, WebSocketSession* session);
+    int size();
     std::string const& getDocRoot() const noexcept { return docRoot; }
 private:
     std::mutex mutex;
