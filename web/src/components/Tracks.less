@@ -37,12 +37,28 @@
       padding: 8px 16px;
       transition: background-color .15s;
 
-      .color {
+      .ColorPicker-MuiButtonBase-root {
         width: 6px;
         left: 0;
         top: 0;
         bottom: 0;
+        height: unset;
+        min-width: unset;
+        margin: 0;
+        border-radius: 0;
         position: absolute;
+        box-shadow: none;
+
+        span { transition: inherit; }
+
+        div {
+          min-width: unset;
+          height: 100%;
+          width: 100%;
+          position: absolute;
+          border-radius: 0;
+          transition: inherit;
+        }
       }
 
       .title {

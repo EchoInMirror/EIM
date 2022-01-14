@@ -1,18 +1,6 @@
 import ByteBuffer from 'bytebuffer'
-import { colors } from '@mui/material'
-import { ReducerTypes } from './reducer'
-
-export interface TrackInfo {
-  uuid: string
-  name: string
-  muted: boolean
-  solo: boolean
-  color: string
-  volume: number
-}
-
-const colorValues: string[] = []
-for (const name in colors) colorValues.push((colors as any)[name][400])
+import { colorValues } from './utils'
+import { ReducerTypes, TrackInfo } from './reducer'
 
 export enum ServerboundPacket {
   Reply,
@@ -37,13 +25,21 @@ export enum ExplorerType {
   VSTPlugins
 }
 
+const readTrack = (buf: ByteBuffer, uuid = buf.readIString()): TrackInfo => ({
+  uuid,
+  name: buf.readIString(),
+  color: buf.readIString(),
+  volume: buf.readFloat(),
+  muted: !!buf.readUint8(),
+  solo: !!buf.readUint8()
+})
+
 export default class Client {
   private ws: WebSocket
   private littleEndian = true
   private replyId = 0
   private events: Record<number, (buf: ByteBuffer) => void> = { }
   private replies: Record<number, (buf: ByteBuffer) => void> = { }
-  public tracks: TrackInfo[] = []
   public trackNameToIndex: Record<string, number> = {}
 
   constructor (address: string, callback: () => void) {
@@ -90,6 +86,24 @@ export default class Client {
           $dispatch({ type: ReducerTypes.SetTrackMidiData, trackMidiData, maxNoteTime })
           break
         }
+        case ClientboundPacket.SyncTrackInfo: {
+          let len = buf.readUint8()
+          const tracks: TrackInfo[] = []
+          this.trackNameToIndex = { }
+          while (len-- > 0) {
+            const it = readTrack(buf)
+            this.trackNameToIndex[it.uuid] = tracks.push(it) - 1
+          }
+          $dispatch({ type: ReducerTypes.SetTrackInfo, tracks })
+          break
+        }
+        case ClientboundPacket.UpdateTrackInfo: {
+          const id = buf.readUint8()
+          if (!$globalData.tracks[id]) return
+          $globalData.tracks[id] = readTrack(buf, $globalData.tracks[id].uuid)
+          $dispatch({ type: ReducerTypes.SetTrackInfo, tracks: [...$globalData.tracks] })
+          break
+        }
       }
       this.events[event]?.(buf)
     }
@@ -125,7 +139,7 @@ export default class Client {
     return result
   }
 
-  public async createTrack (pos: number, identifier: string, name = '轨道' + (this.tracks.length + 1), color = colorValues[Math.random() * colorValues.length | 0]) {
+  public async createTrack (pos: number, identifier: string, name = '轨道', color = colorValues[Math.random() * colorValues.length | 0]) {
     const [packet, promise] = this.buildNeedReplyPack(ServerboundPacket.CreateTrack)
     this.send(packet.writeIString(name).writeIString(color).writeUint8(pos).writeIString(identifier))
     const err = (await promise).readIString()

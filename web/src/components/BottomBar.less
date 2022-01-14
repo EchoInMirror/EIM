@@ -44,6 +44,8 @@
         display: flex;
       }
 
+      svg { pointer-events: none; }
+
       .notes-wrapper {
         flex: 1;
         position: relative;
@@ -51,10 +53,13 @@
         width: 0;
         overflow: hidden;
 
-        .notes div {
-          border-radius: 2px;
-          cursor: pointer;
-          position: absolute;
+        .notes {
+          height: 100%;
+          div {
+            border-radius: 2px;
+            cursor: pointer;
+            position: absolute;
+          }
         }
       }
     }

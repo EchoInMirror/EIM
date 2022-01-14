@@ -112,10 +112,13 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto name = buf.readString();
 		if (!name.empty()) track->name = name;
 		auto color = buf.readString();
-		if (!color.empty()) track->color = color;
+		auto flag = false;
+		if (!color.empty()) {
+			track->color = color;
+			flag = true;
+		}
 		auto volume = buf.readFloat();
 		if (volume > -1) track->chain.get<1>().setGainLinear(volume);
-		auto flag = false;
 		auto muted = buf.readBoolean();
 		if (muted != tracks[id]->isBypassed()) {
 			track->setMuted(muted);

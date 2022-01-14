@@ -69,11 +69,12 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, color: string 
       elm.style.left = (it[2] * width) + 'px'
       elm.style.width = (it[3] * width) + 'px'
       elm.style.backgroundColor = alpha(color, 0.4 + 0.6 * it[1] / 127)
+      elm.draggable = true
       cur.appendChild(elm)
     })
   }, [data, width, color])
   return (
-    <div className='notes' ref={ref} />
+    <div className='notes' ref={ref} onDrop={e => e.preventDefault()} onDragOver={e => e.preventDefault()} />
   )
 }
 
@@ -81,6 +82,7 @@ const Editor: React.FC = () => {
   const [noteWidth, setNoteWidth] = useState(0.4)
   const [noteHeight] = useState(14)
   const [state] = useGlobalData()
+  const scrollableRef = useRef<HTMLElement | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
@@ -111,6 +113,10 @@ const Editor: React.FC = () => {
     }
   }, [state.activeTrack])
 
+  useEffect(() => {
+    if (scrollableRef.current) scrollableRef.current.scrollTop = noteHeight * 50
+  }, [scrollableRef.current])
+
   barLength = noteWidth * state.ppq
   const beatWidth = barLength / (16 / state.timeSigDenominator)
 
@@ -124,9 +130,9 @@ const Editor: React.FC = () => {
           className='scale-slider'
           onChange={(_, val) => setNoteWidth(noteWidths[val as number])}
         />
-        当前轨道: {$client.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
+        当前轨道: {state.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
       </Box>
-      <Paper square elevation={3} className='scrollable'>
+      <Paper square elevation={3} className='scrollable' ref={scrollableRef as any}>
         <PlayRuler headRef={playHeadRef} noteWidth={noteWidth} movableRef={editorRef} />
         <div className='wrapper'>
           <Paper
@@ -148,7 +154,7 @@ const Editor: React.FC = () => {
               }
             }}
           >
-            <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth }}>
+            <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth, height: '100%' }}>
               <EditorGrid width={beatWidth} height={noteHeight} timeSigNumerator={state.timeSigNumerator} timeSigDenominator={state.timeSigDenominator} />
               <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
                 <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
@@ -157,7 +163,7 @@ const Editor: React.FC = () => {
               <Notes
                 data={state.trackMidiData[state.activeTrack]?.notes}
                 width={noteWidth}
-                color={$client.tracks[$client.trackNameToIndex[state.activeTrack]]?.color || ''}
+                color={state.tracks[$client.trackNameToIndex[state.activeTrack]]?.color || ''}
               />
             </div>
           </Box>

@@ -1,10 +1,20 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { createContext, useContext } from 'react'
 
+export interface TrackInfo {
+  uuid: string
+  name: string
+  muted: boolean
+  solo: boolean
+  color: string
+  volume: number
+}
+
 export enum ReducerTypes {
   ChangeActiveTrack,
   SetProjectStatus,
   SetTrackMidiData,
+  SetTrackInfo,
   SetMaxNoteTime
 }
 
@@ -21,7 +31,8 @@ export const initialState = {
   startTime: Date.now(),
   currentTime: 0,
   maxNoteTime: 0,
-  trackMidiData: { } as TrackMidiData
+  trackMidiData: { } as TrackMidiData,
+  tracks: [] as TrackInfo[]
 }
 
 export interface Action { type: ReducerTypes, [key: string]: any }
@@ -57,6 +68,11 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
             ...state,
             maxNoteTime: action.maxNoteTime
           }
+    case ReducerTypes.SetTrackInfo:
+      return {
+        ...state,
+        tracks: action.tracks
+      }
     default:
       return state
   }

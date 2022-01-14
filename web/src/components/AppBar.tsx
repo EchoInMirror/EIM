@@ -5,7 +5,6 @@ import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Sl
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { ClientboundPacket } from '../Client'
 import { useSnackbar } from 'notistack'
-import { useDebouncedCallback } from 'use-debounce'
 import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './BottomBar'
 import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 
@@ -40,10 +39,10 @@ const icon = (
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
 let setProgress = (_val: number) => { }
 
+let moving = false
 const LeftSection: React.FC = () => {
   const [val, fn] = useState(0)
   const [state] = useGlobalData()
-  const setProjectStatus = useDebouncedCallback((...args) => ($client as any).setProjectStatus(...args), 50)
   setProgress = fn
   return (
     <section className='left-section'>
@@ -51,8 +50,12 @@ const LeftSection: React.FC = () => {
       <Slider
         value={val}
         onChange={(_, val) => {
+          moving = true
           fn(val as number)
-          setProjectStatus(0, state.maxNoteTime / state.ppq / state.bpm * 60 * (val as number) / 100, state.isPlaying, 0, 0)
+        }}
+        onChangeCommitted={(_, val) => {
+          moving = false
+          $client.setProjectStatus(0, state.maxNoteTime / state.ppq / state.bpm * 60 * (val as number) / 100, state.isPlaying, 0, 0)
         }}
         sx={{ color: theme => theme.palette.mode === 'dark' ? '#fff' : 'rgba(0,0,0,0.87)' }}
       />
@@ -84,14 +87,14 @@ const CenterSection: React.FC = () => {
       if (tracksPlayHeadRef.current) tracksPlayHeadRef.current.style.transform = `translateX(${tracksLength * beats | 0}px)`
     }
     update(state.currentTime)
-    setProgress((state.currentTime / state.maxNoteTime * state.ppq * state.bpm / 60 * 100) || 0)
+    if (!moving) setProgress((state.currentTime / state.maxNoteTime * state.ppq * state.bpm / 60 * 100) || 0)
     if (!state.isPlaying) return
     let cnt = 0
     const timer = setInterval(() => {
       if (!timeRef.current || !barRef.current) return
       const curTime = state.currentTime + (Date.now() - state.startTime) / 1000
       update(curTime)
-      if (++cnt > 10) {
+      if (!moving && ++cnt > 10) {
         setProgress((curTime / state.maxNoteTime * state.ppq * state.bpm / 60 * 100) || 0)
         cnt = 0
       }

@@ -51,6 +51,7 @@ const App: React.FC = () => {
     document.documentElement.style.setProperty('--keyboard-white-key-color', theme.palette.background!.keyboardWhiteKey)
   }, [theme.palette.background!.paper, theme.palette.background!.keyboardBlackKey, theme.palette.background!.keyboardWhiteKey])
   const ctx = useReducer(reducer, initialState) as any
+  window.$globalData = ctx[0]
   window.$dispatch = ctx[1]
   return (
     <ThemeProvider theme={theme}>
