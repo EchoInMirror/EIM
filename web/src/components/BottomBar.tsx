@@ -32,15 +32,18 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
   const highlightColor = alpha(theme.palette.primary.main, 0.1)
   const gridXDeepColor = alpha(theme.palette.divider, 0.26)
   const beats = 16 / timeSigDenominator
+  console.log(width)
   for (let i = 0; i < 12; i++) {
     rects.push(<rect key={i} height={height} width='81' y={height * i} fill={scales[i] === (theme.palette.mode === 'dark') ? highlightColor : 'none'} />)
     lines.push(<line x1='0' x2='80' y1={(i + 1) * height} y2={(i + 1) * height} key={i} />)
   }
   for (let j = 0, cur = 0; j < timeSigNumerator; j++) {
     rectsX.push(<rect width='1' height='3240' x={width * cur++} y='0' fill={j ? gridXDeepColor : alpha(theme.palette.divider, 0.44)} key={j << 5} />)
-    for (let i = 1; i < beats; i++) {
-      rectsX.push(<rect width='1' height='3240' x={width * cur++} y='0' key={j << 5 | i} />)
-    }
+    if (width >= 9.6) {
+      for (let i = 1; i < beats; i++) {
+        rectsX.push(<rect width='1' height='3240' x={width * cur++} y='0' key={j << 5 | i} />)
+      }
+    } else cur += beats - 1
   }
   return (
     <svg xmlns='http://www.w3.org/2000/svg' width='0' height='0' style={{ position: 'absolute' }}>
@@ -63,9 +66,13 @@ const scrollableRef = createRef<HTMLDivElement>()
 
 let currentX = 0
 let startOffset = 0
+let startWidth = 0
 let currentY = 0
-const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number, ppq: number, color: string }> = ({ data, width, height, ppq, color }) => {
+let resizeDirection = 0
+const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number, ppq: number, color: string, alignment: number }> = ({ data, width, height, ppq, color, alignment }) => {
   const ref = useRef<HTMLDivElement | null>(null)
+  const alignmentWidth = width * alignment
+
   useEffect(() => {
     const cur = ref.current
     if (!cur || !data) return
@@ -74,13 +81,17 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
       const elm = document.createElement('div')
       elm.style.top = ((1 - it[0] / 132) * 100) + '%'
       elm.style.left = (it[2] * width) + 'px'
-      elm.style.width = (it[3] * width) + 'px'
+      if (it[2] === it[3]) {
+        elm.style.width = '2px'
+        elm.style.transform = 'translateX(-1px)'
+      } else elm.style.width = (it[3] * width) + 'px'
       elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * it[1] / 127)
       elm.dataset.isNote = 'true'
       elm.draggable = true
       cur.appendChild(elm)
     })
   }, [data, width, color])
+
   return (
     <div
       ref={ref}
@@ -92,7 +103,10 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
         e.dataTransfer.effectAllowed = 'move'
         const rect = (e.target as HTMLDivElement).getBoundingClientRect()
         currentX = e.pageX - rect.left
+        resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
         currentY = e.pageY - rect.top
+        const tmp = parseFloat(elm.style.width)
+        startWidth = tmp - (tmp / alignmentWidth | 0) * alignmentWidth
         startOffset = parseFloat(elm.style.left)
         startOffset -= (startOffset / width / ppq | 0) * width * ppq
         e.dataTransfer.setDragImage(emptyImage, 0, 0)
@@ -103,10 +117,24 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
         const elm = e.target as HTMLDivElement
         if (!elm.dataset.isNote) return
         e.preventDefault()
-        const left = e.currentTarget.scrollLeft + Math.max(e.pageX - (e.currentTarget.getBoundingClientRect()).left, 0) - currentX
-        const top = scrollableRef.current!.scrollTop + Math.max(e.pageY - (scrollableRef.current!.getBoundingClientRect()).top, 0) - currentY
-        elm.style.left = (Math.round(left / width / ppq) * width * ppq + startOffset) + 'px'
-        elm.style.top = (Math.round(top / height) / 1.32) + '%'
+        if (resizeDirection) {
+          if (resizeDirection === 1) {
+            const curWidth = Math.round((e.pageX - elm.getBoundingClientRect().left) / alignmentWidth) * alignmentWidth + startWidth
+            if (curWidth >= 0) elm.style.width = curWidth + 'px'
+          } else {
+            const curWidth = Math.round((elm.getBoundingClientRect().right - e.pageX) / alignmentWidth) * alignmentWidth + startWidth
+            if (curWidth >= 0) {
+              console.log(parseFloat(elm.style.width) - curWidth)
+              elm.style.left = parseFloat(elm.style.left) + parseFloat(elm.style.width) - curWidth + 'px'
+              elm.style.width = curWidth + 'px'
+            }
+          }
+          return
+        }
+        const left = e.currentTarget.scrollLeft + Math.max(e.pageX - e.currentTarget.getBoundingClientRect().left, 0) - currentX
+        const top = scrollableRef.current!.scrollTop + Math.max(e.pageY - scrollableRef.current!.getBoundingClientRect().top, 0) - currentY
+        elm.style.left = Math.round(left / alignmentWidth) * alignmentWidth + startOffset + 'px'
+        elm.style.top = Math.round(top / height) / 1.32 + '%'
       }}
     />
   )
@@ -116,6 +144,7 @@ const Editor: React.FC = () => {
   const [noteWidthLevel, setNoteWidthLevel] = useState(3)
   const [noteHeight] = useState(14)
   const [state] = useGlobalData()
+  const [alignment] = useState(state.ppq)
   const editorRef = useRef<HTMLElement | null>(null)
   const noteWidth = noteWidths[noteWidthLevel]
   barLength = noteWidth * state.ppq
@@ -170,7 +199,7 @@ const Editor: React.FC = () => {
           headRef={playHeadRef}
           noteWidth={noteWidth}
           movableRef={editorRef}
-          onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? 1 : -1), noteWidths.length - 1), 0))}
+          onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? -1 : 1), noteWidths.length - 1), 0))}
         />
         <div className='wrapper'>
           <Paper
@@ -202,6 +231,7 @@ const Editor: React.FC = () => {
                 ppq={state.ppq}
                 width={noteWidth}
                 height={noteHeight}
+                alignment={alignment}
                 data={state.trackMidiData[state.activeTrack]?.notes}
                 color={state.tracks[$client.trackNameToIndex[state.activeTrack]]?.color || ''}
               />

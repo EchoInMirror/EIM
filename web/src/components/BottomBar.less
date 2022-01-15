@@ -61,6 +61,17 @@
             cursor: grab;
             position: absolute;
             &:active { cursor: grabbing; }
+
+            &:after, &:before {
+              content: '';
+              top: 0;
+              bottom: 0;
+              width: 3px;
+              position: absolute;
+              cursor: e-resize;
+            }
+
+            &:after { right: 0; }
           }
         }
       }

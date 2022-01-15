@@ -115,7 +115,7 @@ const Tracks: React.FC = () => {
         headRef={playHeadRef}
         noteWidth={noteWidth}
         movableRef={playListRef}
-        onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? 1 : -1), noteWidths.length - 1), 0))}
+        onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? -1 : 1), noteWidths.length - 1), 0))}
       />
       <div className='scale-slider'>
         <Toolbar />
