@@ -53,7 +53,8 @@ const PlayRuler: React.FC<{
   headRef: React.Ref<HTMLDivElement>
   noteWidth: number
   movableRef: React.RefObject<HTMLElement | null>
-}> = ({ headRef, noteWidth, movableRef }) => {
+  onWidthLevelChange: (value: boolean) => void
+}> = ({ headRef, noteWidth, movableRef, onWidthLevelChange }) => {
   const [state] = useGlobalData()
   const ref = useRef<HTMLDivElement | null>(null)
   const ref2 = useRef<HTMLDivElement | null>(null)
@@ -102,6 +103,7 @@ const PlayRuler: React.FC<{
           const rect = e.currentTarget!.firstElementChild!.getBoundingClientRect()
           $client.setProjectStatus(0, Math.max(e.pageX - rect.left, 0) / noteWidth / state.ppq / state.bpm * 60, state.isPlaying, 0, 0)
         }}
+        onWheel={e => onWidthLevelChange(e.deltaY > 0)}
       >
         {barNumbers}
       </Box>

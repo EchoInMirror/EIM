@@ -1,5 +1,5 @@
 import './BottomBar.less'
-import React, { useEffect, createRef, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, createRef } from 'react'
 import useGlobalData, { TrackMidiNoteData } from '../reducer'
 import PlayRuler from './PlayRuler'
 import { Resizable } from 're-resizable'
@@ -7,6 +7,8 @@ import { Paper, Button, Box, useTheme, alpha, Slider } from '@mui/material'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
+
+const emptyImage = new Image()
 
 const keyNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const keys: JSX.Element[] = []
@@ -57,7 +59,12 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
   )
 }
 
-const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, color: string }> = ({ data, width, color }) => {
+const scrollableRef = createRef<HTMLDivElement>()
+
+let currentX = 0
+let startOffset = 0
+let currentY = 0
+const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number, ppq: number, color: string }> = ({ data, width, height, ppq, color }) => {
   const ref = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     const cur = ref.current
@@ -65,25 +72,54 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, color: string 
     cur.innerText = ''
     data.forEach(it => {
       const elm = document.createElement('div')
-      elm.style.bottom = (it[0] / 132 * 100) + '%'
+      elm.style.top = ((1 - it[0] / 132) * 100) + '%'
       elm.style.left = (it[2] * width) + 'px'
       elm.style.width = (it[3] * width) + 'px'
-      elm.style.backgroundColor = alpha(color, 0.4 + 0.6 * it[1] / 127)
+      elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * it[1] / 127)
+      elm.dataset.isNote = 'true'
       elm.draggable = true
       cur.appendChild(elm)
     })
   }, [data, width, color])
   return (
-    <div className='notes' ref={ref} onDrop={e => e.preventDefault()} onDragOver={e => e.preventDefault()} />
+    <div
+      ref={ref}
+      className='notes'
+      onDrop={e => e.preventDefault()}
+      onDragStart={e => {
+        const elm = e.target as HTMLDivElement
+        if (!elm.dataset.isNote) return
+        e.dataTransfer.effectAllowed = 'move'
+        const rect = (e.target as HTMLDivElement).getBoundingClientRect()
+        currentX = e.pageX - rect.left
+        currentY = e.pageY - rect.top
+        startOffset = parseFloat(elm.style.left)
+        startOffset -= (startOffset / width / ppq | 0) * width * ppq
+        e.dataTransfer.setDragImage(emptyImage, 0, 0)
+      }}
+      onDragEnd={e => (e.currentTarget.style.cursor = '')}
+      onDragOver={e => e.preventDefault()}
+      onDrag={e => {
+        const elm = e.target as HTMLDivElement
+        if (!elm.dataset.isNote) return
+        e.preventDefault()
+        const left = e.currentTarget.scrollLeft + Math.max(e.pageX - (e.currentTarget.getBoundingClientRect()).left, 0) - currentX
+        const top = scrollableRef.current!.scrollTop + Math.max(e.pageY - (scrollableRef.current!.getBoundingClientRect()).top, 0) - currentY
+        elm.style.left = (Math.round(left / width / ppq) * width * ppq + startOffset) + 'px'
+        elm.style.top = (Math.round(top / height) / 1.32) + '%'
+      }}
+    />
   )
 }
 
 const Editor: React.FC = () => {
-  const [noteWidth, setNoteWidth] = useState(0.4)
+  const [noteWidthLevel, setNoteWidthLevel] = useState(3)
   const [noteHeight] = useState(14)
   const [state] = useGlobalData()
-  const scrollableRef = useRef<HTMLElement | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
+  const noteWidth = noteWidths[noteWidthLevel]
+  barLength = noteWidth * state.ppq
+  const beatWidth = barLength / (16 / state.timeSigDenominator)
 
   useEffect(() => {
     let pressedKeys: number[] = []
@@ -117,23 +153,25 @@ const Editor: React.FC = () => {
     if (scrollableRef.current) scrollableRef.current.scrollTop = noteHeight * 50
   }, [scrollableRef.current])
 
-  barLength = noteWidth * state.ppq
-  const beatWidth = barLength / (16 / state.timeSigDenominator)
-
   return (
     <div className='editor'>
       <Box className='actions' sx={{ backgroundColor: theme => theme.palette.background.bright }}>
         <Slider
           min={0}
-          max={9}
-          defaultValue={3}
+          max={noteWidths.length - 1}
+          value={noteWidthLevel}
           className='scale-slider'
-          onChange={(_, val) => setNoteWidth(noteWidths[val as number])}
+          onChange={(_, val) => setNoteWidthLevel(val as number)}
         />
         当前轨道: {state.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
       </Box>
       <Paper square elevation={3} className='scrollable' ref={scrollableRef as any}>
-        <PlayRuler headRef={playHeadRef} noteWidth={noteWidth} movableRef={editorRef} />
+        <PlayRuler
+          headRef={playHeadRef}
+          noteWidth={noteWidth}
+          movableRef={editorRef}
+          onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? 1 : -1), noteWidths.length - 1), 0))}
+        />
         <div className='wrapper'>
           <Paper
             square
@@ -161,8 +199,10 @@ const Editor: React.FC = () => {
                 <rect fill='url(#editor-grid-x)' x='0' y='0' width='100%' height='100%' />
               </svg>
               <Notes
-                data={state.trackMidiData[state.activeTrack]?.notes}
+                ppq={state.ppq}
                 width={noteWidth}
+                height={noteHeight}
+                data={state.trackMidiData[state.activeTrack]?.notes}
                 color={state.tracks[$client.trackNameToIndex[state.activeTrack]]?.color || ''}
               />
             </div>

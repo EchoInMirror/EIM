@@ -100,25 +100,30 @@ const Tracks: React.FC = () => {
   const [state] = useGlobalData()
   const [loading, setLoading] = useState(false)
   const [height] = useState(70)
-  const [noteWidth, setNoteWidth] = useState(0.4)
+  const [noteWidthLevel, setNoteWidthLevel] = useState(3)
   const playListRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => $client.refresh(), [])
-
+  const noteWidth = noteWidths[noteWidthLevel]
   barLength = noteWidth * state.ppq
   const beatWidth = barLength / (16 / state.timeSigDenominator)
+
+  useEffect(() => $client.refresh(), [])
 
   return (
     <main className='tracks'>
       <Toolbar />
-      <PlayRuler headRef={playHeadRef} noteWidth={noteWidth} movableRef={playListRef} />
+      <PlayRuler
+        headRef={playHeadRef}
+        noteWidth={noteWidth}
+        movableRef={playListRef}
+        onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? 1 : -1), noteWidths.length - 1), 0))}
+      />
       <div className='scale-slider'>
         <Toolbar />
         <Slider
           min={0}
-          max={9}
-          defaultValue={3}
-          onChange={(_, val) => setNoteWidth(noteWidths[val as number])}
+          max={noteWidths.length - 1}
+          value={noteWidthLevel}
+          onChange={(_, val) => setNoteWidthLevel(val as number)}
         />
       </div>
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>

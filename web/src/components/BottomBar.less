@@ -55,10 +55,12 @@
 
         .notes {
           height: 100%;
+
           div {
             border-radius: 2px;
-            cursor: pointer;
+            cursor: grab;
             position: absolute;
+            &:active { cursor: grabbing; }
           }
         }
       }
