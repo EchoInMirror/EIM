@@ -137,6 +137,14 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
           selectedBoxRef.current.style.width = '0'
           selectedBoxRef.current.style.height = '0'
         }
+        if (e.button === 4 || e.ctrlKey) {
+          if (!selectedBoxRef.current) return
+          mouseState = 2
+          selectedBoxRef.current.style.left = (startX / alignmentWidth | 0) * alignmentWidth + 'px'
+          selectedBoxRef.current.style.top = (startY / height | 0) * height + 'px'
+          selectedBoxRef.current.style.display = 'block'
+          return
+        }
         switch (e.button) {
           case 0: {
             if (elm.dataset.isNote) {
@@ -170,27 +178,21 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
               elm.remove()
             }
             break
-          case 4:
-            if (!selectedBoxRef.current) return
-            mouseState = 2
-            selectedBoxRef.current.style.left = (startX / alignmentWidth | 0) * alignmentWidth + 'px'
-            selectedBoxRef.current.style.top = (startY / height | 0) * height + 'px'
-            selectedBoxRef.current.style.display = 'block'
         }
       }}
       onMouseMove={e => {
         if (!mouseState) return
         const rect = e.currentTarget.getBoundingClientRect()
-        const left = Math.round((e.pageX - rect.left - startX) / alignmentWidth)
-        const top = Math.round((e.pageY - rect.top - startY) / height)
-        if (left === offsetX && top === offsetY) return
-        const dx = (left - offsetX) * alignmentWidth
-        const dy = top - offsetY
-        offsetY = top
-        offsetX = left
         switch (mouseState) {
           case 1: {
-            if (!selectedNotes.length) return
+            if (!selectedNotes.length) break
+            const left = Math.round((e.pageX - rect.left - startX) / alignmentWidth)
+            const top = Math.round((e.pageY - rect.top - startY) / height)
+            if (left === offsetX && top === offsetY) return
+            const dx = (left - offsetX) * alignmentWidth
+            const dy = top - offsetY
+            offsetY = top
+            offsetX = left
             if (resizeDirection) {
               selectedNotes.forEach(it => {
                 if (resizeDirection === 1) it.style.width = parseFloat(it.style.width) + dx + 'px'
@@ -208,7 +210,14 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
             break
           }
           case 2: {
-            if (!selectedBoxRef.current) return
+            if (!selectedBoxRef.current) break
+            const left0 = Math.ceil((e.pageX - rect.left - startX) / alignmentWidth)
+            const top0 = Math.ceil((e.pageY - rect.top - startY) / height)
+            if (left0 === offsetX && top0 === offsetY) return
+            const dx = (left0 - offsetX) * alignmentWidth
+            const dy = top0 - offsetY
+            offsetY = top0
+            offsetX = left0
             const box = selectedBoxRef.current.style
             const left = parseFloat(box.left)
             const top = parseFloat(box.top)
