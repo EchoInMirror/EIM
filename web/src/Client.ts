@@ -9,7 +9,8 @@ export enum ServerboundPacket {
   CreateTrack,
   Refresh,
   MidiMessage,
-  UpdateTrackInfo
+  UpdateTrackInfo,
+  MidiNotesAdd
 }
 
 export enum ClientboundPacket {

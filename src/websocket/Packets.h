@@ -10,7 +10,8 @@ enum ServerboundPacket {
 	ServerboundCreateTrack,
 	ServerboundRefresh,
 	ServerboundMidiMessage,
-	ServerboundUpdateTrackInfo
+	ServerboundUpdateTrackInfo,
+	ServerboundMidiNotesAdd
 };
 
 enum ClientboundPacket {

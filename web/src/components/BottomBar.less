@@ -72,6 +72,15 @@
             }
 
             &:after { right: 0; }
+
+            &.selected {
+              filter: brightness(2);
+            }
+          }
+
+          &:active div {
+            cursor: inherit;
+            &:after, &:before { cursor: inherit; }
           }
         }
       }

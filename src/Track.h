@@ -12,6 +12,7 @@ public:
     juce::Uuid uuid;
     std::string name;
     std::string color;
+    juce::MidiMessageSequence midiSequence;
 
     juce::AudioProcessorGraph::Node* currentNode = nullptr;
     juce::MidiMessageCollector messageCollector;
@@ -36,7 +37,6 @@ private:
     double nextStartTime = 0;
     juce::AudioProcessorGraph::NodeID midiIn;
     juce::AudioProcessorGraph::Node::Ptr begin, end;
-    juce::MidiMessageSequence midiSequence;
 
     void addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages);
 

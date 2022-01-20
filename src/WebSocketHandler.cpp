@@ -134,5 +134,21 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		}
 		break;
 	}
+	case ServerboundPacket::ServerboundMidiNotesAdd: {
+		auto id = buf.readUInt8();
+		auto& tracks = mainWindow->masterTrack->tracks;
+		if (tracks.size() <= id) return;
+		auto& midiSequence = ((Track*)tracks[id]->getProcessor())->midiSequence;
+		int len = buf.readUInt16();
+		while (len-- > 0) {
+			int note = buf.readUInt8();
+			auto noteOn = juce::MidiMessage::noteOn(1, note, buf.readUInt8());
+			noteOn.setTimeStamp(buf.readUInt32());
+			auto noteOff = juce::MidiMessage::noteOff(1, note);
+			noteOff.setTimeStamp(buf.readUInt32());
+			midiSequence.addEvent(noteOn)->noteOffObject = midiSequence.addEvent(noteOff);
+		}
+		break;
+	}
 	}
 }

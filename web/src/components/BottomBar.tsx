@@ -8,8 +8,6 @@ import { Paper, Button, Box, useTheme, alpha, Slider } from '@mui/material'
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
 
-const emptyImage = new Image()
-
 const keyNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const keys: JSX.Element[] = []
 for (let i = 0; i < 132; i++) {
@@ -32,7 +30,6 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
   const highlightColor = alpha(theme.palette.primary.main, 0.1)
   const gridXDeepColor = alpha(theme.palette.divider, 0.26)
   const beats = 16 / timeSigDenominator
-  console.log(width)
   for (let i = 0; i < 12; i++) {
     rects.push(<rect key={i} height={height} width='81' y={height * i} fill={scales[i] === (theme.palette.mode === 'dark') ? highlightColor : 'none'} />)
     lines.push(<line x1='0' x2='80' y1={(i + 1) * height} y2={(i + 1) * height} key={i} />)
@@ -64,19 +61,26 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
 
 const scrollableRef = createRef<HTMLDivElement>()
 
-let currentX = 0
-let startOffset = 0
-let startWidth = 0
-let currentY = 0
+let startX = 0
+let startY = 0
+let offsetY = 0
+let offsetX = 0
 let resizeDirection = 0
+let grabbing = false
+let selectedNotes: HTMLDivElement[] = []
+
 const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number, ppq: number, color: string, alignment: number }> = ({ data, width, height, ppq, color, alignment }) => {
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
+
+  console.log(ppq)
 
   useEffect(() => {
     const cur = ref.current
     if (!cur || !data) return
     cur.innerText = ''
+    selectedNotes = []
+    grabbing = false
     data.forEach(it => {
       const elm = document.createElement('div')
       elm.style.top = ((1 - it[0] / 132) * 100) + '%'
@@ -87,54 +91,81 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
       } else elm.style.width = (it[3] * width) + 'px'
       elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * it[1] / 127)
       elm.dataset.isNote = 'true'
-      elm.draggable = true
+      ;(elm as any).note = it
       cur.appendChild(elm)
     })
   }, [data, width, color])
+
+  useEffect(() => {
+    if (!ref.current) return
+    const fn = () => {
+      if (!grabbing) return
+      grabbing = false
+      if (ref.current) ref.current.style.cursor = ''
+    }
+    document.addEventListener('mouseup', fn)
+    return () => document.removeEventListener('mouseup', fn)
+  }, [ref.current])
 
   return (
     <div
       ref={ref}
       className='notes'
-      onDrop={e => e.preventDefault()}
-      onDragStart={e => {
-        const elm = e.target as HTMLDivElement
-        if (!elm.dataset.isNote) return
-        e.dataTransfer.effectAllowed = 'move'
-        const rect = (e.target as HTMLDivElement).getBoundingClientRect()
-        currentX = e.pageX - rect.left
-        resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
-        currentY = e.pageY - rect.top
-        const tmp = parseFloat(elm.style.width)
-        startWidth = tmp - (tmp / alignmentWidth | 0) * alignmentWidth
-        startOffset = parseFloat(elm.style.left)
-        startOffset -= (startOffset / width / ppq | 0) * width * ppq
-        e.dataTransfer.setDragImage(emptyImage, 0, 0)
-      }}
-      onDragEnd={e => (e.currentTarget.style.cursor = '')}
-      onDragOver={e => e.preventDefault()}
-      onDrag={e => {
-        const elm = e.target as HTMLDivElement
-        if (!elm.dataset.isNote) return
-        e.preventDefault()
-        if (resizeDirection) {
-          if (resizeDirection === 1) {
-            const curWidth = Math.round((e.pageX - elm.getBoundingClientRect().left) / alignmentWidth) * alignmentWidth + startWidth
-            if (curWidth >= 0) elm.style.width = curWidth + 'px'
-          } else {
-            const curWidth = Math.round((elm.getBoundingClientRect().right - e.pageX) / alignmentWidth) * alignmentWidth + startWidth
-            if (curWidth >= 0) {
-              console.log(parseFloat(elm.style.width) - curWidth)
-              elm.style.left = parseFloat(elm.style.left) + parseFloat(elm.style.width) - curWidth + 'px'
-              elm.style.width = curWidth + 'px'
-            }
-          }
-          return
+      onMouseDown={e => {
+        if (!scrollableRef.current) return
+        let elm = e.target as HTMLDivElement
+        if (elm.dataset.isNote) {
+          const rect = elm.getBoundingClientRect()
+          const currentX = e.pageX - rect.left
+          resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
+        } else {
+          e.currentTarget.style.cursor = 'grabbing'
+          const { top, left } = e.currentTarget.getBoundingClientRect()
+          elm = document.createElement('div')
+          elm.style.top = ((e.pageY - top) / height | 0) / 1.32 + '%'
+          elm.style.left = Math.round((e.pageX - left) / alignmentWidth) * alignmentWidth + 'px'
+          elm.style.width = alignmentWidth + 'px'
+          elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * 80 / 127)
+          elm.dataset.isNote = 'true'
+          ;(elm as any).note = []
+          e.currentTarget.appendChild(elm)
+          resizeDirection = 0
         }
-        const left = e.currentTarget.scrollLeft + Math.max(e.pageX - e.currentTarget.getBoundingClientRect().left, 0) - currentX
-        const top = scrollableRef.current!.scrollTop + Math.max(e.pageY - scrollableRef.current!.getBoundingClientRect().top, 0) - currentY
-        elm.style.left = Math.round(left / alignmentWidth) * alignmentWidth + startOffset + 'px'
-        elm.style.top = Math.round(top / height) / 1.32 + '%'
+        selectedNotes.forEach(it => (it.className = ''))
+        selectedNotes = [elm]
+        elm.className = 'selected'
+        const rect = e.currentTarget.getBoundingClientRect()
+        startX = e.pageX - rect.left
+        startY = e.pageY - rect.top
+        offsetX = offsetY = 0
+        e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
+        grabbing = true
+      }}
+      onMouseMove={e => {
+        if (!grabbing || !selectedNotes.length) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        const left = Math.round((e.pageX - rect.left - startX) / alignmentWidth)
+        const dx = (left - offsetX) * alignmentWidth
+        offsetX = left
+        if (resizeDirection) {
+          if (!dx) return
+          selectedNotes.forEach(it => {
+            if (resizeDirection === 1) it.style.width = parseFloat(it.style.width) + dx + 'px'
+            else {
+              it.style.width = parseFloat(it.style.width) - dx + 'px'
+              it.style.left = parseFloat(it.style.left) + dx + 'px'
+            }
+          })
+        } else {
+          const top = Math.round((e.pageY - rect.top - startY) / height)
+          const dy = (top - offsetY) / 1.32
+          offsetY = top
+          if (!dx && !dy) return
+          selectedNotes.forEach(it => {
+            if (dx) it.style.left = parseFloat(it.style.left) + dx + 'px'
+            if (dy) it.style.top = parseFloat(it.style.top) + dy + '%'
+          })
+        }
       }}
     />
   )
