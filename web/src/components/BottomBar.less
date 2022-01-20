@@ -19,6 +19,14 @@
       z-index: 2;
     }
 
+    .selected-box {
+      border-width: 1px;
+      border-style: solid;
+      position: absolute;
+      display: none;
+      pointer-events: none;
+    }
+
     .scale-slider {
       margin-top: 4px;
       margin-left: 20px;
@@ -74,7 +82,7 @@
             &:after { right: 0; }
 
             &.selected {
-              filter: brightness(2);
+              filter: brightness(2.4);
             }
           }
 

@@ -60,13 +60,16 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
 }
 
 const scrollableRef = createRef<HTMLDivElement>()
+const selectedBoxRef = createRef<HTMLDivElement>()
+
+type NoteElement = HTMLDivElement & { note: [number, number, number, number] }
 
 let startX = 0
 let startY = 0
 let offsetY = 0
 let offsetX = 0
 let resizeDirection = 0
-let grabbing = false
+let mouseState = 0
 let selectedNotes: HTMLDivElement[] = []
 
 const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number, ppq: number, color: string, alignment: number }> = ({ data, width, height, ppq, color, alignment }) => {
@@ -80,9 +83,9 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
     if (!cur || !data) return
     cur.innerText = ''
     selectedNotes = []
-    grabbing = false
+    mouseState = 0
     data.forEach(it => {
-      const elm = document.createElement('div')
+      const elm = document.createElement('div') as NoteElement
       elm.style.top = ((1 - it[0] / 132) * 100) + '%'
       elm.style.left = (it[2] * width) + 'px'
       if (it[2] === it[3]) {
@@ -91,7 +94,7 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
       } else elm.style.width = (it[3] * width) + 'px'
       elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * it[1] / 127)
       elm.dataset.isNote = 'true'
-      ;(elm as any).note = it
+      elm.note = it
       cur.appendChild(elm)
     })
   }, [data, width, color])
@@ -99,9 +102,16 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
   useEffect(() => {
     if (!ref.current) return
     const fn = () => {
-      if (!grabbing) return
-      grabbing = false
-      if (ref.current) ref.current.style.cursor = ''
+      if (!mouseState || !ref.current) return
+      if (mouseState === 2 && selectedBoxRef.current) {
+        selectedNotes = []
+        for (const it of ref.current.children) if (it.className) selectedNotes.push(it as NoteElement)
+        selectedBoxRef.current.style.display = 'none'
+        selectedBoxRef.current.style.width = '0'
+        selectedBoxRef.current.style.height = '0'
+      }
+      mouseState = 0
+      ref.current.style.cursor = ''
     }
     document.addEventListener('mouseup', fn)
     return () => document.removeEventListener('mouseup', fn)
@@ -111,60 +121,119 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
     <div
       ref={ref}
       className='notes'
+      tabIndex={0}
+      onMouseUp={e => e.preventDefault()}
+      onContextMenu={e => e.preventDefault()}
       onMouseDown={e => {
         if (!scrollableRef.current) return
-        let elm = e.target as HTMLDivElement
-        if (elm.dataset.isNote) {
-          const rect = elm.getBoundingClientRect()
-          const currentX = e.pageX - rect.left
-          resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
-        } else {
-          e.currentTarget.style.cursor = 'grabbing'
-          const { top, left } = e.currentTarget.getBoundingClientRect()
-          elm = document.createElement('div')
-          elm.style.top = ((e.pageY - top) / height | 0) / 1.32 + '%'
-          elm.style.left = Math.round((e.pageX - left) / alignmentWidth) * alignmentWidth + 'px'
-          elm.style.width = alignmentWidth + 'px'
-          elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * 80 / 127)
-          elm.dataset.isNote = 'true'
-          ;(elm as any).note = []
-          e.currentTarget.appendChild(elm)
-          resizeDirection = 0
-        }
-        selectedNotes.forEach(it => (it.className = ''))
-        selectedNotes = [elm]
-        elm.className = 'selected'
+        e.currentTarget.focus()
+        let elm = e.target as NoteElement
         const rect = e.currentTarget.getBoundingClientRect()
         startX = e.pageX - rect.left
         startY = e.pageY - rect.top
         offsetX = offsetY = 0
-        e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
-        grabbing = true
+        if (mouseState === 2 && selectedBoxRef.current) {
+          selectedBoxRef.current.style.display = 'none'
+          selectedBoxRef.current.style.width = '0'
+          selectedBoxRef.current.style.height = '0'
+        }
+        switch (e.button) {
+          case 0: {
+            if (elm.dataset.isNote) {
+              const rect = elm.getBoundingClientRect()
+              const currentX = e.pageX - rect.left
+              resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
+            } else {
+              e.currentTarget.style.cursor = 'grabbing'
+              const { top, left } = e.currentTarget.getBoundingClientRect()
+              elm = document.createElement('div') as NoteElement
+              const noteLeft = Math.round((e.pageX - left) / alignmentWidth) * alignmentWidth
+              const noteId = (e.pageY - top) / height | 0
+              elm.style.top = noteId / 1.32 + '%'
+              elm.style.left = noteLeft + 'px'
+              elm.style.width = alignmentWidth + 'px'
+              elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * 80 / 127)
+              elm.dataset.isNote = 'true'
+              elm.note = [132 - noteId, 80, noteLeft / width | 0, alignment]
+              e.currentTarget.appendChild(elm)
+              resizeDirection = 0
+            }
+            selectedNotes.forEach(it => (it.className = ''))
+            selectedNotes = [elm]
+            elm.className = 'selected'
+            e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
+            mouseState = 1
+            break
+          }
+          case 2:
+            if (elm.dataset.isNote) {
+              elm.remove()
+            }
+            break
+          case 4:
+            if (!selectedBoxRef.current) return
+            mouseState = 2
+            selectedBoxRef.current.style.left = (startX / alignmentWidth | 0) * alignmentWidth + 'px'
+            selectedBoxRef.current.style.top = (startY / height | 0) * height + 'px'
+            selectedBoxRef.current.style.display = 'block'
+        }
       }}
       onMouseMove={e => {
-        if (!grabbing || !selectedNotes.length) return
+        if (!mouseState) return
         const rect = e.currentTarget.getBoundingClientRect()
         const left = Math.round((e.pageX - rect.left - startX) / alignmentWidth)
+        const top = Math.round((e.pageY - rect.top - startY) / height)
+        if (left === offsetX && top === offsetY) return
         const dx = (left - offsetX) * alignmentWidth
+        const dy = top - offsetY
+        offsetY = top
         offsetX = left
-        if (resizeDirection) {
-          if (!dx) return
-          selectedNotes.forEach(it => {
-            if (resizeDirection === 1) it.style.width = parseFloat(it.style.width) + dx + 'px'
-            else {
-              it.style.width = parseFloat(it.style.width) - dx + 'px'
-              it.style.left = parseFloat(it.style.left) + dx + 'px'
+        switch (mouseState) {
+          case 1: {
+            if (!selectedNotes.length) return
+            if (resizeDirection) {
+              selectedNotes.forEach(it => {
+                if (resizeDirection === 1) it.style.width = parseFloat(it.style.width) + dx + 'px'
+                else {
+                  it.style.width = parseFloat(it.style.width) - dx + 'px'
+                  it.style.left = parseFloat(it.style.left) + dx + 'px'
+                }
+              })
+            } else {
+              selectedNotes.forEach(it => {
+                if (dx) it.style.left = parseFloat(it.style.left) + dx + 'px'
+                if (dy) it.style.top = parseFloat(it.style.top) + dy / 1.32 + '%'
+              })
             }
-          })
-        } else {
-          const top = Math.round((e.pageY - rect.top - startY) / height)
-          const dy = (top - offsetY) / 1.32
-          offsetY = top
-          if (!dx && !dy) return
-          selectedNotes.forEach(it => {
-            if (dx) it.style.left = parseFloat(it.style.left) + dx + 'px'
-            if (dy) it.style.top = parseFloat(it.style.top) + dy + '%'
-          })
+            break
+          }
+          case 2: {
+            if (!selectedBoxRef.current) return
+            const box = selectedBoxRef.current.style
+            const left = parseFloat(box.left)
+            const top = parseFloat(box.top)
+            const boxWidth = (parseFloat(box.width) || 0) + dx
+            const boxHeight = (parseFloat(box.height) || 0) + dy * height
+            const minLeft = left / width
+            const maxLeft = (left + boxWidth) / width
+            const minTop = top / height
+            const maxTop = (top + boxHeight) / height
+            box.width = boxWidth + 'px'
+            box.height = boxHeight + 'px'
+            for (const it of e.currentTarget.children) {
+              const elm = it as NoteElement
+              const { note } = elm
+              if (note[2] >= minLeft && note[2] < maxLeft && minTop <= (132 - note[0]) && maxTop > (132 - note[0])) {
+                elm.className = 'selected'
+              } else if (elm.className) elm.className = ''
+            }
+          }
+        }
+      }}
+      onKeyUp={e => {
+        if (e.keyCode === 46) {
+          selectedNotes.forEach(it => it.remove())
+          selectedNotes = []
         }
       }}
     />
@@ -258,6 +327,11 @@ const Editor: React.FC = () => {
                 <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
                 <rect fill='url(#editor-grid-x)' x='0' y='0' width='100%' height='100%' />
               </svg>
+              <Box
+                className='selected-box'
+                ref={selectedBoxRef}
+                sx={{ borderColor: theme => theme.palette.primary.main, backgroundColor: theme => alpha(theme.palette.primary.main, 0.2) }}
+              />
               <Notes
                 ppq={state.ppq}
                 width={noteWidth}
