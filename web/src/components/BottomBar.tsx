@@ -73,8 +73,18 @@ let mouseState = 0
 let boxHeight = 0
 let boxWidth = 0
 let selectedNotes: NoteElement[] = []
+let pressedKeys: number[] = []
+let activeNote: NoteElement | undefined
 
-const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number, ppq: number, color: string, alignment: number }> = ({ data, width, height, ppq, color, alignment }) => {
+const Notes: React.FC<{
+  data: TrackMidiNoteData[]
+  width: number
+  height: number
+  ppq: number
+  color: string
+  alignment: number
+  index: number
+}> = ({ data, width, height, ppq, color, alignment, index }) => {
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
 
@@ -128,7 +138,6 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
       onContextMenu={e => e.preventDefault()}
       onMouseDown={e => {
         if (!scrollableRef.current) return
-        e.currentTarget.focus()
         let elm = e.target as NoteElement
         const rect = e.currentTarget.getBoundingClientRect()
         startX = e.pageX - rect.left
@@ -177,14 +186,24 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
               selectedNotes = [elm]
               elm.className = 'selected'
             }
+            activeNote = elm
+            if (pressedKeys.length) {
+              pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
+              pressedKeys = []
+            }
+            selectedNotes.forEach(it => {
+              if (it.note[2] !== elm.note[2]) return
+              pressedKeys.push(it.note[0])
+              $client.midiMessage(index, 0x90, it.note[0], it.note[1])
+            })
             e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
             mouseState = 1
             break
           }
           case 2:
-            if (elm.dataset.isNote) {
-              elm.remove()
-            }
+            if (elm.dataset.isNote) elm.remove()
+            selectedNotes.forEach(it => it.className && (it.className = ''))
+            selectedNotes = []
             break
         }
       }}
@@ -217,9 +236,27 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
               }
               return true
             })) {
+              if (dy && pressedKeys.length) {
+                pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
+                pressedKeys = []
+              }
+              const curNote = activeNote?.dataset?.isNote ? activeNote.note[2] : -1
               selectedNotes.forEach(it => {
-                if (dx) it.style.left = parseFloat(it.style.left) + dx + 'px'
-                if (dy) it.style.top = Math.min(Math.max(parseFloat(it.style.top) + dy / 1.32, 0), 100) + '%'
+                if (dx) {
+                  const left = parseFloat(it.style.left) + dx
+                  it.style.left = left + 'px'
+                  it.note[2] = left / width | 0
+                }
+                if (dy) {
+                  const top = Math.min(Math.max(parseFloat(it.style.top) + dy / 1.32, 0), 100)
+                  it.style.top = top + '%'
+                  const keyId = Math.round(1.32 * (100 - top))
+                  if (it.note[2] === curNote) {
+                    pressedKeys.push(keyId)
+                    $client.midiMessage(index, 0x90, keyId, it.note[1])
+                  }
+                  it.note[0] = keyId
+                }
               })
             }
             break
@@ -279,6 +316,7 @@ const Editor: React.FC = () => {
   const noteWidth = noteWidths[noteWidthLevel]
   barLength = noteWidth * state.ppq
   const beatWidth = barLength / (16 / state.timeSigDenominator)
+  const index = $client.trackNameToIndex[state.activeTrack] || 0
 
   useEffect(() => {
     clearInterval(timer!)
@@ -286,7 +324,6 @@ const Editor: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    let pressedKeys: number[] = []
     const mousedown = (e: MouseEvent) => {
       const btn = e.target as HTMLButtonElement
       const key = btn?.dataset?.eimKeyboardKey
@@ -414,7 +451,8 @@ const Editor: React.FC = () => {
                 height={noteHeight}
                 alignment={alignment}
                 data={state.trackMidiData[state.activeTrack]?.notes}
-                color={state.tracks[$client.trackNameToIndex[state.activeTrack]]?.color || ''}
+                index={index}
+                color={state.tracks[index]?.color || ''}
               />
             </div>
           </Box>

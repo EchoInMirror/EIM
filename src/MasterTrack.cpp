@@ -21,7 +21,7 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	graphPlayer.setProcessor(this);
 	outputNodeID = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
 
-	setPlayConfigDetails(0, 2, 96000, 1024);
+	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
 	prepareToPlay(getSampleRate(), getBlockSize());
 }
 
