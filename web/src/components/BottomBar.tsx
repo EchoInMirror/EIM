@@ -1,7 +1,7 @@
 import './BottomBar.less'
 import React, { useEffect, useRef, useState, createRef } from 'react'
 import useGlobalData, { TrackMidiNoteData } from '../reducer'
-import PlayRuler from './PlayRuler'
+import PlayRuler, { moveScrollbar } from './PlayRuler'
 import { Resizable } from 're-resizable'
 import { Paper, Button, Box, useTheme, alpha, Slider } from '@mui/material'
 
@@ -70,7 +70,9 @@ let offsetY = 0
 let offsetX = 0
 let resizeDirection = 0
 let mouseState = 0
-let selectedNotes: HTMLDivElement[] = []
+let boxHeight = 0
+let boxWidth = 0
+let selectedNotes: NoteElement[] = []
 
 const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number, ppq: number, color: string, alignment: number }> = ({ data, width, height, ppq, color, alignment }) => {
   const ref = useRef<HTMLDivElement | null>(null)
@@ -140,6 +142,7 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
         if (e.button === 4 || e.ctrlKey) {
           if (!selectedBoxRef.current) return
           mouseState = 2
+          boxHeight = boxWidth = 0
           selectedBoxRef.current.style.left = (startX / alignmentWidth | 0) * alignmentWidth + 'px'
           selectedBoxRef.current.style.top = (startY / height | 0) * height + 'px'
           selectedBoxRef.current.style.display = 'block'
@@ -147,10 +150,12 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
         }
         switch (e.button) {
           case 0: {
+            let resetAllNotes = false
             if (elm.dataset.isNote) {
               const rect = elm.getBoundingClientRect()
               const currentX = e.pageX - rect.left
               resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
+              resetAllNotes = !selectedNotes.includes(elm)
             } else {
               e.currentTarget.style.cursor = 'grabbing'
               const { top, left } = e.currentTarget.getBoundingClientRect()
@@ -165,10 +170,13 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
               elm.note = [132 - noteId, 80, noteLeft / width | 0, alignment]
               e.currentTarget.appendChild(elm)
               resizeDirection = 0
+              resetAllNotes = true
             }
-            selectedNotes.forEach(it => (it.className = ''))
-            selectedNotes = [elm]
-            elm.className = 'selected'
+            if (resetAllNotes) {
+              selectedNotes.forEach(it => (it.className = ''))
+              selectedNotes = [elm]
+              elm.className = 'selected'
+            }
             e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
             mouseState = 1
             break
@@ -201,10 +209,17 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
                   it.style.left = parseFloat(it.style.left) + dx + 'px'
                 }
               })
-            } else {
+            } else if (selectedNotes.every(it => {
+              if (dx && parseFloat(it.style.left) + dx < 0) return false
+              if (dy) {
+                const tmp = parseFloat(it.style.top) + dy / 1.32
+                if (tmp < -0.005 || tmp >= 100) return false
+              }
+              return true
+            })) {
               selectedNotes.forEach(it => {
                 if (dx) it.style.left = parseFloat(it.style.left) + dx + 'px'
-                if (dy) it.style.top = parseFloat(it.style.top) + dy / 1.32 + '%'
+                if (dy) it.style.top = Math.min(Math.max(parseFloat(it.style.top) + dy / 1.32, 0), 100) + '%'
               })
             }
             break
@@ -214,21 +229,24 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
             const left0 = Math.ceil((e.pageX - rect.left - startX) / alignmentWidth)
             const top0 = Math.ceil((e.pageY - rect.top - startY) / height)
             if (left0 === offsetX && top0 === offsetY) return
-            const dx = (left0 - offsetX) * alignmentWidth
-            const dy = top0 - offsetY
+            boxWidth = boxWidth + (left0 - offsetX) * alignmentWidth
+            boxHeight = boxHeight + (top0 - offsetY) * height
             offsetY = top0
             offsetX = left0
             const box = selectedBoxRef.current.style
             const left = parseFloat(box.left)
             const top = parseFloat(box.top)
-            const boxWidth = (parseFloat(box.width) || 0) + dx
-            const boxHeight = (parseFloat(box.height) || 0) + dy * height
-            const minLeft = left / width
-            const maxLeft = (left + boxWidth) / width
-            const minTop = top / height
-            const maxTop = (top + boxHeight) / height
-            box.width = boxWidth + 'px'
-            box.height = boxHeight + 'px'
+            const minLeft0 = left / width
+            const maxLeft0 = (left + boxWidth) / width
+            const minTop0 = top / height
+            const maxTop0 = (top + boxHeight) / height
+            const minLeft = Math.min(minLeft0, maxLeft0)
+            const maxLeft = Math.max(minLeft0, maxLeft0)
+            const minTop = Math.min(minTop0, maxTop0)
+            const maxTop = Math.max(minTop0, maxTop0)
+            box.width = Math.abs(boxWidth) + 'px'
+            box.height = Math.abs(boxHeight) + 'px'
+            box.transform = `translate(${boxWidth < 0 ? boxWidth : 0}px, ${boxHeight < 0 ? boxHeight : 0}px)`
             for (const it of e.currentTarget.children) {
               const elm = it as NoteElement
               const { note } = elm
@@ -249,6 +267,9 @@ const Notes: React.FC<{ data: TrackMidiNoteData[], width: number, height: number
   )
 }
 
+let mouseOut = false
+let direction = 0
+let timer: NodeJS.Timer | undefined
 const Editor: React.FC = () => {
   const [noteWidthLevel, setNoteWidthLevel] = useState(3)
   const [noteHeight] = useState(14)
@@ -258,6 +279,11 @@ const Editor: React.FC = () => {
   const noteWidth = noteWidths[noteWidthLevel]
   barLength = noteWidth * state.ppq
   const beatWidth = barLength / (16 / state.timeSigDenominator)
+
+  useEffect(() => {
+    clearInterval(timer!)
+    timer = undefined
+  }, [])
 
   useEffect(() => {
     let pressedKeys: number[] = []
@@ -273,6 +299,8 @@ const Editor: React.FC = () => {
       $client.midiMessage(index, 0x90, keyId, Math.min(rect.width, Math.max(0, e.pageX - rect.left)) / rect.width * 127 | 0)
     }
     const mouseup = () => {
+      clearInterval(timer!)
+      timer = undefined
       if (!pressedKeys.length) return
       const index = $client.trackNameToIndex[state.activeTrack]
       if (index == null) return
@@ -303,8 +331,47 @@ const Editor: React.FC = () => {
         />
         当前轨道: {state.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
       </Box>
-      <Paper square elevation={3} className='scrollable' ref={scrollableRef as any}>
+      <Paper
+        square
+        elevation={3}
+        className='scrollable'
+        ref={scrollableRef as any}
+        onMouseOut={() => (mouseOut = true)}
+        onMouseMove={e => {
+          if (!mouseState) return
+          mouseOut = false
+          const rect = e.currentTarget.getBoundingClientRect()
+          if (e.pageX - rect.left < 64) {
+            direction |= 0b0001
+            direction &= ~0b0010
+          } else if (rect.right - e.pageX < 16) {
+            direction &= ~0b0001
+            direction |= 0b0010
+          } else direction &= ~0b0011
+          if (e.pageY - rect.top < 40) {
+            direction |= 0b0100
+            direction &= ~0b1000
+          } else if (rect.bottom - e.pageY < 16) {
+            direction &= ~0b0100
+            direction |= 0b1000
+          } else direction &= ~0b1100
+          if (direction && timer == null) {
+            timer = setInterval(() => {
+              if (!direction || !scrollableRef.current) {
+                clearInterval(timer!)
+                timer = undefined
+                return
+              }
+              if (direction & 0b0001) moveScrollbar('bottom-bar', mouseOut ? -4 : -2)
+              else if (direction & 0b0010) moveScrollbar('bottom-bar', mouseOut ? 4 : 2)
+              if (direction & 0b0100) scrollableRef.current.scrollTop -= mouseOut ? 8 : 4
+              else if (direction & 0b1000) scrollableRef.current.scrollTop += mouseOut ? 8 : 4
+            }, 30)
+          }
+        }}
+      >
         <PlayRuler
+          id='bottom-bar'
           headRef={playHeadRef}
           noteWidth={noteWidth}
           movableRef={editorRef}

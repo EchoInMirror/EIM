@@ -112,6 +112,7 @@ const Tracks: React.FC = () => {
     <main className='tracks'>
       <Toolbar />
       <PlayRuler
+        id='tracks'
         headRef={playHeadRef}
         noteWidth={noteWidth}
         movableRef={playListRef}
