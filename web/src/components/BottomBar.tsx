@@ -187,15 +187,17 @@ const Notes: React.FC<{
               elm.className = 'selected'
             }
             activeNote = elm
-            if (pressedKeys.length) {
-              pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
-              pressedKeys = []
+            if (!resizeDirection) {
+              if (pressedKeys.length) {
+                pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
+                pressedKeys = []
+              }
+              selectedNotes.forEach(it => {
+                if (it.note[2] !== elm.note[2]) return
+                pressedKeys.push(it.note[0])
+                $client.midiMessage(index, 0x90, it.note[0], it.note[1])
+              })
             }
-            selectedNotes.forEach(it => {
-              if (it.note[2] !== elm.note[2]) return
-              pressedKeys.push(it.note[0])
-              $client.midiMessage(index, 0x90, it.note[0], it.note[1])
-            })
             e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
             mouseState = 1
             break
@@ -218,9 +220,10 @@ const Notes: React.FC<{
             if (left === offsetX && top === offsetY) return
             const dx = (left - offsetX) * alignmentWidth
             const dy = top - offsetY
-            offsetY = top
-            offsetX = left
             if (resizeDirection) {
+              if (!dx || selectedNotes.some(it => resizeDirection === 1
+                ? dx < 0 && parseFloat(it.style.width) < alignmentWidth
+                : dx > 0 && parseFloat(it.style.width) < alignmentWidth)) return
               selectedNotes.forEach(it => {
                 if (resizeDirection === 1) it.style.width = parseFloat(it.style.width) + dx + 'px'
                 else {
@@ -228,14 +231,15 @@ const Notes: React.FC<{
                   it.style.left = parseFloat(it.style.left) + dx + 'px'
                 }
               })
-            } else if (selectedNotes.every(it => {
-              if (dx && parseFloat(it.style.left) + dx < 0) return false
-              if (dy) {
-                const tmp = parseFloat(it.style.top) + dy / 1.32
-                if (tmp < -0.005 || tmp >= 100) return false
-              }
-              return true
-            })) {
+            } else {
+              if (selectedNotes.some(it => {
+                if (dx && parseFloat(it.style.left) + dx < 0) return true
+                if (dy) {
+                  const tmp = parseFloat(it.style.top) + dy / 1.32
+                  if (tmp < -0.005 || tmp >= 100) return true
+                }
+                return false
+              })) return
               if (dy && pressedKeys.length) {
                 pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
                 pressedKeys = []
@@ -259,6 +263,8 @@ const Notes: React.FC<{
                 }
               })
             }
+            offsetY = top
+            offsetX = left
             break
           }
           case 2: {
