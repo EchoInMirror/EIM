@@ -84,7 +84,8 @@ const Notes: React.FC<{
   color: string
   alignment: number
   index: number
-}> = ({ data, width, height, ppq, color, alignment, index }) => {
+  uuid: string
+}> = ({ data, width, height, ppq, color, alignment, index, uuid }) => {
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
 
@@ -100,10 +101,11 @@ const Notes: React.FC<{
       const elm = document.createElement('div') as NoteElement
       elm.style.top = ((1 - it[0] / 132) * 100) + '%'
       elm.style.left = (it[2] * width) + 'px'
-      if (it[2] === it[3]) {
-        elm.style.width = '2px'
-        elm.style.transform = 'translateX(-1px)'
-      } else elm.style.width = (it[3] * width) + 'px'
+      if (it[3]) elm.style.width = (it[3] * width) + 'px'
+      else {
+        elm.style.width = '4px'
+        elm.style.transform = 'translateX(-2px)'
+      }
       elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * it[1] / 127)
       elm.dataset.isNote = 'true'
       elm.note = it
@@ -180,6 +182,10 @@ const Notes: React.FC<{
               e.currentTarget.appendChild(elm)
               resizeDirection = 0
               resetAllNotes = true
+              data.push(elm.note)
+              data.sort((a, b) => a[2] - b[2])
+              $client.addMidiNotes(index, [elm.note])
+              $client.trackUpdateNotifier[uuid]?.()
             }
             if (resetAllNotes) {
               selectedNotes.forEach(it => (it.className = ''))
@@ -203,7 +209,12 @@ const Notes: React.FC<{
             break
           }
           case 2:
-            if (elm.dataset.isNote) elm.remove()
+            if (elm.dataset.isNote) {
+              $client.deleteMidiNotes(index, [elm.note])
+              elm.remove()
+              data.splice(data.indexOf(elm.note), 1)
+              $client.trackUpdateNotifier[uuid]?.()
+            }
             selectedNotes.forEach(it => it.className && (it.className = ''))
             selectedNotes = []
             break
@@ -233,7 +244,7 @@ const Notes: React.FC<{
               })
             } else {
               if (selectedNotes.some(it => {
-                if (dx && parseFloat(it.style.left) + dx < 0) return true
+                if (dx && parseFloat(it.style.left) + dx < -0.005) return true
                 if (dy) {
                   const tmp = parseFloat(it.style.top) + dy / 1.32
                   if (tmp < -0.005 || tmp >= 100) return true
@@ -265,6 +276,7 @@ const Notes: React.FC<{
             }
             offsetY = top
             offsetX = left
+            $client.trackUpdateNotifier[uuid]?.()
             break
           }
           case 2: {
@@ -279,10 +291,10 @@ const Notes: React.FC<{
             const box = selectedBoxRef.current.style
             const left = parseFloat(box.left)
             const top = parseFloat(box.top)
-            const minLeft0 = left / width
-            const maxLeft0 = (left + boxWidth) / width
-            const minTop0 = top / height
-            const maxTop0 = (top + boxHeight) / height
+            const minLeft0 = Math.round(left / width)
+            const maxLeft0 = Math.round((left + boxWidth) / width)
+            const minTop0 = Math.round(top / height)
+            const maxTop0 = Math.round((top + boxHeight) / height)
             const minLeft = Math.min(minLeft0, maxLeft0)
             const maxLeft = Math.max(minLeft0, maxLeft0)
             const minTop = Math.min(minTop0, maxTop0)
@@ -302,8 +314,16 @@ const Notes: React.FC<{
       }}
       onKeyUp={e => {
         if (e.keyCode === 46) {
-          selectedNotes.forEach(it => it.remove())
+          const notes = selectedNotes.map(it => {
+            const { note } = it
+            it.remove()
+            return note
+          }).sort((a, b) => a[2] - b[2])
+          $client.deleteMidiNotes(index, notes)
+          let i = 0
+          notes.forEach(it => data.splice((i = data.indexOf(it, i)), 1))
           selectedNotes = []
+          $client.trackUpdateNotifier[uuid]?.()
         }
       }}
     />
@@ -440,7 +460,7 @@ const Editor: React.FC = () => {
               }
             }}
           >
-            <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth, height: '100%' }}>
+            <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth, height: '100%', minWidth: '100%' }}>
               <EditorGrid width={beatWidth} height={noteHeight} timeSigNumerator={state.timeSigNumerator} timeSigDenominator={state.timeSigDenominator} />
               <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
                 <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
@@ -458,6 +478,7 @@ const Editor: React.FC = () => {
                 alignment={alignment}
                 data={state.trackMidiData[state.activeTrack]?.notes}
                 index={index}
+                uuid={state.tracks[index]?.uuid || ''}
                 color={state.tracks[index]?.color || ''}
               />
             </div>

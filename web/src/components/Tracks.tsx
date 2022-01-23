@@ -61,7 +61,12 @@ const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, inde
   )
 }
 
-const Track: React.FC<{ data: TrackMidiNoteData[], width: number }> = ({ data, width }) => {
+const Track: React.FC<{ data: TrackMidiNoteData[], width: number, uuid: string }> = ({ data, width, uuid }) => {
+  const fn = useState(0)[1]
+  useEffect(() => {
+    $client.trackUpdateNotifier[uuid] = () => fn(val => val + 1)
+    return () => { delete $client.trackUpdateNotifier[uuid] }
+  }, [])
   return (
     <div className='notes'>
       {data && data.map((it, i) => (
@@ -156,7 +161,7 @@ const Tracks: React.FC = () => {
             </svg>
             {state.tracks.map(it => (
               <Box key={it.uuid} sx={{ backgroundColor: alpha(it.color, 0.1), '& .notes div': { backgroundColor: it.color } }}>
-                <Track data={state.trackMidiData[it.uuid]?.notes} width={noteWidth} />
+                <Track uuid={it.uuid} data={state.trackMidiData[it.uuid]?.notes} width={noteWidth} />
                 <Divider />
               </Box>
             ))}

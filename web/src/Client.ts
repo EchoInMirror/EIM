@@ -1,6 +1,6 @@
 import ByteBuffer from 'bytebuffer'
 import { colorValues } from './utils'
-import { ReducerTypes, TrackInfo } from './reducer'
+import { ReducerTypes, TrackInfo, TrackMidiNoteData } from './reducer'
 
 export enum ServerboundPacket {
   Reply,
@@ -10,7 +10,8 @@ export enum ServerboundPacket {
   Refresh,
   MidiMessage,
   UpdateTrackInfo,
-  MidiNotesAdd
+  MidiNotesAdd,
+  MidiNotesDelete
 }
 
 export enum ClientboundPacket {
@@ -42,6 +43,7 @@ export default class Client {
   private events: Record<number, (buf: ByteBuffer) => void> = { }
   private replies: Record<number, (buf: ByteBuffer) => void> = { }
   public trackNameToIndex: Record<string, number> = {}
+  public trackUpdateNotifier: Record<string, () => void> = {}
 
   constructor (address: string, callback: () => void) {
     this.ws = new WebSocket(address)
@@ -161,5 +163,17 @@ export default class Client {
   public updateTrackInfo (id: number, name = '', color = '', volume = -1, muted = false, solo = false) {
     this.send(this.buildPack(ServerboundPacket.UpdateTrackInfo).writeUint8(id).writeIString(name).writeIString(color)
       .writeFloat(volume).writeUint8(+muted).writeUint8(+solo))
+  }
+
+  public addMidiNotes (id: number, notes: TrackMidiNoteData[]) {
+    const buf = this.buildPack(ServerboundPacket.MidiNotesAdd).writeUint8(id).writeUint16(notes.length)
+    notes.forEach(it => buf.writeUint8(it[0]).writeUint8(it[1]).writeUint32(it[2]).writeUint32(it[3]))
+    this.send(buf)
+  }
+
+  public deleteMidiNotes (id: number, notes: TrackMidiNoteData[]) {
+    const buf = this.buildPack(ServerboundPacket.MidiNotesDelete).writeUint8(id).writeUint16(notes.length)
+    notes.forEach(it => buf.writeUint8(it[0]).writeUint32(it[2]))
+    this.send(buf)
   }
 }

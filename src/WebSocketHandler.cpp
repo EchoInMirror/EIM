@@ -143,10 +143,34 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		while (len-- > 0) {
 			int note = buf.readUInt8();
 			auto noteOn = juce::MidiMessage::noteOn(1, note, buf.readUInt8());
-			noteOn.setTimeStamp(buf.readUInt32());
+			int start = buf.readUInt32();
+			noteOn.setTimeStamp(start);
 			auto noteOff = juce::MidiMessage::noteOff(1, note);
-			noteOff.setTimeStamp(buf.readUInt32());
+			noteOff.setTimeStamp(start + buf.readUInt32());
 			midiSequence.addEvent(noteOn)->noteOffObject = midiSequence.addEvent(noteOff);
+		}
+		break;
+	}
+	case ServerboundPacket::ServerboundMidiNotesDelete: {
+		auto id = buf.readUInt8();
+		auto& tracks = mainWindow->masterTrack->tracks;
+		if (tracks.size() <= id) return;
+		auto& midiSequence = ((Track*)tracks[id]->getProcessor())->midiSequence;
+		int len = buf.readUInt16();
+		int note = buf.readUInt8();
+		int time = buf.readUInt32();
+		DBG("" << note << " " << time);
+		for (int i = 0; i < midiSequence.getNumEvents() && len > 0; i++) {
+			auto it = midiSequence.getEventPointer(i);
+			if (it->message.getTimeStamp() == time && it->message.getNoteNumber() == note) {
+				midiSequence.deleteEvent(i, true);
+				if (--len > 0) {
+					i--;
+					DBG("" << note << " " << time);
+					note = buf.readUInt8();
+					time = buf.readUInt32();
+				}
+			}
 		}
 		break;
 	}
