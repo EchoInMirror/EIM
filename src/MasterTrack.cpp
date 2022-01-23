@@ -29,7 +29,6 @@ void MasterTrack::scanPlugins() {
 	auto file = "C:/Program Files/Steinberg/VSTPlugins/Spire-1.5_x64/Spire-1.5.dll";
 	bool flag = false;
 	for (auto it : manager.getFormats()) {
-		DBG("" << it->getName());
 		if (it->fileMightContainThisPluginType(file)) {
 			auto arr = new juce::OwnedArray<juce::PluginDescription>();
 			if (knownPluginList.scanAndAddFile(file, true, *arr, *it)) {

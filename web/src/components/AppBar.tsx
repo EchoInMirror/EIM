@@ -127,7 +127,7 @@ const CenterSection: React.FC = () => {
       </IconButton>
       <IconButton
         color='inherit'
-        onClick={() => $client.setProjectStatus(0, -1, false, 0, 0)}
+        onClick={() => $client.setProjectStatus(0, 0, false, 0, 0)}
       >
         <Stop fontSize='large' />
       </IconButton>
