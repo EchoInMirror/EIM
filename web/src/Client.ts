@@ -11,7 +11,8 @@ export enum ServerboundPacket {
   MidiMessage,
   UpdateTrackInfo,
   MidiNotesAdd,
-  MidiNotesDelete
+  MidiNotesDelete,
+  MidiNotesEdit
 }
 
 export enum ClientboundPacket {
@@ -174,6 +175,13 @@ export default class Client {
   public deleteMidiNotes (id: number, notes: TrackMidiNoteData[]) {
     const buf = this.buildPack(ServerboundPacket.MidiNotesDelete).writeUint8(id).writeUint16(notes.length)
     notes.forEach(it => buf.writeUint8(it[0]).writeUint32(it[2]))
+    this.send(buf)
+  }
+
+  public editMidiNotes (id: number, notes: [number, number][], dx: number, dy: number, dw: number, dv: number) {
+    if (!dx && !dy && !dw && !dv) return
+    const buf = this.buildPack(ServerboundPacket.MidiNotesEdit).writeInt8(id).writeInt16(notes.length).writeInt32(dx).writeInt8(dy).writeInt32(dw).writeFloat(dv)
+    notes.forEach(it => buf.writeUint8(it[0]).writeUint32(it[1]))
     this.send(buf)
   }
 }

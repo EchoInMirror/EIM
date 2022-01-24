@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState, createRef } from 'react'
 import useGlobalData, { TrackMidiNoteData } from '../reducer'
 import PlayRuler, { moveScrollbar } from './PlayRuler'
 import { Resizable } from 're-resizable'
-import { Paper, Button, Box, useTheme, alpha, Slider } from '@mui/material'
+import { Paper, Button, Box, useTheme, alpha, Slider, FormControl, MenuItem, Select, InputLabel, Divider } from '@mui/material'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
@@ -62,7 +62,7 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
 const scrollableRef = createRef<HTMLDivElement>()
 const selectedBoxRef = createRef<HTMLDivElement>()
 
-type NoteElement = HTMLDivElement & { note: [number, number, number, number] }
+type NoteElement = HTMLDivElement & { note: TrackMidiNoteData }
 
 let startX = 0
 let startY = 0
@@ -76,6 +76,17 @@ let selectedNotes: NoteElement[] = []
 let pressedKeys: number[] = []
 let activeNote: NoteElement | undefined
 
+let _data: TrackMidiNoteData[] = []
+let _currentIndex = 0
+let _alignment = 0
+
+enum MouseState {
+  None,
+  Dragging,
+  Selecting,
+  Deleting
+}
+
 const Notes: React.FC<{
   data: TrackMidiNoteData[]
   width: number
@@ -88,6 +99,9 @@ const Notes: React.FC<{
 }> = ({ data, width, height, ppq, color, alignment, index, uuid }) => {
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
+  _currentIndex = index
+  _data = data
+  _alignment = alignment
 
   console.log(ppq)
 
@@ -96,7 +110,7 @@ const Notes: React.FC<{
     if (!cur || !data) return
     cur.innerText = ''
     selectedNotes = []
-    mouseState = 0
+    mouseState = MouseState.None
     data.forEach(it => {
       const elm = document.createElement('div') as NoteElement
       elm.style.top = ((1 - it[0] / 132) * 100) + '%'
@@ -117,19 +131,29 @@ const Notes: React.FC<{
     if (!ref.current) return
     const fn = () => {
       if (!mouseState || !ref.current) return
-      if (mouseState === 2 && selectedBoxRef.current) {
-        selectedNotes = []
-        for (const it of ref.current.children) if (it.className) selectedNotes.push(it as NoteElement)
-        selectedBoxRef.current.style.display = 'none'
-        selectedBoxRef.current.style.width = '0'
-        selectedBoxRef.current.style.height = '0'
+      switch (mouseState) {
+        case MouseState.Dragging: {
+          _data.sort((a, b) => a[2] - b[2])
+          const dx = resizeDirection === 1 ? 0 : offsetX * _alignment
+          $client.editMidiNotes(_currentIndex, selectedNotes.map(({ note }) => [note[0] + offsetY, note[2] - dx]), dx, -offsetY, resizeDirection * offsetX * _alignment, 0)
+          break
+        }
+        case MouseState.Selecting: if (selectedBoxRef.current) {
+          selectedNotes = []
+          for (const it of ref.current.children) if (it.className) selectedNotes.push(it as NoteElement)
+          selectedBoxRef.current.style.display = 'none'
+          selectedBoxRef.current.style.width = '0'
+          selectedBoxRef.current.style.height = '0'
+        }
       }
-      mouseState = 0
+      mouseState = MouseState.None
       ref.current.style.cursor = ''
     }
     document.addEventListener('mouseup', fn)
     return () => document.removeEventListener('mouseup', fn)
   }, [ref.current])
+
+  if (!data) return <div ref={ref} className='notes' style={{ cursor: 'no-drop' }} />
 
   return (
     <div
@@ -145,14 +169,14 @@ const Notes: React.FC<{
         startX = e.pageX - rect.left
         startY = e.pageY - rect.top
         offsetX = offsetY = 0
-        if (mouseState === 2 && selectedBoxRef.current) {
+        if (mouseState === MouseState.Selecting && selectedBoxRef.current) {
           selectedBoxRef.current.style.display = 'none'
           selectedBoxRef.current.style.width = '0'
           selectedBoxRef.current.style.height = '0'
         }
         if (e.button === 4 || e.ctrlKey) {
           if (!selectedBoxRef.current) return
-          mouseState = 2
+          mouseState = MouseState.Selecting
           boxHeight = boxWidth = 0
           selectedBoxRef.current.style.left = (startX / alignmentWidth | 0) * alignmentWidth + 'px'
           selectedBoxRef.current.style.top = (startY / height | 0) * height + 'px'
@@ -171,7 +195,7 @@ const Notes: React.FC<{
               e.currentTarget.style.cursor = 'grabbing'
               const { top, left } = e.currentTarget.getBoundingClientRect()
               elm = document.createElement('div') as NoteElement
-              const noteLeft = Math.round((e.pageX - left) / alignmentWidth) * alignmentWidth
+              const noteLeft = ((e.pageX - left) / alignmentWidth | 0) * alignmentWidth
               const noteId = (e.pageY - top) / height | 0
               elm.style.top = noteId / 1.32 + '%'
               elm.style.left = noteLeft + 'px'
@@ -205,7 +229,7 @@ const Notes: React.FC<{
               })
             }
             e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
-            mouseState = 1
+            mouseState = MouseState.Dragging
             break
           }
           case 2:
@@ -217,6 +241,7 @@ const Notes: React.FC<{
             }
             selectedNotes.forEach(it => it.className && (it.className = ''))
             selectedNotes = []
+            mouseState = MouseState.Deleting
             break
         }
       }}
@@ -224,7 +249,7 @@ const Notes: React.FC<{
         if (!mouseState) return
         const rect = e.currentTarget.getBoundingClientRect()
         switch (mouseState) {
-          case 1: {
+          case MouseState.Dragging: {
             if (!selectedNotes.length) break
             const left = Math.round((e.pageX - rect.left - startX) / alignmentWidth)
             const top = Math.round((e.pageY - rect.top - startY) / height)
@@ -279,7 +304,7 @@ const Notes: React.FC<{
             $client.trackUpdateNotifier[uuid]?.()
             break
           }
-          case 2: {
+          case MouseState.Selecting: {
             if (!selectedBoxRef.current) break
             const left0 = Math.ceil((e.pageX - rect.left - startX) / alignmentWidth)
             const top0 = Math.ceil((e.pageY - rect.top - startY) / height)
@@ -309,6 +334,16 @@ const Notes: React.FC<{
                 elm.className = 'selected'
               } else if (elm.className) elm.className = ''
             }
+            break
+          }
+          case MouseState.Deleting: {
+            const elm = e.target as NoteElement
+            if (elm.dataset.isNote) {
+              $client.deleteMidiNotes(index, [elm.note])
+              elm.remove()
+              data.splice(data.indexOf(elm.note), 1)
+              $client.trackUpdateNotifier[uuid]?.()
+            }
           }
         }
       }}
@@ -318,7 +353,7 @@ const Notes: React.FC<{
             const { note } = it
             it.remove()
             return note
-          }).sort((a, b) => a[2] - b[2])
+          })
           $client.deleteMidiNotes(index, notes)
           let i = 0
           notes.forEach(it => data.splice((i = data.indexOf(it, i)), 1))
@@ -337,7 +372,7 @@ const Editor: React.FC = () => {
   const [noteWidthLevel, setNoteWidthLevel] = useState(3)
   const [noteHeight] = useState(14)
   const [state] = useGlobalData()
-  const [alignment] = useState(state.ppq)
+  const [alignment, setAlignment] = useState(state.ppq)
   const editorRef = useRef<HTMLElement | null>(null)
   const noteWidth = noteWidths[noteWidthLevel]
   barLength = noteWidth * state.ppq
@@ -382,6 +417,8 @@ const Editor: React.FC = () => {
     if (scrollableRef.current) scrollableRef.current.scrollTop = noteHeight * 50
   }, [scrollableRef.current])
 
+  const steps = state.ppq / 16 * state.timeSigDenominator
+
   return (
     <div className='editor'>
       <Box className='actions' sx={{ backgroundColor: theme => theme.palette.background.bright }}>
@@ -393,6 +430,33 @@ const Editor: React.FC = () => {
           onChange={(_, val) => setNoteWidthLevel(val as number)}
         />
         当前轨道: {state.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
+        <br />
+        <FormControl variant='standard'>
+          <InputLabel id='bottom-bar-alignment-label'>对齐</InputLabel>
+          <Select
+            labelId='bottom-bar-alignment-label'
+            id='bottom-bar-alignment'
+            value={alignment}
+            onChange={e => setAlignment(e.target.value as number)}
+            label='对齐'
+          >
+            <MenuItem value={state.ppq * state.timeSigNumerator}><em>小节</em></MenuItem>
+            <Divider />
+            <MenuItem value={state.ppq}><em>节拍</em></MenuItem>
+            <MenuItem value={state.ppq / 2}>1/2 拍</MenuItem>
+            <MenuItem value={state.ppq / 3 | 0}>1/3 拍</MenuItem>
+            <MenuItem value={state.ppq / 4}>1/4 拍</MenuItem>
+            <MenuItem value={state.ppq / 6 | 0}>1/6 拍</MenuItem>
+            <Divider />
+            <MenuItem value={steps}><em>步进</em></MenuItem>
+            <MenuItem value={steps / 2}>1/2 步</MenuItem>
+            <MenuItem value={steps / 3 | 0}>1/3 步</MenuItem>
+            <MenuItem value={steps / 4}>1/4 步</MenuItem>
+            <MenuItem value={steps / 6 | 0}>1/6 步</MenuItem>
+            <Divider />
+            <MenuItem value={1}><em>无</em></MenuItem>
+          </Select>
+        </FormControl>
       </Box>
       <Paper
         square

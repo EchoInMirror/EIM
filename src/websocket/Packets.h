@@ -12,7 +12,8 @@ enum ServerboundPacket {
 	ServerboundMidiMessage,
 	ServerboundUpdateTrackInfo,
 	ServerboundMidiNotesAdd,
-	ServerboundMidiNotesDelete
+	ServerboundMidiNotesDelete,
+	ServerboundMidiNotesEdit
 };
 
 enum ClientboundPacket {

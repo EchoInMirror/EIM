@@ -160,25 +160,61 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		if (tracks.size() <= id) return;
 		auto track = ((Track*)tracks[id]->getProcessor());
 		auto& midiSequence = track->midiSequence;
-		int len = buf.readUInt16();
-		int note = buf.readUInt8();
-		int time = buf.readUInt32();
+		int len = buf.readUInt16(), note = buf.readUInt8(), time = buf.readUInt32();
 		auto& info = masterTrack->currentPositionInfo;
 		for (int i = 0; i < midiSequence.getNumEvents() && len > 0; i++) {
 			auto it = midiSequence.getEventPointer(i);
-			if (it->message.isNoteOn() && (int)it->message.getTimeStamp() == time && it->message.getNoteNumber() == note) {
-				if (info.isPlaying && it->noteOffObject && info.ppqPosition >= it->message.getTimeStamp() && info.ppqPosition <= it->noteOffObject->message.getTimeStamp()) {
-					auto msg = juce::MidiMessage::noteOff(1, note);
-					msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
-					track->messageCollector.addMessageToQueue(msg);
-				}
-				midiSequence.deleteEvent(i--, true);
-				if (--len > 0) {
-					note = buf.readUInt8();
-					time = buf.readUInt32();
-				}
+			if (!it->message.isNoteOn() || (int)it->message.getTimeStamp() != time || it->message.getNoteNumber() != note) continue;
+			if (info.isPlaying && it->noteOffObject && info.ppqPosition >= it->message.getTimeStamp() && info.ppqPosition <= it->noteOffObject->message.getTimeStamp()) {
+				auto msg = juce::MidiMessage::noteOff(1, note);
+				msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
+				track->messageCollector.addMessageToQueue(msg);
+			}
+			midiSequence.deleteEvent(i--, true);
+			if (--len > 0) {
+				note = buf.readUInt8();
+				time = buf.readUInt32();
 			}
 		}
+		masterTrack->endTime = juce::jmax(midiSequence.getEndTime(), (double)info.timeSigNumerator * masterTrack->ppq);
+		break;
+	}
+	case ServerboundPacket::ServerboundMidiNotesEdit: {
+		auto id = buf.readUInt8();
+		auto& masterTrack = mainWindow->masterTrack;
+		auto& tracks = masterTrack->tracks;
+		if (tracks.size() <= id) return;
+		auto track = ((Track*)tracks[id]->getProcessor());
+		auto& midiSequence = track->midiSequence;
+		int len = buf.readUInt16();
+		int dx = buf.readInt32(), dy = buf.readInt8(), dw = buf.readInt32();
+		float dv = buf.readFloat();
+		int note = buf.readUInt8(), time = buf.readUInt32();
+		auto& info = masterTrack->currentPositionInfo;
+		for (auto it = midiSequence.begin(); it != midiSequence.end() && len > 0; it++) {
+			auto& msg = (*it)->message;
+			auto curTime = (int)msg.getTimeStamp();
+			if (!msg.isNoteOn() || curTime != time || msg.getNoteNumber() != note) continue;
+			auto& noteOff = (*it)->noteOffObject;
+			if (info.isPlaying && noteOff && info.ppqPosition >= curTime && info.ppqPosition <= noteOff->message.getTimeStamp()) {
+				auto offMsg = juce::MidiMessage::noteOff(1, note);
+				offMsg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
+				track->messageCollector.addMessageToQueue(offMsg);
+			}
+			if (dx) msg.setTimeStamp(juce::jmax(0, curTime + dx));
+			if (noteOff && (dx || dw)) noteOff->message.setTimeStamp(juce::jmax(0, (int)noteOff->message.getTimeStamp() + dx + dw));
+			if (dy) {
+				note = juce::jmin(juce::jmax(0, note + dy), 127);
+				msg.setNoteNumber(note);
+				if (noteOff) noteOff->message.setNoteNumber(note);
+			}
+			if (dv) msg.setVelocity(juce::jlimit<float>(0, 1, msg.getVelocity() + dv));
+			if (--len > 0) {
+				note = buf.readUInt8();
+				time = buf.readUInt32();
+			}
+		}
+		midiSequence.sort();
 		masterTrack->endTime = juce::jmax(midiSequence.getEndTime(), (double)info.timeSigNumerator * masterTrack->ppq);
 		break;
 	}
