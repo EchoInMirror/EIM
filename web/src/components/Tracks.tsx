@@ -5,7 +5,7 @@ import VolumeMute from '@mui/icons-material/VolumeMute'
 import PlayRuler from './PlayRuler'
 import React, { useState, useEffect, createRef, useRef } from 'react'
 import useGlobalData, { ReducerTypes, TrackMidiNoteData, TrackInfo } from '../reducer'
-import { ColorPicker } from 'material-ui-color'
+import { ColorPicker } from 'mui-color'
 import { colorMap } from '../utils'
 import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme } from '@mui/material'
 
@@ -31,7 +31,7 @@ const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, inde
         hideTextfield
         value={color}
         palette={colorMap}
-        onChange={color => $client.updateTrackInfo(index, undefined, '#' + color.hex, -1, info.muted, info.solo)}
+        onChange={(color: any) => $client.updateTrackInfo(index, undefined, '#' + color.hex, -1, info.muted, info.solo)}
       />
       <div className='title'>
         <Button className='solo' variant='outlined' />

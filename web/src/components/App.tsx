@@ -46,6 +46,7 @@ const palette: PaletteOptions = {
 const App: React.FC = () => {
   const theme = createTheme({ palette }, zhCN)
   useEffect(() => {
+    document.documentElement.style.setProperty('--paper-background-color', theme.palette.background.bright)
     document.documentElement.style.setProperty('--scrollbar-color', theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main)
     document.documentElement.style.setProperty('--keyboard-black-key-color', theme.palette.background!.keyboardBlackKey)
     document.documentElement.style.setProperty('--keyboard-white-key-color', theme.palette.background!.keyboardWhiteKey)

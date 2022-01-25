@@ -15,7 +15,7 @@
     "bytebuffer": "^5.0.1",
     "less": "^4.1.2",
     "long": "^3.2.0",
-    "material-ui-color": "^1.2.0",
+    "mui-color": "^2.0.0-beta.2",
     "notistack": "^2.0.3",
     "parcel": "^2.0.1",
     "re-resizable": "^6.9.1",

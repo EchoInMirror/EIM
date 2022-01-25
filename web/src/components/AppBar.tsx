@@ -234,7 +234,7 @@ const AppBar: React.FC = () => {
                   const val = parseInt(e.target.value)
                   setBPMInteger((isNaN(val) ? 120 : Math.max(Math.min(val, 220), 10)).toString())
                 }}
-                onKeyDown={e => e.keyCode === 13 && updateBPM(e)}
+                onKeyDown={e => e.code === 'Enter' && updateBPM(e)}
                 onBlur={updateBPM}
                 value={bpmInteger}
               />.
@@ -243,7 +243,7 @@ const AppBar: React.FC = () => {
                 className='decimal'
                 value={bpmDecimal}
                 onBlur={updateBPM}
-                onKeyDown={e => e.keyCode === 13 && updateBPM(e)}
+                onKeyDown={e => e.code === 'Enter' && updateBPM(e)}
                 onChange={e => {
                   const val = parseInt(e.target.value)
                   setBPMDecimal((isNaN(val) ? 0 : Math.min(val, 99)).toString().padStart(2, '0'))
