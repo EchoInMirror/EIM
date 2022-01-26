@@ -7,6 +7,8 @@ PluginWrapper::PluginWrapper(std::unique_ptr<juce::AudioPluginInstance> p) :
 	instance(std::move(p)) {
 	setContentOwned(instance->createEditorIfNeeded(), true);
 	// mixer.setWetMixProportion(0.1f);
+	setUsingNativeTitleBar(true);
+	setResizable(true, true);
 	setVisible(true);
 }
 

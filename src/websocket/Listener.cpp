@@ -2,7 +2,7 @@
 #include "Packets.h"
 #include "../Main.h"
 
-Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint) : ioc(ioc), acceptor(ioc), state(boost::make_shared<SharedState>(".")) {
+Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint) : ioc(ioc), acceptor(ioc), state(std::make_shared<SharedState>(".")) {
     boost::beast::error_code ec;
 
     acceptor.open(endpoint.protocol(), ec);

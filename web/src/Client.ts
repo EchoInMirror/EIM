@@ -12,7 +12,9 @@ export enum ServerboundPacket {
   UpdateTrackInfo,
   MidiNotesAdd,
   MidiNotesDelete,
-  MidiNotesEdit
+  MidiNotesEdit,
+  OpenPluginManager,
+  Config
 }
 
 export enum ClientboundPacket {
@@ -20,12 +22,17 @@ export enum ClientboundPacket {
   ProjectStatus,
   SyncTrackInfo,
   TrackMidiData,
-  UpdateTrackInfo
+  UpdateTrackInfo,
+  Config
 }
 
 export enum ExplorerType {
   Favorites,
   VSTPlugins
+}
+
+export interface Config {
+  vstSearchPaths: string[]
 }
 
 const readTrack = (buf: ByteBuffer, uuid = buf.readIString()): TrackInfo => ({
@@ -183,5 +190,17 @@ export default class Client {
     const buf = this.buildPack(ServerboundPacket.MidiNotesEdit).writeInt8(id).writeInt16(notes.length).writeInt32(dx).writeInt8(dy).writeInt32(dw).writeFloat(dv)
     notes.forEach(it => buf.writeUint8(it[0]).writeUint32(it[1]))
     this.send(buf)
+  }
+
+  public openPluginManager () {
+    this.send(this.buildPack(ServerboundPacket.OpenPluginManager))
+  }
+
+  public config (config?: Config) {
+    const [packet, promise] = this.buildNeedReplyPack(ServerboundPacket.Config)
+    packet.writeUint8(config ? 1 : 0)
+    if (config) packet.writeIString(JSON.stringify(config))
+    this.send(packet)
+    return promise.then(it => it.readIString())
   }
 }

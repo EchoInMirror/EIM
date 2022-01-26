@@ -29,10 +29,10 @@ void WebSocketSession::onWrite(boost::beast::error_code ec, std::size_t) {
     queue.erase(queue.begin());
     if (!queue.empty()) doWrite();
 }
-void WebSocketSession::send(boost::shared_ptr<ByteBuffer> data) {
+void WebSocketSession::send(std::shared_ptr<ByteBuffer> data) {
     boost::asio::post(ws.get_executor(), boost::beast::bind_front_handler(&WebSocketSession::onSend, shared_from_this(), data));
 }
-void WebSocketSession::onSend(boost::shared_ptr<ByteBuffer> ss) {
+void WebSocketSession::onSend(std::shared_ptr<ByteBuffer> ss) {
     queue.push_back(ss);
     if (queue.size() > 1) return;
     doWrite();

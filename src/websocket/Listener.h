@@ -7,7 +7,7 @@
 
 class Listener : public boost::enable_shared_from_this<Listener> {
 public:
-    const boost::shared_ptr<SharedState> state;
+    const std::shared_ptr<SharedState> state;
     Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint);
 
     void doAccept();

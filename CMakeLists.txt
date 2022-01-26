@@ -10,6 +10,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 add_definitions(-DJUCE_PLUGINHOST_VST3 -DJUCE_PLUGINHOST_VST)
 if(MSVC)
     add_definitions(-D_WIN32_WINNT=0x0601)
+    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
 endif(MSVC)
 
 set(vst2sdkPath ${CMAKE_CURRENT_BINARY_DIR}/vst2sdk)

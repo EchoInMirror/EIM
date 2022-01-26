@@ -127,9 +127,20 @@ void ByteBuffer::writeDouble(double val) {
 	commit(sizeof(double));
 }
 
+void ByteBuffer::writeString(const char* val) {
+	auto len = strlen(val);
+	DBG("" << len);
+	writeUInt32((unsigned long)len);
+	if (!len) return;
+	auto size = sizeof(const char) * len;
+	memcpy(boost::asio::buffer_cast<char*>(prepare(size)), val, size);
+	commit(size);
+}
+
 void ByteBuffer::writeString(std::string val) {
 	auto len = val.length();
 	writeUInt32((unsigned long) len);
+	if (!len) return;
 	auto size = sizeof(const char) * len;
 	val.copy(boost::asio::buffer_cast<char*>(prepare(size)), len);
 	commit(size);

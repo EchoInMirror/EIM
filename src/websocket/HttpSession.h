@@ -11,9 +11,9 @@ class HttpSession : public boost::enable_shared_from_this<HttpSession> {
 private:
     boost::beast::tcp_stream stream;
     boost::beast::flat_buffer buffer;
-    boost::shared_ptr<SharedState> state;
+    std::shared_ptr<SharedState> state;
 
-    boost::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> parser;
+    std::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> parser;
 
     struct SendLambda;
 
@@ -21,5 +21,5 @@ private:
     void onWrite(boost::beast::error_code ec, std::size_t, bool close);
 public:
     void doRead();
-    HttpSession(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<SharedState> const& state);
+    HttpSession(boost::asio::ip::tcp::socket&& socket, std::shared_ptr<SharedState> const& state);
 };

@@ -13,7 +13,9 @@ enum ServerboundPacket {
 	ServerboundUpdateTrackInfo,
 	ServerboundMidiNotesAdd,
 	ServerboundMidiNotesDelete,
-	ServerboundMidiNotesEdit
+	ServerboundMidiNotesEdit,
+	ServerboundOpenPluginManager,
+	ServerboundConfig
 };
 
 enum ClientboundPacket {
@@ -21,11 +23,12 @@ enum ClientboundPacket {
 	ClientboundProjectStatus,
 	ClientboundSyncTrackInfo,
 	ClientboundTrackMidiData,
-	ClientboundUpdateTrackInfo
+	ClientboundUpdateTrackInfo,
+	ClientboundConfig
 };
 
-boost::shared_ptr<ByteBuffer> makePacket(unsigned int id);
-boost::shared_ptr<ByteBuffer> makeReplyPacket(unsigned int id);
-boost::shared_ptr<ByteBuffer> makeProjectStatusPacket();
-boost::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size);
-boost::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket();
+std::shared_ptr<ByteBuffer> makePacket(ClientboundPacket id);
+std::shared_ptr<ByteBuffer> makeReplyPacket(unsigned int id);
+std::shared_ptr<ByteBuffer> makeProjectStatusPacket();
+std::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size);
+std::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket();

@@ -2,15 +2,7 @@
 #include "Main.h"
 
 MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
-	manager.addDefaultFormats();
 	setPlayHead(this);
-
-	knownPluginListXMLFile = juce::File::getCurrentWorkingDirectory().getChildFile("knownPlugins.xml");
-	if (knownPluginListXMLFile.exists()) {
-		auto xml = juce::XmlDocument::parse(knownPluginListXMLFile.loadFileAsString());
-		knownPluginList.recreateFromXml(*xml.get());
-		xml.reset();
-	} else scanPlugins();
 
 	endTime = currentPositionInfo.timeSigNumerator * ppq;
 
@@ -25,31 +17,8 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	prepareToPlay(getSampleRate(), getBlockSize());
 }
 
-void MasterTrack::scanPlugins() {
-	auto file = "C:/Program Files/Steinberg/VSTPlugins/Spire-1.5_x64/Spire-1.5.dll";
-	bool flag = false;
-	for (auto it : manager.getFormats()) {
-		if (it->fileMightContainThisPluginType(file)) {
-			auto arr = new juce::OwnedArray<juce::PluginDescription>();
-			if (knownPluginList.scanAndAddFile(file, true, *arr, *it)) {
-				flag = true;
-				break;
-			}
-		}
-	}
-
-	if (flag) {
-		knownPluginList.createXml().release()->writeTo(knownPluginListXMLFile);
-	}
-}
-
-std::unique_ptr<PluginWrapper> MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc) {
-	juce::String err;
-	return std::make_unique<PluginWrapper>(std::move(manager.createPluginInstance(*desc, getSampleRate(), getBlockSize(), err)));
-}
-
-void MasterTrack::loadPluginAsync(std::unique_ptr<juce::PluginDescription> desc, MasterTrack::PluginCreationCallback callback) {
-	manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(), [callback](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
+void MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc, MasterTrack::PluginCreationCallback callback) {
+	EIMApplication::getEIMInstance()->pluginManager->manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(), [callback](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
 		callback(std::make_unique<PluginWrapper>(std::move(instance)), err.toStdString());
 	});
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Config.h"
+#include "PluginManagerWindow.h"
 #include "MasterTrack.h"
 #include "websocket/Listener.h"
 
@@ -17,7 +19,9 @@ private:
 class EIMApplication : public juce::JUCEApplication {
 public:
     EIMApplication() {}
+    Config config;
     std::unique_ptr<MainWindow> mainWindow;
+    std::unique_ptr<PluginManagerWindow> pluginManager;
     boost::shared_ptr<Listener> listener;
 
     const juce::String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }

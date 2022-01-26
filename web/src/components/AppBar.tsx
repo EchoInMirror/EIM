@@ -1,39 +1,45 @@
 import './AppBar.less'
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import useGlobalData, { ReducerTypes } from '../reducer'
-import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Slider } from '@mui/material'
+import Settings from './Settings'
+import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Slider, ListItemIcon, ListItemText, Divider } from '@mui/material'
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { ClientboundPacket } from '../Client'
 import { useSnackbar } from 'notistack'
 import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './BottomBar'
 import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 
+import NoteAdd from '@mui/icons-material/NoteAdd'
+import FileOpen from '@mui/icons-material/FileOpen'
+import Save from '@mui/icons-material/Save'
+import SaveAs from '@mui/icons-material/SaveAs'
+import SaveAlt from '@mui/icons-material/SaveAlt'
+import SettingsIcon from '@mui/icons-material/Settings'
+
 const icon = (
-  <div style={{ width: 40, height: 40, marginLeft: -10 }}>
-    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 964.59 907.06' width='40' height='40'>
-      <defs>
-        <clipPath id='clip-path' transform='translate(-15.78 -45.41)'>
-          <path fill='none' transform='rotate(-50.26 768.342 413.676)' d='M529.38 17.84h477.94v791.67H529.38z' />
-        </clipPath>
-        <clipPath id='clip-path-2' transform='translate(-15.78 -45.41)'>
-          <path transform='rotate(-50.26 231.226 586.306)' d='M-7.48 190.81h477.42v791H-7.48z' />
-        </clipPath>
-      </defs>
-      <g fill='currentColor'>
-        <g clipPath='url(#clip-path)'>
-          <path d='M423.3 421.06L369 341.54a359.49 359.49 0 0 0-26 28.08l-.23.29 56.23 82.3a264.12 264.12 0 0 1 16.61-22.27q3.75-4.56 7.69-8.88zM395 318.68l53.39 78.23A259.37 259.37 0 0 1 479 374.73l-53.23-78A352.94 352.94 0 0 0 395 318.68zM455.72 279.7l53.81 78.85a261.91 261.91 0 0 1 207.31-2.83l62.34-75C677 228 556.17 228.86 455.72 279.7z' transform='translate(-15.78 -45.41)' />
-          <path d='M835.25 454.16c61 93.47 57.13 219.43-18 309.75C725.06 874.84 560.37 890 449.44 797.78c-93.56-77.79-119-207.13-69.32-312.28L321.06 399c-100.45 149.48-73.42 353.73 68.07 471.36 151 125.54 375.17 104.9 500.7-46.1 108.63-130.66 107.8-316.13 7.76-445z' transform='translate(-15.78 -45.41)' />
-        </g>
-        <path d='M304.19 351.95L0 717.82l72.54 60.31L359.5 432.99l-55.31-81.04zM327.25 324.2l-.24.29 55.31 81.04 17.47-21.01-72.54-60.32z' />
-        <g clipPath='url(#clip-path-2)'>
-          <path d='M278.4 642.16l-62.34 75c102.05 52.66 222.67 51.9 323 1.29l-53.84-78.89a261.93 261.93 0 0 1-206.82 2.6zM515.83 623.44l53.23 78a353.71 353.71 0 0 0 30.69-21.83l-53.37-78.2a259.48 259.48 0 0 1-30.55 22.03zM579.68 568q-4 4.8-8.17 9.36l54.24 79.48a358.66 358.66 0 0 0 26.37-28.4L596 546.14A264.19 264.19 0 0 1 579.68 568z' transform='translate(-15.78 -45.41)' />
-          <path d='M606.12 127.57C455.13 2 231 22.67 105.42 173.67-3.21 304.33-2.38 489.78 97.65 618.7l62.34-75C99 450.25 102.88 324.3 178 234c92.19-111 256.88-126.11 367.81-33.89 93.72 77.89 119.08 207.57 69.07 312.81l59 86.46c100.81-149.52 73.88-354.06-67.76-471.81z' transform='translate(-15.78 -45.41)' />
-        </g>
-        <path d='M564.79 521.46l68.33 56.8-52.1-76.33-16.23 19.53zM892.04 127.84L603.85 474.48l55.31 81.04 305.43-367.36-72.55-60.32z' />
-        <circle cx='498' cy='498.22' r='50.44' transform='rotate(-50.26 441.702 492.331)' />
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 964.59 907.06' width='40' height='40'>
+    <defs>
+      <clipPath id='clip-path' transform='translate(-15.78 -45.41)'>
+        <path fill='none' transform='rotate(-50.26 768.342 413.676)' d='M529.38 17.84h477.94v791.67H529.38z' />
+      </clipPath>
+      <clipPath id='clip-path-2' transform='translate(-15.78 -45.41)'>
+        <path transform='rotate(-50.26 231.226 586.306)' d='M-7.48 190.81h477.42v791H-7.48z' />
+      </clipPath>
+    </defs>
+    <g fill='currentColor'>
+      <g clipPath='url(#clip-path)'>
+        <path d='M423.3 421.06L369 341.54a359.49 359.49 0 0 0-26 28.08l-.23.29 56.23 82.3a264.12 264.12 0 0 1 16.61-22.27q3.75-4.56 7.69-8.88zM395 318.68l53.39 78.23A259.37 259.37 0 0 1 479 374.73l-53.23-78A352.94 352.94 0 0 0 395 318.68zM455.72 279.7l53.81 78.85a261.91 261.91 0 0 1 207.31-2.83l62.34-75C677 228 556.17 228.86 455.72 279.7z' transform='translate(-15.78 -45.41)' />
+        <path d='M835.25 454.16c61 93.47 57.13 219.43-18 309.75C725.06 874.84 560.37 890 449.44 797.78c-93.56-77.79-119-207.13-69.32-312.28L321.06 399c-100.45 149.48-73.42 353.73 68.07 471.36 151 125.54 375.17 104.9 500.7-46.1 108.63-130.66 107.8-316.13 7.76-445z' transform='translate(-15.78 -45.41)' />
       </g>
-    </svg>
-  </div>
+      <path d='M304.19 351.95L0 717.82l72.54 60.31L359.5 432.99l-55.31-81.04zM327.25 324.2l-.24.29 55.31 81.04 17.47-21.01-72.54-60.32z' />
+      <g clipPath='url(#clip-path-2)'>
+        <path d='M278.4 642.16l-62.34 75c102.05 52.66 222.67 51.9 323 1.29l-53.84-78.89a261.93 261.93 0 0 1-206.82 2.6zM515.83 623.44l53.23 78a353.71 353.71 0 0 0 30.69-21.83l-53.37-78.2a259.48 259.48 0 0 1-30.55 22.03zM579.68 568q-4 4.8-8.17 9.36l54.24 79.48a358.66 358.66 0 0 0 26.37-28.4L596 546.14A264.19 264.19 0 0 1 579.68 568z' transform='translate(-15.78 -45.41)' />
+        <path d='M606.12 127.57C455.13 2 231 22.67 105.42 173.67-3.21 304.33-2.38 489.78 97.65 618.7l62.34-75C99 450.25 102.88 324.3 178 234c92.19-111 256.88-126.11 367.81-33.89 93.72 77.89 119.08 207.57 69.07 312.81l59 86.46c100.81-149.52 73.88-354.06-67.76-471.81z' transform='translate(-15.78 -45.41)' />
+      </g>
+      <path d='M564.79 521.46l68.33 56.8-52.1-76.33-16.23 19.53zM892.04 127.84L603.85 474.48l55.31 81.04 305.43-367.36-72.55-60.32z' />
+      <circle cx='498' cy='498.22' r='50.44' transform='rotate(-50.26 441.702 492.331)' />
+    </g>
+  </svg>
 )
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
@@ -41,12 +47,14 @@ let setProgress = (_val: number) => { }
 
 let moving = false
 const LeftSection: React.FC = () => {
+  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement>()
   const [val, fn] = useState(0)
+  const [open, setOpen] = useState(false)
   const [state] = useGlobalData()
   setProgress = fn
   return (
     <section className='left-section'>
-      {icon}
+      <IconButton color='inherit' onClick={e => setAnchorEl(e.target as HTMLButtonElement)} sx={{ margin: '0 -6px 0 -20px' }}>{icon}</IconButton>
       <Slider
         value={val}
         onChange={(_, val) => {
@@ -59,6 +67,40 @@ const LeftSection: React.FC = () => {
         }}
         sx={{ color: theme => theme.palette.mode === 'dark' ? '#fff' : 'rgba(0,0,0,0.87)' }}
       />
+      <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(undefined)}>
+        <MenuItem onClick={() => setAnchorEl(undefined)}>
+          <ListItemIcon><NoteAdd fontSize='small' /></ListItemIcon>
+          <ListItemText>新建</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => setAnchorEl(undefined)}>
+          <ListItemIcon><FileOpen fontSize='small' /></ListItemIcon>
+          <ListItemText>打开</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => setAnchorEl(undefined)}>
+          <ListItemIcon><Save fontSize='small' /></ListItemIcon>
+          <ListItemText>保存</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => setAnchorEl(undefined)}>
+          <ListItemIcon><SaveAs fontSize='small' /></ListItemIcon>
+          <ListItemText>另存为</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => setAnchorEl(undefined)}>
+          <ListItemIcon><SaveAlt fontSize='small' /></ListItemIcon>
+          <ListItemText>导出...</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            setOpen(true)
+            setAnchorEl(undefined)
+          }}
+        >
+          <ListItemIcon><SettingsIcon fontSize='small' /></ListItemIcon>
+          <ListItemText>首选项</ListItemText>
+        </MenuItem>
+      </Menu>
+      <Settings open={open} setOpen={setOpen} />
     </section>
   )
 }

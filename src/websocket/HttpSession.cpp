@@ -121,7 +121,7 @@ struct HttpSession::SendLambda {
     explicit SendLambda(HttpSession& self) : self(self) { }
 
     template<bool isRequest, class Body, class Fields> void operator()(http::message<isRequest, Body, Fields>&& msg) const {
-        auto sp = boost::make_shared<http::message<isRequest, Body, Fields>>(std::move(msg));
+        auto sp = std::make_shared<http::message<isRequest, Body, Fields>>(std::move(msg));
 
         auto self2 = self.shared_from_this();
         http::async_write(self.stream, *sp, [self2, sp](boost::beast::error_code ec, std::size_t bytes) {
@@ -130,7 +130,7 @@ struct HttpSession::SendLambda {
     }
 };
 
-HttpSession::HttpSession(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<SharedState> const& state): state(state), stream(boost::beast::unlimited_rate_policy(), std::move(socket)) {
+HttpSession::HttpSession(boost::asio::ip::tcp::socket&& socket, std::shared_ptr<SharedState> const& state): state(state), stream(boost::beast::unlimited_rate_policy(), std::move(socket)) {
 }
 
 void HttpSession::doRead() {

@@ -31,6 +31,7 @@ public:
 	void writeUInt64(unsigned long long val);
 	void writeFloat(float val);
 	void writeDouble(double val);
+	void writeString(const char* val);
 	void writeString(std::string val);
 	void writeString(juce::String val);
 };

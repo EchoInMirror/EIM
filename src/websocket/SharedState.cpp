@@ -12,7 +12,7 @@ void SharedState::leave(WebSocketSession* session) {
     sessions.erase(session);
 }
 
-void SharedState::send(boost::shared_ptr<ByteBuffer> message) {
+void SharedState::send(std::shared_ptr<ByteBuffer> message) {
     std::vector<boost::weak_ptr<WebSocketSession>> v;
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -23,7 +23,7 @@ void SharedState::send(boost::shared_ptr<ByteBuffer> message) {
     for (auto const& wp : v) if (auto sp = wp.lock()) sp->send(message);
 }
 
-void SharedState::sendExclude(boost::shared_ptr<ByteBuffer> message, WebSocketSession* session) {
+void SharedState::sendExclude(std::shared_ptr<ByteBuffer> message, WebSocketSession* session) {
     std::vector<boost::weak_ptr<WebSocketSession>> v;
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -34,4 +34,4 @@ void SharedState::sendExclude(boost::shared_ptr<ByteBuffer> message, WebSocketSe
     for (auto const& wp : v) if (auto sp = wp.lock()) sp->send(message);
 }
 
-int SharedState::size() { return sessions.size(); }
+int SharedState::size() { return (int)sessions.size(); }

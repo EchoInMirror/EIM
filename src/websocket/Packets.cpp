@@ -1,20 +1,20 @@
 #include "Packets.h"
 #include "../Main.h"
 
-boost::shared_ptr<ByteBuffer> makePacket(unsigned int id) {
-	auto buf = boost::make_shared<ByteBuffer>();
+std::shared_ptr<ByteBuffer> makePacket(ClientboundPacket id) {
+	auto buf = std::make_shared<ByteBuffer>();
 	buf->writeUInt8((unsigned char) id);
 	return buf;
 }
 
-boost::shared_ptr<ByteBuffer> makeReplyPacket(unsigned int id) {
-	auto buf = boost::make_shared<ByteBuffer>();
+std::shared_ptr<ByteBuffer> makeReplyPacket(unsigned int id) {
+	auto buf = std::make_shared<ByteBuffer>();
 	buf->writeUInt8(0);
 	buf->writeUInt32(id);
 	return buf;
 }
 
-boost::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
+std::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
 	auto &masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
 	auto &info = masterTrack->currentPositionInfo;
 	auto buf = makePacket(ClientboundPacket::ClientboundProjectStatus);
@@ -30,13 +30,13 @@ boost::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
 	return buf;
 }
 
-boost::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size) {
+std::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size) {
 	auto buf = makePacket(ClientboundPacket::ClientboundTrackMidiData);
 	buf->writeUInt8((unsigned char) size);
 	return buf;
 }
 
-boost::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket() {
+std::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket() {
 	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
 	auto& tracks = masterTrack->tracks;
 	auto buf = makeTrackMidiDataPacket((int)tracks.size());

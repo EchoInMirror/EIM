@@ -51,14 +51,14 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		case 1:
 			if (path.empty()) {
 				std::unordered_set<juce::String> map;
-				for (auto& it : mainWindow->masterTrack->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
+				for (auto& it : EIMApplication::getEIMInstance()->pluginManager->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
 				out->writeUInt32((unsigned long)map.size());
 				for (auto& it : map) out->writeString(it);
 				out->writeUInt32(0);
 			} else {
 				out->writeUInt32(0);
 				std::vector<juce::String> arr;
-				for (auto& it : mainWindow->masterTrack->knownPluginList.getTypes()) {
+				for (auto& it : EIMApplication::getEIMInstance()->pluginManager->knownPluginList.getTypes()) {
 					if (path == it.manufacturerName) arr.emplace_back(it.name + "#EIM#" + it.fileOrIdentifier);
 				}
 				out->writeUInt32((unsigned long)arr.size());
@@ -76,11 +76,11 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto identifier = buf.readString();
 		auto track = mainWindow->masterTrack->createTrack(name, color);
 		if (!identifier.empty()) {
-			auto type = mainWindow->masterTrack->knownPluginList.getTypeForFile(identifier);
+			auto type = EIMApplication::getEIMInstance()->pluginManager->knownPluginList.getTypeForFile(identifier);
 			if (type != nullptr) {
 				auto track0 = (Track*)track->getProcessor();
 				track0->name = type->name.toStdString();
-				mainWindow->masterTrack->loadPluginAsync(std::move(type), [track0, session, replyId](std::unique_ptr<PluginWrapper> instance, const std::string& err) {
+				mainWindow->masterTrack->loadPlugin(std::move(type), [track0, session, replyId](std::unique_ptr<PluginWrapper> instance, const std::string& err) {
 					auto out = makeReplyPacket(replyId);
 					if (err.empty()) track0->setGenerator(std::move(instance));
 					out->writeString(err);
@@ -216,6 +216,20 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		}
 		midiSequence.sort();
 		masterTrack->endTime = juce::jmax(midiSequence.getEndTime(), (double)info.timeSigNumerator * masterTrack->ppq);
+		break;
+	}
+	case ServerboundPacket::ServerboundOpenPluginManager:
+		EIMApplication::getEIMInstance()->pluginManager->setVisible(true);
+		break;
+	case ServerboundPacket::ServerboundConfig: {
+		auto out = makeReplyPacket(buf.readUInt32());
+		if (buf.readBoolean()) {
+			EIMApplication::getEIMInstance()->config.config = juce::JSON::parse(buf.readString());
+			out->writeString("");
+		} else {
+			out->writeString(EIMApplication::getEIMInstance()->config.toString());
+		}
+		session->send(out);
 		break;
 	}
 	}

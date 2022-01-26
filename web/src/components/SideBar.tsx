@@ -119,7 +119,7 @@ const AppBar: React.FC = () => {
         minWidth={200}
         maxWidth='60vw'
         enable={{ right: true }}
-        style={{ display: width ? undefined : 'none' }}
+        style={{ display: width ? 'flex' : 'none', flexDirection: 'column' }}
       >
         <Toolbar />
         <Explorer type={type} key={type} />

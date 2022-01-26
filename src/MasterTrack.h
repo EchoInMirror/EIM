@@ -8,7 +8,6 @@ class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead 
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
-    juce::KnownPluginList knownPluginList;
     double endTime = 0;
     short ppq = 96;
 
@@ -17,12 +16,10 @@ public:
     MasterTrack();
     ~MasterTrack() { deviceManager.closeAudioDevice(); }
 
-    void scanPlugins();
     void removeTrack(int id);
     void stopAllNotes();
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
-    std::unique_ptr<PluginWrapper> loadPlugin(std::unique_ptr<juce::PluginDescription> desc);
-    void loadPluginAsync(std::unique_ptr<juce::PluginDescription> desc, PluginCreationCallback callback);
+    void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
 
@@ -32,9 +29,7 @@ public:
     virtual void transportRecord(bool shouldStartRecording) override { juce::ignoreUnused(shouldStartRecording); }
     virtual void transportRewind() override { }
 private:
-    juce::File knownPluginListXMLFile;
     juce::AudioProcessorGraph::NodeID outputNodeID;
-    juce::AudioPluginFormatManager manager;
     juce::AudioDeviceManager deviceManager;
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     juce::AudioProcessorPlayer graphPlayer;

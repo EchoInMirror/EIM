@@ -4,6 +4,7 @@
 void EIMApplication::initialise(const juce::String& commandLine) {
     juce::ignoreUnused(commandLine);
     mainWindow.reset(new MainWindow());
+    pluginManager.reset(new PluginManagerWindow(config.rootPath));
     auto address = boost::asio::ip::make_address("0.0.0.0");
 
     listener = boost::make_shared<Listener>(ioc, boost::asio::ip::tcp::endpoint{address, 8088});
