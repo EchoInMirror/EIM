@@ -1,0 +1,85 @@
+.bottom-bar .mixer {
+  height: 100%;
+  padding: 10px;
+  align-items: flex-start;
+
+  .track {
+    width: 80px;
+    display: inline-block;
+
+    .mid-divider { margin: 0 8px; }
+
+    .name {
+      font-size: 12px;
+      padding: 2px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .content {
+      padding: 0 10px;
+    }
+
+    .level {
+      height: 120px;
+      display: flex;
+      justify-content: center;
+      margin: 10px 0;
+      position: relative;
+
+      .MuiSlider-root { margin-left: -14px; }
+
+      input[type=range] {
+        -webkit-appearance: slider-vertical;
+      }
+    }
+
+    .mute {
+      position: absolute;
+      top: -28px;
+      left: -2px;
+    }
+
+    .left, .right {
+      height: 100%;
+      width: 4px;
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        opacity: .38;
+        border-radius: 12px;
+        background-color: var(--primary-color);
+      }
+    }
+
+    .left {
+      margin: 0 1px 0 12px;
+
+      span {
+        left: 4px;
+        top: -22px;
+        transform: translateX(-50%);
+        position: absolute;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: -1px;
+      }
+    }
+
+    .plugins {
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: -0.3px;
+
+      .marquee-container div { padding: 0 5px; }
+    }
+  }
+}

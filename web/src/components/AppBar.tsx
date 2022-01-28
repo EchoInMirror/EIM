@@ -6,7 +6,7 @@ import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Sl
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { ClientboundPacket } from '../Client'
 import { useSnackbar } from 'notistack'
-import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './BottomBar'
+import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
 import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 
 import NoteAdd from '@mui/icons-material/NoteAdd'

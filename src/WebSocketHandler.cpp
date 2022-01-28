@@ -60,7 +60,7 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 				out->writeUInt32(0);
 				std::vector<juce::String> arr;
 				for (auto& it : instance->pluginManager->knownPluginList.getTypes()) {
-					if (path == it.manufacturerName) arr.emplace_back(it.name + "#EIM#" + it.fileOrIdentifier);
+					if (path == it.manufacturerName) arr.emplace_back(it.name + (it.pluginFormatName == "VST" ? "(VST)" : "") + "#EIM#" + it.fileOrIdentifier);
 				}
 				out->writeUInt32((unsigned long)arr.size());
 				for (auto& it : arr) out->writeString(it);

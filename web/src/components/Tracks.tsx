@@ -135,7 +135,7 @@ const Tracks: React.FC = () => {
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
         <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1, '& li': { height } }}>
           <Divider />
-          {state.tracks.map((it, i) => <React.Fragment key={it.uuid}><TrackActions info={it} index={i} /><Divider /></React.Fragment>)}
+          {state.tracks.map((it, i) => <React.Fragment key={it.uuid}><TrackActions info={it} index={i} /><Divider variant='middle' /></React.Fragment>)}
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}

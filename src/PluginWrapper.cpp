@@ -1,7 +1,7 @@
 #include "PluginWrapper.h"
 
 PluginWrapper::PluginWrapper(std::unique_ptr<juce::AudioPluginInstance> p) :
-	juce::DocumentWindow( p->getName(), juce::Colours::white, juce::DocumentWindow::closeButton),
+	juce::DocumentWindow(p->getName(), juce::Colours::white, juce::DocumentWindow::closeButton),
 	AudioProcessor(BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true)
 		.withOutput("Output", juce::AudioChannelSet::stereo(), true)),
 	instance(std::move(p)) {
