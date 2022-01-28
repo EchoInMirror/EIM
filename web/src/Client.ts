@@ -14,7 +14,8 @@ export enum ServerboundPacket {
   MidiNotesDelete,
   MidiNotesEdit,
   OpenPluginManager,
-  Config
+  Config,
+  ScanVSTs
 }
 
 export enum ClientboundPacket {
@@ -23,7 +24,8 @@ export enum ClientboundPacket {
   SyncTrackInfo,
   TrackMidiData,
   UpdateTrackInfo,
-  Config
+  Config,
+  ScanVSTs
 }
 
 export enum ExplorerType {
@@ -32,7 +34,7 @@ export enum ExplorerType {
 }
 
 export interface Config {
-  vstSearchPaths: string[]
+  vstSearchPaths: Record<string, string[]>
 }
 
 const readTrack = (buf: ByteBuffer, uuid = buf.readIString()): TrackInfo => ({
@@ -202,5 +204,9 @@ export default class Client {
     if (config) packet.writeIString(JSON.stringify(config))
     this.send(packet)
     return promise.then(it => it.readIString())
+  }
+
+  public scanVSTs () {
+    this.send(this.buildPack(ServerboundPacket.ScanVSTs))
   }
 }

@@ -16,8 +16,9 @@ void WebSocketSession::onAccept(boost::beast::error_code ec) {
     if (ec) return;
     state->join(this);
     doRead();
-    send(makeProjectStatusPacket());
-    send(makeAllTrackMidiDataPacket());
+    send(EIMPackets::makeProjectStatusPacket());
+    send(EIMPackets::makeAllTrackMidiDataPacket());
+    if (EIMApplication::getEIMInstance()->pluginManager->isScanning) send(EIMPackets::makeScanVSTsPacket(true));
 }
 void WebSocketSession::onRead(boost::beast::error_code ec, std::size_t) {
     if (ec) return;

@@ -68,7 +68,7 @@ void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
 		msg.setTimeStamp(juce::roundToInt(msg.getTimeStamp() / timeFormat * masterTrack->ppq));
 		midiSequence.addEvent(msg, 0);
 	}
-	auto buf = makeTrackMidiDataPacket(1);
+	auto buf = EIMPackets::makeTrackMidiDataPacket(1);
 	writeMidiData(buf.get());
 	EIMApplication::getEIMInstance()->listener->state->send(buf);
 }

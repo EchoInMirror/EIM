@@ -30,7 +30,7 @@ void Listener::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socke
 
 void Listener::syncTrackInfo() {
     auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracks;
-    auto buf = makePacket(ClientboundPacket::ClientboundSyncTrackInfo);
+    auto buf = EIMPackets::makePacket(ClientboundPacket::ClientboundSyncTrackInfo);
     buf->writeInt8((char)tracks.size());
     for (auto& it : tracks) {
         auto track = (Track*)it->getProcessor();
@@ -41,5 +41,5 @@ void Listener::syncTrackInfo() {
 }
 
 void Listener::broadcastProjectStatus() {
-    state->send(makeProjectStatusPacket());
+    state->send(EIMPackets::makeProjectStatusPacket());
 }

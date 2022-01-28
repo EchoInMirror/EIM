@@ -1,20 +1,20 @@
 #include "Packets.h"
 #include "../Main.h"
 
-std::shared_ptr<ByteBuffer> makePacket(ClientboundPacket id) {
+std::shared_ptr<ByteBuffer> EIMPackets::makePacket(ClientboundPacket id) {
 	auto buf = std::make_shared<ByteBuffer>();
 	buf->writeUInt8((unsigned char) id);
 	return buf;
 }
 
-std::shared_ptr<ByteBuffer> makeReplyPacket(unsigned int id) {
+std::shared_ptr<ByteBuffer> EIMPackets::makeReplyPacket(unsigned int id) {
 	auto buf = std::make_shared<ByteBuffer>();
 	buf->writeUInt8(0);
 	buf->writeUInt32(id);
 	return buf;
 }
 
-std::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
+std::shared_ptr<ByteBuffer> EIMPackets::makeProjectStatusPacket() {
 	auto &masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
 	auto &info = masterTrack->currentPositionInfo;
 	auto buf = makePacket(ClientboundPacket::ClientboundProjectStatus);
@@ -30,16 +30,22 @@ std::shared_ptr<ByteBuffer> makeProjectStatusPacket() {
 	return buf;
 }
 
-std::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size) {
+std::shared_ptr<ByteBuffer> EIMPackets::makeTrackMidiDataPacket(int size) {
 	auto buf = makePacket(ClientboundPacket::ClientboundTrackMidiData);
 	buf->writeUInt8((unsigned char) size);
 	return buf;
 }
 
-std::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket() {
+std::shared_ptr<ByteBuffer> EIMPackets::makeAllTrackMidiDataPacket() {
 	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
 	auto& tracks = masterTrack->tracks;
 	auto buf = makeTrackMidiDataPacket((int)tracks.size());
 	for (auto& it : tracks) ((Track*)it->getProcessor())->writeMidiData(buf.get());
+	return buf;
+}
+
+std::shared_ptr<ByteBuffer> EIMPackets::makeScanVSTsPacket(bool isScanning) {
+	auto buf = makePacket(ClientboundPacket::ClientboundScanVSTs);
+	buf->writeBoolean(isScanning);
 	return buf;
 }

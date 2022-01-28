@@ -27,7 +27,6 @@ EIMApplication* EIMApplication::getEIMInstance() {
 
 MainWindow::MainWindow(): juce::DocumentWindow("Echo In Mirror", juce::Colours::lightgrey, juce::DocumentWindow::allButtons) {
     setSize(400, 400);
-    setUsingNativeTitleBar(true);
     setResizable(true, true);
     centreWithSize(getWidth(), getHeight());
     setVisible(true);

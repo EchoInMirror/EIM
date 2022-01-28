@@ -4,6 +4,7 @@
 
 void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
+	auto instance = EIMApplication::getEIMInstance();
 	switch (buf.readUInt8()) {
 	case ServerboundPacket::ServerboundReply: break;
 	case ServerboundPacket::ServerboundSetProjectStatus: {
@@ -46,19 +47,19 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto replyId = buf.readUInt32();
 		auto type = buf.readUInt8();
 		auto path = buf.readString();
-		auto out = makeReplyPacket(replyId);
+		auto out = EIMPackets::makeReplyPacket(replyId);
 		switch (type) {
 		case 1:
 			if (path.empty()) {
 				std::unordered_set<juce::String> map;
-				for (auto& it : EIMApplication::getEIMInstance()->pluginManager->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
+				for (auto& it : instance->pluginManager->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
 				out->writeUInt32((unsigned long)map.size());
 				for (auto& it : map) out->writeString(it);
 				out->writeUInt32(0);
 			} else {
 				out->writeUInt32(0);
 				std::vector<juce::String> arr;
-				for (auto& it : EIMApplication::getEIMInstance()->pluginManager->knownPluginList.getTypes()) {
+				for (auto& it : instance->pluginManager->knownPluginList.getTypes()) {
 					if (path == it.manufacturerName) arr.emplace_back(it.name + "#EIM#" + it.fileOrIdentifier);
 				}
 				out->writeUInt32((unsigned long)arr.size());
@@ -76,12 +77,12 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto identifier = buf.readString();
 		auto track = mainWindow->masterTrack->createTrack(name, color);
 		if (!identifier.empty()) {
-			auto type = EIMApplication::getEIMInstance()->pluginManager->knownPluginList.getTypeForFile(identifier);
+			auto type = instance->pluginManager->knownPluginList.getTypeForFile(identifier);
 			if (type != nullptr) {
 				auto track0 = (Track*)track->getProcessor();
 				track0->name = type->name.toStdString();
 				mainWindow->masterTrack->loadPlugin(std::move(type), [track0, session, replyId](std::unique_ptr<PluginWrapper> instance, const std::string& err) {
-					auto out = makeReplyPacket(replyId);
+					auto out = EIMPackets::makeReplyPacket(replyId);
 					if (err.empty()) track0->setGenerator(std::move(instance));
 					out->writeString(err);
 					session->send(out);
@@ -126,7 +127,7 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		}
 		buf.readBoolean();
 		if (flag || session->state->size() > 1) {
-			auto out = makePacket(ClientboundPacket::ClientboundUpdateTrackInfo);
+			auto out = EIMPackets::makePacket(ClientboundPacket::ClientboundUpdateTrackInfo);
 			out->writeUInt8(id);
 			track->writeTrackInfo(out.get());
 			if (flag) session->state->send(out);
@@ -219,18 +220,33 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		break;
 	}
 	case ServerboundPacket::ServerboundOpenPluginManager:
-		EIMApplication::getEIMInstance()->pluginManager->setVisible(true);
+		juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->setVisible(true); });
 		break;
 	case ServerboundPacket::ServerboundConfig: {
-		auto out = makeReplyPacket(buf.readUInt32());
+		auto out = EIMPackets::makeReplyPacket(buf.readUInt32());
+		auto& config = instance->config;
+		auto& manager = instance->pluginManager;
 		if (buf.readBoolean()) {
-			EIMApplication::getEIMInstance()->config.config = juce::JSON::parse(buf.readString());
+			config.config = juce::JSON::parse(buf.readString());
 			out->writeString("");
 		} else {
-			out->writeString(EIMApplication::getEIMInstance()->config.toString());
+			auto obj = new juce::DynamicObject();
+			juce::var map(obj);
+			for (auto it : manager->manager.getFormats()) {
+				auto paths = juce::PluginListComponent::getLastSearchPath(manager->scanningProperties, *it);
+				juce::StringArray arr;
+				for (int i = 0; i < paths.getNumPaths(); i++) arr.add(paths[i].getFullPathName());
+				obj->setProperty(it->getName(), arr);
+			}
+			juce::var copy = config.config;
+			copy.getDynamicObject()->setProperty("vstSearchPaths", map);
+			out->writeString(juce::JSON::toString(copy));
 		}
 		session->send(out);
 		break;
 	}
+	case ServerboundPacket::ServerboundScanVSTs:
+		juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->scanPlugins(); });
+		break;
 	}
 }

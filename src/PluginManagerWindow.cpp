@@ -1,17 +1,29 @@
 #include "PluginManagerWindow.h"
+#include "Main.h"
+#include "websocket/Packets.h"
 
 class Scanner : public juce::KnownPluginList::CustomScanner {
 public:
     juce::File knownPluginListXMLFile;
     juce::KnownPluginList* knownPluginList;
-    Scanner(juce::File knownPluginListXMLFile, juce::KnownPluginList* knownPluginList) : knownPluginListXMLFile(knownPluginListXMLFile), knownPluginList(knownPluginList) { }
+    bool* isScanning;
+    Scanner(bool* isScanning, juce::File knownPluginListXMLFile, juce::KnownPluginList* knownPluginList) : isScanning(isScanning),
+        knownPluginListXMLFile(knownPluginListXMLFile), knownPluginList(knownPluginList) { }
     bool findPluginTypesFor(juce::AudioPluginFormat& format, juce::OwnedArray<juce::PluginDescription>& result, const juce::String& fileOrIdentifier) override {
+        if (!*isScanning) {
+            *isScanning = true;
+            EIMApplication::getEIMInstance()->listener->state->send(EIMPackets::makeScanVSTsPacket(true));
+        }
         format.findAllTypesForFile(result, fileOrIdentifier);
-        scanFinished();
+        knownPluginList->createXml().release()->writeTo(knownPluginListXMLFile);
         return true;
     }
 
     void scanFinished() override {
+        if (*isScanning) {
+            EIMApplication::getEIMInstance()->listener->state->send(EIMPackets::makeScanVSTsPacket(false));
+            *isScanning = false;
+        }
         knownPluginList->createXml().release()->writeTo(knownPluginListXMLFile);
     }
 };
@@ -19,11 +31,11 @@ public:
 PluginManagerWindow::PluginManagerWindow(juce::File rootPath) : juce::DocumentWindow("Plugin Manager", juce::Colours::white, juce::DocumentWindow::allButtons),
     knownPluginListXMLFile(rootPath.getChildFile("knownPlugins.xml")),
     deadMansPedalFile(rootPath.getChildFile("deadMansPedalFile.xml")),
-pluginListComponent(std::make_unique<juce::PluginListComponent>(manager, knownPluginList, rootPath.getChildFile("deadMansPedalFile.xml"),
-    new juce::PropertiesFile(rootPath.getChildFile("scanningProperties.xml"), { }), true)) {
+    scanningProperties(rootPath.getChildFile("scanningProperties.xml"), { }),
+pluginListComponent(std::make_unique<juce::PluginListComponent>(manager, knownPluginList, rootPath.getChildFile("deadMansPedalFile.xml"), &scanningProperties, true)) {
     pluginListComponent->setNumberOfThreadsForScanning(4);
     manager.addDefaultFormats();
-    knownPluginList.setCustomScanner(std::make_unique<Scanner>(knownPluginListXMLFile, &knownPluginList));
+    knownPluginList.setCustomScanner(std::make_unique<Scanner>(&isScanning, knownPluginListXMLFile, &knownPluginList));
 
     if (knownPluginListXMLFile.exists()) {
         auto xml = juce::XmlDocument::parse(knownPluginListXMLFile.loadFileAsString());
@@ -31,11 +43,20 @@ pluginListComponent(std::make_unique<juce::PluginListComponent>(manager, knownPl
         xml.reset();
     }
 
-    setUsingNativeTitleBar(true);
     setResizable(true, true);
     setContentOwned(pluginListComponent.get(), true);
     centreWithSize(getWidth(), getHeight());
-    setVisible(true);
 }
 
 void PluginManagerWindow::closeButtonPressed() { setVisible(false); }
+
+void PluginManagerWindow::scanPlugins() {
+    if (isScanning) return;
+    setVisible(true);
+    for (auto it : manager.getFormats()) {
+        auto paths = juce::PluginListComponent::getLastSearchPath(scanningProperties, *it);
+        paths.removeRedundantPaths();
+        scanningProperties.saveIfNeeded();
+        pluginListComponent->scanFor(*it, it->searchPathsForPlugins(paths, true, true));
+    }
+}

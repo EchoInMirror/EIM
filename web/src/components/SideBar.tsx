@@ -22,6 +22,7 @@ const DraggableTreeItem: React.FC<TreeItemProps> = props => (
   />
 )
 
+let callbackMap: Record<string, (() => void) | null> = { }
 const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type, tree, parent }) => {
   const nodes = []
   const subTrees = useMemo<Record<string, TreeNode>>(() => ({ }), [])
@@ -43,6 +44,10 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type
           if (subTrees[name]) return
           $client.getExplorerData(type, cur.replace(/^\//, '')).then(it => {
             subTrees[name] = it
+            if (callbackMap[cur]) {
+              callbackMap[cur]!()
+              callbackMap[cur] = null
+            }
             update(flag => flag + 1)
           })
         }}
@@ -60,14 +65,24 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type
 
 const Explorer: React.FC<{ type: number }> = ({ type }) => {
   const [tree, setTree] = useState<TreeNode>({})
+  const [expanded, setExpanded] = React.useState<string[]>([])
   useEffect(() => {
+    callbackMap = { }
     $client.getExplorerData(type, '').then(setTree)
   }, [])
   return (
     <TreeView
+      expanded={expanded}
       defaultCollapseIcon={<ExpandMore />}
       defaultExpandIcon={<ChevronRight />}
       sx={{ flexGrow: 1, overflow: 'auto', whiteSpace: 'nowrap' }}
+      onNodeToggle={(_, ids: string[]) => setExpanded(ids.filter(it => {
+        if (typeof callbackMap[it] === 'undefined') {
+          callbackMap[it] = () => setExpanded(prev => [...prev, it])
+          return false
+        }
+        return true
+      }))}
     >
       <Item tree={tree} parent='' type={type} />
     </TreeView>
@@ -119,6 +134,7 @@ const AppBar: React.FC = () => {
         minWidth={200}
         maxWidth='60vw'
         enable={{ right: true }}
+        handleStyles={{ right: { width: 4, right: -2 } }}
         style={{ display: width ? 'flex' : 'none', flexDirection: 'column' }}
       >
         <Toolbar />
