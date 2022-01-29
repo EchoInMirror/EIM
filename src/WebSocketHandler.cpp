@@ -60,7 +60,8 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 				out->writeUInt32(0);
 				std::vector<juce::String> arr;
 				for (auto& it : instance->pluginManager->knownPluginList.getTypes()) {
-					if (path == it.manufacturerName) arr.emplace_back(it.name + (it.pluginFormatName == "VST" ? "(VST)" : "") + "#EIM#" + it.fileOrIdentifier);
+					if (path == it.manufacturerName) arr.emplace_back((it.isInstrument ? "I#" : "") + it.name +
+						(it.pluginFormatName == "VST" ? "(VST)" : "") + "#EIM#" + it.fileOrIdentifier);
 				}
 				out->writeUInt32((unsigned long)arr.size());
 				for (auto& it : arr) out->writeString(it);
@@ -83,7 +84,7 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 				track0->name = type->name.toStdString();
 				mainWindow->masterTrack->loadPlugin(std::move(type), [track0, session, replyId](std::unique_ptr<PluginWrapper> instance, const std::string& err) {
 					auto out = EIMPackets::makeReplyPacket(replyId);
-					if (err.empty()) track0->setGenerator(std::move(instance));
+					if (err.empty()) track0->setInstrument(std::move(instance));
 					out->writeString(err);
 					session->send(out);
 				});
@@ -247,6 +248,9 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 	}
 	case ServerboundPacket::ServerboundScanVSTs:
 		juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->scanPlugins(); });
+		break;
+	case ServerboundPacket::ServerboundTrackMixerInfo:
+		session->send(EIMPackets::makeAllTrackMixerInfoPacket());
 		break;
 	}
 }

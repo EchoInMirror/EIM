@@ -21,7 +21,6 @@ public:
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
-    void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }

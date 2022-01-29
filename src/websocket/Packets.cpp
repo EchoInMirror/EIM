@@ -49,3 +49,17 @@ std::shared_ptr<ByteBuffer> EIMPackets::makeScanVSTsPacket(bool isScanning) {
 	buf->writeBoolean(isScanning);
 	return buf;
 }
+
+std::shared_ptr<ByteBuffer> EIMPackets::makeTrackMixerInfoPacket(int size) {
+	auto buf = makePacket(ClientboundPacket::ClientboundTrackMixerInfo);
+	buf->writeUInt8((unsigned char)size);
+	return buf;
+}
+
+std::shared_ptr<ByteBuffer> EIMPackets::makeAllTrackMixerInfoPacket() {
+	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+	auto& tracks = masterTrack->tracks;
+	auto buf = makeTrackMixerInfoPacket((int)tracks.size());
+	for (auto& it : tracks) ((Track*)it->getProcessor())->writeTrackMixerInfo(buf.get());
+	return buf;
+}

@@ -66,15 +66,18 @@
       .title {
         display: flex;
         align-items: center;
-        button {
+
+        .instrument { padding: 0; }
+
+        .solo {
           padding: 0;
           line-height: 1.4;
           min-width: 24px;
           margin-right: 4px;
-        }
 
-        .solo::before {
-          content: counter(track-li);
+          &::before {
+            content: counter(track-li);
+          }
         }
       }
 

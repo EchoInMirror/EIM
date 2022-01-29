@@ -34,7 +34,7 @@ void Listener::syncTrackInfo() {
     buf->writeInt8((char)tracks.size());
     for (auto& it : tracks) {
         auto track = (Track*)it->getProcessor();
-        buf->writeString(track->uuid.toString());
+        buf->writeUUID(track->uuid);
         track->writeTrackInfo(buf.get());
     }
     state->send(buf);

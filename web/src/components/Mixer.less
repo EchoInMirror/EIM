@@ -6,15 +6,16 @@
   .track {
     width: 80px;
     display: inline-block;
+    overflow: visible;
 
     .mid-divider { margin: 0 8px; }
 
     .name {
       font-size: 12px;
       padding: 2px 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      align-items: flex-start;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
     }
 
     .content {
@@ -28,7 +29,12 @@
       margin: 10px 0;
       position: relative;
 
-      .MuiSlider-root { margin-left: -14px; }
+      .MuiSlider-valueLabel { pointer-events: none; }
+
+      .MuiSlider-root {
+        z-index: 1;
+        margin-left: -14px;
+      }
 
       input[type=range] {
         -webkit-appearance: slider-vertical;

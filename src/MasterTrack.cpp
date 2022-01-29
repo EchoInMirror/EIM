@@ -74,12 +74,6 @@ void MasterTrack::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffe
 	if (currentPositionInfo.isPlaying) currentPositionInfo.timeInSamples += buffer.getNumSamples();
 }
 
-void MasterTrack::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {
-	calcPositionInfo();
-	AudioProcessorGraph::processBlock(buffer, midiMessages);
-	if (currentPositionInfo.isPlaying) currentPositionInfo.timeInSamples += buffer.getNumSamples();
-}
-
 void MasterTrack::stopAllNotes() {
 	auto msg = juce::MidiMessage::allNotesOff(1);
 	msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);

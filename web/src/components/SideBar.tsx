@@ -5,9 +5,10 @@ import TreeItem from '@mui/lab/TreeItem'
 import { Resizable } from 're-resizable'
 import { setIsMixer } from './BottomBar'
 import { Paper, Box, alpha, Toolbar, Button } from '@mui/material'
-import { FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, Piano, Tune } from '@mui/icons-material'
+import { FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, Piano, Tune, GraphicEq } from '@mui/icons-material'
 
 import type { TreeItemProps } from '@mui/lab/TreeItem'
+import type { ButtonProps } from '@mui/material/Button'
 
 // eslint-disable-next-line react/jsx-key
 const icons = [<FavoriteOutlined />, <SettingsInputHdmiOutlined />]
@@ -30,32 +31,42 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type
   const [, update] = useState(0)
   for (const name in tree) {
     const cur = parent + '/' + name
-    const [trueName, data] = name.split('#EIM#', 2)
-    nodes.push((
-      <DraggableTreeItem
-        key={cur}
-        nodeId={cur}
-        label={trueName}
-        draggable={!tree[name]}
-        onDragStart={e => {
-          e.dataTransfer.setData('application/json', JSON.stringify({ eim: true, type: 'loadPlugin', data: data }))
-          e.stopPropagation()
-        }}
-        onClick={() => {
-          if (subTrees[name]) return
-          $client.getExplorerData(type, cur.replace(/^\//, '')).then(it => {
-            subTrees[name] = it
-            if (callbackMap[cur]) {
-              callbackMap[cur]!()
-              callbackMap[cur] = null
-            }
-            update(flag => flag + 1)
-          })
-        }}
-      >
-        {tree[name] && (subTrees[name] ? <Item tree={subTrees[name]} parent={cur} type={type} /> : <TreeItem nodeId={cur + '$$EMPTY'} />)}
-      </DraggableTreeItem>
-    ))
+    const children = tree[name] && (subTrees[name] ? <Item tree={subTrees[name]} parent={cur} type={type} /> : <TreeItem nodeId={cur + '$$EMPTY'} />)
+    let node: JSX.Element | undefined
+    const handleClick = () => {
+      if (subTrees[name]) return
+      $client.getExplorerData(type, cur.replace(/^\//, '')).then(it => {
+        subTrees[name] = it
+        if (callbackMap[cur]) {
+          callbackMap[cur]!()
+          callbackMap[cur] = null
+        }
+        update(flag => flag + 1)
+      })
+    }
+    if (type === 1) {
+      const [trueName, data] = name.split('#EIM#', 2)
+      if (data) {
+        const isInstrument = trueName.startsWith('I#')
+        node = (
+          <DraggableTreeItem
+            key={cur}
+            nodeId={cur}
+            icon={isInstrument ? <Piano /> : <GraphicEq />}
+            label={isInstrument ? trueName.slice(2) : trueName}
+            draggable={!tree[name]}
+            onDragStart={e => {
+              $dragObject = { type: 'loadPlugin', isInstrument, data: data }
+              e.stopPropagation()
+            }}
+            onClick={handleClick}
+          >
+            {children}
+          </DraggableTreeItem>
+        )
+      }
+    }
+    nodes.push(node || <TreeItem key={cur} nodeId={cur} label={name} onClick={handleClick}>{children}</TreeItem>)
   }
   return (
     <>
@@ -90,10 +101,9 @@ const Explorer: React.FC<{ type: number }> = ({ type }) => {
   )
 }
 
-const SideBarButton: React.FC<{ active?: boolean, onClick?: () => void }> = ({ active, onClick, children }) => (
+const SideBarButton: React.FC<{ active?: boolean } & ButtonProps> = ({ active, children, ...props }) => (
   <Button
     component='li'
-    onClick={onClick}
     sx={theme => ({
       color: active ? theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main : alpha(theme.palette.primary.main, 0.5),
       borderRadius: 0,
@@ -104,6 +114,7 @@ const SideBarButton: React.FC<{ active?: boolean, onClick?: () => void }> = ({ a
         backgroundColor: active ? alpha(theme.palette.primary.main, 0.2) : 'inherit'
       }
     })}
+    {...props as any}
   >
     {children}
   </Button>
@@ -145,6 +156,11 @@ const AppBar: React.FC = () => {
             <SideBarButton
               active={isMixer}
               onClick={() => {
+                setIsMixer(true)
+                setIsMixer0(true)
+              }}
+              onDragOver={() => {
+                if (isMixer) return
                 setIsMixer(true)
                 setIsMixer0(true)
               }}

@@ -34,4 +34,5 @@ public:
 	void writeString(const char* val);
 	void writeString(std::string val);
 	void writeString(juce::String val);
+	void writeUUID(juce::Uuid val);
 };

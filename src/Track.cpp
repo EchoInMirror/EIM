@@ -8,30 +8,48 @@ Track::Track(std::string name, std::string color, MasterTrack* masterTrack): Aud
 	setChannelLayoutOfBus(true, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	setChannelLayoutOfBus(false, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	auto input = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode));
-	begin = addNode(std::make_unique<ProcessorBase>());
-	end = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode));
+	begin = addNode(std::make_unique<ProcessorBase>())->nodeID;
+	end = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
 	midiIn = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::midiInputNode))->nodeID;
 	auto midiOut = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::midiOutputNode))->nodeID;
 
-	addConnection({ { input->nodeID, 0 }, { begin->nodeID, 0 } });
-	addConnection({ { input->nodeID, 1 }, { begin->nodeID, 1 } });
-	addConnection({ { begin->nodeID, 0 }, { end->nodeID, 0 } });
-	addConnection({ { begin->nodeID, 1 }, { end->nodeID, 1 } });
+	addAudioConnection(input->nodeID, begin);
+	addAudioConnection(begin, end);
 	addConnection({ { midiIn, juce::AudioProcessorGraph::midiChannelIndex }, { midiOut, juce::AudioProcessorGraph::midiChannelIndex } });
 	chain.get<1>().setGainLinear(1);
 }
 
-void Track::setGenerator(std::unique_ptr<PluginWrapper> instance) {
-	auto node = addNode(std::move(instance));
-	addConnection({ { node->nodeID, 0 }, { end->nodeID, 0 } });
-	addConnection({ { node->nodeID, 1 }, { end->nodeID, 1 } });
-	addConnection({ { midiIn, juce::AudioProcessorGraph::midiChannelIndex }, { node->nodeID, juce::AudioProcessorGraph::midiChannelIndex } });
+void Track::addEffectPlugin(std::unique_ptr<PluginWrapper> plugin) {
+	auto node = addNode(std::move(plugin));
+	plugins.emplace_back(node);
+	juce::AudioProcessorGraph::NodeID prev;
+	for (auto& conn : getConnections()) if (conn.destination.nodeID == end) {
+		prev = conn.source.nodeID;
+		removeConnection(conn);
+	}
+	addAudioConnection(prev, instrumentNode->nodeID);
+	addAudioConnection(instrumentNode->nodeID, end);
+}
+
+void Track::setInstrument(std::unique_ptr<PluginWrapper> instance) {
+	if (instance == nullptr) {
+		instrumentNode = nullptr;
+		return;
+	}
+	instrumentNode = addNode(std::move(instance));
+	addAudioConnection(instrumentNode->nodeID, begin);
+	addConnection({ { midiIn, juce::AudioProcessorGraph::midiChannelIndex }, { instrumentNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex } });
 }
 
 void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
 	AudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
 	for (auto it : getNodes()) it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
 	messageCollector.reset(newSampleRate);
+}
+
+void Track::addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::AudioProcessorGraph::NodeID dest) {
+	addConnection({ { src, 0 }, { dest, 0 } });
+	addConnection({ { src, 1 }, { dest, 1 } });
 }
 
 void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages) {
@@ -77,12 +95,25 @@ void Track::writeTrackInfo(ByteBuffer* buf) {
 	buf->writeString(name);
 	buf->writeString(color);
 	buf->writeFloat(chain.get<1>().getGainLinear());
+	buf->writeBoolean(instrumentNode != nullptr);
 	buf->writeBoolean(currentNode->isBypassed());
 	buf->writeBoolean(false);
 }
 
+void Track::writeTrackMixerInfo(ByteBuffer* buf) {
+	buf->writeUUID(uuid);
+	buf->writeFloat(pan);
+	buf->writeUInt8(std::to_underlying(panRule));
+	buf->writeUInt8(plugins.size());
+	for (auto& it : plugins) {
+		auto plugin = (PluginWrapper*)it->getProcessor();
+		buf->writeString(plugin->getName());
+		buf->writeFloat(plugin->mixProportion);
+	}
+}
+
 void Track::writeMidiData(ByteBuffer* buf) {
-	buf->writeString(uuid.toString());
+	buf->writeUUID(uuid);
 	std::vector<std::tuple<juce::uint8, juce::uint8, juce::uint32, juce::uint32>> arr;
 	midiSequence.updateMatchedPairs();
 	for (auto& it : midiSequence) {

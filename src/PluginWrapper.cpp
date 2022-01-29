@@ -6,7 +6,7 @@ PluginWrapper::PluginWrapper(std::unique_ptr<juce::AudioPluginInstance> p) :
 		.withOutput("Output", juce::AudioChannelSet::stereo(), true)),
 	instance(std::move(p)) {
 	setContentOwned(instance->createEditorIfNeeded(), true);
-	// mixer.setWetMixProportion(0.1f);
+	mixer.setMixingRule(juce::dsp::DryWetMixingRule::balanced);
 	setUsingNativeTitleBar(true);
 	setResizable(true, true);
 	setVisible(true);
@@ -25,26 +25,16 @@ void PluginWrapper::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
 	instance->processBlock(buffer, midiMessages);
 	mixer.mixWetSamples(buffer);
 }
-void PluginWrapper::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {
-	mixer2.pushDrySamples(buffer);
-	instance->processBlock(buffer, midiMessages);
-	mixer2.mixWetSamples(buffer);
-}
 
 void PluginWrapper::processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
 	mixer.pushDrySamples(buffer);
 	instance->processBlockBypassed(buffer, midiMessages);
 	mixer.mixWetSamples(buffer);
 }
-void PluginWrapper::processBlockBypassed(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {
-	mixer2.pushDrySamples(buffer);
-	instance->processBlockBypassed(buffer, midiMessages);
-	mixer2.mixWetSamples(buffer);
-}
+
 void PluginWrapper::prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) {
 	const auto channels = juce::jmax(instance->getTotalNumInputChannels(), instance->getTotalNumOutputChannels());
 	mixer.prepare({ sampleRate, (juce::uint32)estimatedSamplesPerBlock, (juce::uint32)channels });
-	mixer2.prepare({ sampleRate, (juce::uint32)estimatedSamplesPerBlock, (juce::uint32)channels });
 	instance->setRateAndBufferSizeDetails(sampleRate, estimatedSamplesPerBlock);
 	instance->prepareToPlay(sampleRate, estimatedSamplesPerBlock);
 }

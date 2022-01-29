@@ -25,9 +25,11 @@ public:
     virtual void setProcessingPrecision(ProcessingPrecision newPrecision);
     virtual void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize);
 
-    void setGenerator(std::unique_ptr<PluginWrapper>);
+    void addEffectPlugin(std::unique_ptr<PluginWrapper>);
+    void setInstrument(std::unique_ptr<PluginWrapper>);
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
     void writeTrackInfo(ByteBuffer* buf);
+    void writeTrackMixerInfo(ByteBuffer* buf);
     void writeMidiData(ByteBuffer* buf);
     void setMuted(bool val);
 private:
@@ -35,10 +37,14 @@ private:
     juce::CriticalSection processLock;
     int samplesPlayed = 0;
     double nextStartTime = 0;
-    juce::AudioProcessorGraph::NodeID midiIn;
-    juce::AudioProcessorGraph::Node::Ptr begin, end;
+    std::vector<juce::AudioProcessorGraph::Node::Ptr> plugins;
+    juce::AudioProcessorGraph::NodeID midiIn, begin, end;
+    juce::AudioProcessorGraph::Node::Ptr instrumentNode = nullptr;
+    juce::dsp::PannerRule panRule = juce::dsp::PannerRule::balanced;
+    float pan = 0.0;
 
     void addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages);
+    void addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::AudioProcessorGraph::NodeID dest);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
 };

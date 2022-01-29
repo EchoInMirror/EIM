@@ -7,6 +7,7 @@ class PluginWrapper: public juce::DocumentWindow, public juce::AudioProcessor {
 public:
     PluginWrapper(std::unique_ptr<juce::AudioPluginInstance> instance);
     ~PluginWrapper() { clearContentComponent(); }
+    float mixProportion = 1.0;
 
     void closeButtonPressed() override;
     int getDesktopWindowStyleFlags() const override;
@@ -30,16 +31,13 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override { instance->setStateInformation(data, sizeInBytes); }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
-    void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
     void processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
-    void processBlockBypassed(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
     void prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) override;
     void setPlayHead(juce::AudioPlayHead* newPlayHead) override;
     virtual void setProcessingPrecision(ProcessingPrecision newPrecision);
     virtual void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize);
 private:
     juce::dsp::DryWetMixer<float> mixer;
-    juce::dsp::DryWetMixer<double> mixer2;
     std::unique_ptr<juce::AudioPluginInstance> instance;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginWrapper)
 };

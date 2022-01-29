@@ -6,6 +6,7 @@ export interface TrackInfo {
   name: string
   muted: boolean
   solo: boolean
+  hasInstrument: boolean
   color: string
   volume: number
 }
@@ -15,7 +16,8 @@ export enum ReducerTypes {
   SetProjectStatus,
   SetTrackMidiData,
   SetTrackInfo,
-  SetMaxNoteTime
+  SetMaxNoteTime,
+  UpdateTrack
 }
 
 export type TrackMidiNoteData = [number, number, number, number]
@@ -73,10 +75,19 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
         ...state,
         tracks: action.tracks
       }
+    case ReducerTypes.UpdateTrack: {
+      const tracks = state.tracks.slice()
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { type, index, ...others } = action
+      tracks[index] = { ...tracks[index], ...others }
+      return { ...state, tracks }
+    }
     default:
       return state
   }
 }
+
+export type DispatchType = (action: Action) => void
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const GlobalDataContext = createContext([initialState, (_action: Action) => { }] as const)

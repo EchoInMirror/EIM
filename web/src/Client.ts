@@ -15,7 +15,8 @@ export enum ServerboundPacket {
   MidiNotesEdit,
   OpenPluginManager,
   Config,
-  ScanVSTs
+  ScanVSTs,
+  TrackMixerInfo
 }
 
 export enum ClientboundPacket {
@@ -25,7 +26,8 @@ export enum ClientboundPacket {
   TrackMidiData,
   UpdateTrackInfo,
   Config,
-  ScanVSTs
+  ScanVSTs,
+  TrackMixerInfo
 }
 
 export enum ExplorerType {
@@ -37,11 +39,12 @@ export interface Config {
   vstSearchPaths: Record<string, string[]>
 }
 
-const readTrack = (buf: ByteBuffer, uuid = buf.readIString()): TrackInfo => ({
+const readTrack = (buf: ByteBuffer, uuid = buf.readUint64().toString(32)): TrackInfo => ({
   uuid,
   name: buf.readIString(),
   color: buf.readIString(),
   volume: buf.readFloat(),
+  hasInstrument: !!buf.readUint8(),
   muted: !!buf.readUint8(),
   solo: !!buf.readUint8()
 })
@@ -84,7 +87,7 @@ export default class Client {
           const trackMidiData = { ...$globalData.trackMidiData }
           let maxNoteTime = 0
           while (len-- > 0) {
-            const key = buf.readIString()
+            const key = buf.readUint64().toString(32)
             trackMidiData[key] = { notes: [] }
             const { notes } = trackMidiData[key]
             let cnt = buf.readUint16()

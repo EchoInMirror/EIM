@@ -16,7 +16,8 @@ enum ServerboundPacket {
 	ServerboundMidiNotesEdit,
 	ServerboundOpenPluginManager,
 	ServerboundConfig,
-	ServerboundScanVSTs
+	ServerboundScanVSTs,
+	ServerboundTrackMixerInfo
 };
 
 enum ClientboundPacket {
@@ -26,7 +27,8 @@ enum ClientboundPacket {
 	ClientboundTrackMidiData,
 	ClientboundUpdateTrackInfo,
 	ClientboundConfig,
-	ClientboundScanVSTs
+	ClientboundScanVSTs,
+	ClientboundTrackMixerInfo
 };
 
 namespace EIMPackets {
@@ -36,4 +38,6 @@ namespace EIMPackets {
 	std::shared_ptr<ByteBuffer> makeTrackMidiDataPacket(int size);
 	std::shared_ptr<ByteBuffer> makeAllTrackMidiDataPacket();
 	std::shared_ptr<ByteBuffer> makeScanVSTsPacket(bool isScanning);
+	std::shared_ptr<ByteBuffer> makeTrackMixerInfoPacket(int size);
+	std::shared_ptr<ByteBuffer> makeAllTrackMixerInfoPacket();
 }

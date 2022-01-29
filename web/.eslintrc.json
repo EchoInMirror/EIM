@@ -21,7 +21,8 @@
     "@typescript-eslint"
   ],
   "globals": {
-    "$client": "readonly"
+    "$client": "readonly",
+    "$dragObject": "writable"
   },
   "rules": {
     "no-use-before-define": "off",

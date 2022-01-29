@@ -149,3 +149,7 @@ void ByteBuffer::writeString(std::string val) {
 void ByteBuffer::writeString(juce::String val) {
 	writeString(val.toStdString());
 }
+
+void ByteBuffer::writeUUID(juce::Uuid val) {
+	writeUInt64(val.getNode());
+}
