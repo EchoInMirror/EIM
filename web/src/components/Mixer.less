@@ -11,8 +11,9 @@
     .mid-divider { margin: 0 8px; }
 
     .name {
-      font-size: 12px;
       padding: 2px 0;
+      font-size: 12px;
+      min-height: 25px;
       align-items: flex-start;
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
@@ -85,7 +86,11 @@
       font-weight: bold;
       letter-spacing: -0.3px;
 
-      .marquee-container div { padding: 0 5px; }
+      .marquee-container {
+        cursor: pointer;
+        
+        div { padding: 0 5px; }
+      }
     }
   }
 }

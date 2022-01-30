@@ -4,7 +4,11 @@
 #include "Main.h"
 #include "websocket/Packets.h"
 
-Track::Track(std::string name, std::string color, MasterTrack* masterTrack): AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
+Track::Track(juce::Uuid uuid, MasterTrack* masterTrack) : uuid(uuid), AudioProcessorGraph(), masterTrack(masterTrack) { init(); }
+
+Track::Track(std::string name, std::string color, MasterTrack* masterTrack): AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) { init(); }
+
+void Track::init() {
 	setChannelLayoutOfBus(true, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	setChannelLayoutOfBus(false, 0, juce::AudioChannelSet::canonicalChannelSet(2));
 	auto input = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode));
@@ -102,7 +106,7 @@ void Track::writeTrackInfo(ByteBuffer* buf) {
 
 void Track::writeTrackMixerInfo(ByteBuffer* buf) {
 	buf->writeUUID(uuid);
-	buf->writeFloat(pan);
+	buf->writeInt8(pan);
 	buf->writeUInt8(std::to_underlying(panRule));
 	buf->writeUInt8(plugins.size());
 	for (auto& it : plugins) {

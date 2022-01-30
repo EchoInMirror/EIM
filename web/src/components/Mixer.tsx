@@ -1,7 +1,8 @@
 import './Mixer.less'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import useGlobalData, { TrackInfo, DispatchType, ReducerTypes } from '../reducer'
-import { Slider, IconButton, Card, Divider, Stack, useTheme, getLuminance, Button } from '@mui/material'
+import { ClientboundPacket } from '../Client'
+import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button } from '@mui/material'
 import Marquee from 'react-fast-marquee'
 
 import Power from '@mui/icons-material/Power'
@@ -9,11 +10,34 @@ import VolumeUp from '@mui/icons-material/VolumeUp'
 import VolumeOff from '@mui/icons-material/VolumeOff'
 import LoadingButton from '@mui/lab/LoadingButton'
 
-const defaultPan = [50, 50]
+interface MixerPlugin { name: string, mix: number }
 
-const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, dispatch: DispatchType }> = ({ info, active, index, dispatch }) => {
+interface TrackMixerInfo {
+  pan: number
+  panRule: number
+  plugins: MixerPlugin[]
+}
+
+const TrackPlugin: React.FC<{ plugin: MixerPlugin }> = ({ plugin }) => {
+  return (
+    <>
+      <Marquee gradient={false} pauseOnHover>{plugin.name}</Marquee>
+      <Divider variant='middle' />
+    </>
+  )
+}
+
+const defaultPan = [0, 0]
+
+const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, mixerInfo: TrackMixerInfo, dispatch: DispatchType }> = ({ info, active, index, mixerInfo, dispatch }) => {
   const [pan, setPan] = useState(defaultPan)
   const [loading] = useState(false)
+  console.log(mixerInfo, info)
+
+  const isMaster = info.uuid === '0'
+  useEffect(() => {
+    setPan(old => (old[0] === 0 ? old[1] : old[0]) === mixerInfo.pan ? old : mixerInfo.pan > 0 ? [0, mixerInfo.pan] : [mixerInfo.pan, 0])
+  }, [mixerInfo.pan])
 
   return (
     <Card className='track' sx={active ? { border: theme => 'solid 1px ' + theme.palette.primary.main } : undefined}>
@@ -22,7 +46,8 @@ const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, dispatc
         disableElevation
         className='name'
         variant='contained'
-        style={{ backgroundColor: info.color, color: getLuminance(info.color) > 0.5 ? '#000' : '#fff' }}
+        color={isMaster ? 'primary' : undefined}
+        style={isMaster ? undefined : { backgroundColor: info.color, color: getLuminance(info.color) > 0.5 ? '#000' : '#fff' }}
         onDragOver={e => $dragObject?.type === 'loadPlugin' && $dragObject.isInstrument && e.preventDefault()}
         onDrop={() => {
           if (!$dragObject?.isInstrument || $dragObject.type !== 'loadPlugin') return
@@ -31,17 +56,18 @@ const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, dispatc
           // $client.createTrack(state.tracks.length, data.data).finally(() => setLoading(false))
         }}
       >
-        {info.hasInstrument && <Power fontSize='small' />}<Marquee gradient={false} pauseOnHover>{info.name}</Marquee>
+        {info.hasInstrument && <Power fontSize='small' />}<Marquee gradient={false} pauseOnHover>{isMaster ? '主轨道' : info.name || ' '}</Marquee>
       </Button>
       <div className='content'>
         <Slider
           size='small'
           value={pan}
-          sx={{ [`& .MuiSlider-thumb[data-index="${pan[0] === 50 ? 0 : 1}"]`]: { opacity: 0 } }}
+          min={-100}
+          sx={{ [`& .MuiSlider-thumb[data-index="${pan[0] === 0 ? 0 : 1}"]`]: { opacity: 0 } }}
           onChange={(_, val) => {
             const [a, b] = val as number[]
-            const cur = a === 50 ? b : a
-            setPan(cur > 50 ? [50, cur] : [cur, 50])
+            const cur = a === 0 ? b : a
+            setPan(cur > 0 ? [0, cur] : [cur, 0])
           }}
         />
         <div className='level'>
@@ -68,10 +94,7 @@ const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, dispatc
       </div>
       <Divider className='mid-divider' />
       <div className='plugins'>
-        <Marquee gradient={false} pauseOnHover>FabFilter Pro-Q 3</Marquee>
-        <Divider variant='middle' />
-        <Marquee gradient={false} pauseOnHover>FabFilter Pro-Q 3</Marquee>
-        <Divider variant='middle' />
+        {mixerInfo.plugins.map((it, i) => <TrackPlugin key={i} plugin={it} />)}
         <LoadingButton
           size='small'
           loading={loading}
@@ -86,20 +109,35 @@ const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, dispatc
 }
 
 const Mixer: React.FC = () => {
-  const masterTrack: TrackInfo = {
-    uuid: '0000-0000-0000-0000-000000000000',
-    name: '主轨道',
-    muted: false,
-    solo: false,
-    hasInstrument: false,
-    color: useTheme().palette.primary.main,
-    volume: 1
-  }
   const [globalData, dispatch] = useGlobalData()
+  const [mixerInfo, setMixerInfo] = useState<Record<string, TrackMixerInfo>>({})
+
+  useEffect(() => {
+    $client.on(ClientboundPacket.TrackMixerInfo, buf => {
+      let len = buf.readUint8()
+      const onlyOne = len === 1
+      const map: Record<string, TrackMixerInfo> = { }
+      while (len-- > 0) {
+        const { plugins } = map[buf.readUint64().toString(32)] = {
+          pan: buf.readInt8(),
+          panRule: buf.readUint8(),
+          plugins: [] as MixerPlugin[]
+        }
+        for (let size = buf.readUint8(); size-- > 0;) plugins.push({ name: buf.readIString(), mix: buf.readFloat() })
+      }
+      setMixerInfo(onlyOne ? old => ({ ...old, ...map }) : map)
+    })
+    $client.getTracksMixerInfo()
+    return () => $client.off(ClientboundPacket.TrackMixerInfo)
+  }, [])
+
+  const tracks: JSX.Element[] = []
+  globalData.tracks.forEach((it, i) => mixerInfo[it.uuid] &&
+    tracks.push(<Track key={it.uuid} info={it} active={globalData.activeTrack === it.uuid} index={i} mixerInfo={mixerInfo[it.uuid]} dispatch={dispatch} />))
+
   return (
     <Stack className='mixer' spacing={1} direction='row'>
-      <Track key={masterTrack.uuid} info={masterTrack} active={false} index={-1} dispatch={dispatch} />
-      {globalData.tracks.map((it, i) => <Track key={it.uuid} info={it} active={globalData.activeTrack === it.uuid} index={i} dispatch={dispatch} />)}
+      {tracks}
     </Stack>
   )
 }

@@ -8,6 +8,7 @@ class ByteBuffer;
 
 class Track: public juce::AudioProcessorGraph {
 public:
+    Track(juce::Uuid uuid, MasterTrack* masterTrack);
     Track(std::string name, std::string color, MasterTrack* masterTrack);
     juce::Uuid uuid;
     std::string name;
@@ -41,8 +42,9 @@ private:
     juce::AudioProcessorGraph::NodeID midiIn, begin, end;
     juce::AudioProcessorGraph::Node::Ptr instrumentNode = nullptr;
     juce::dsp::PannerRule panRule = juce::dsp::PannerRule::balanced;
-    float pan = 0.0;
+    int pan = 0;
 
+    void init();
     void addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages);
     void addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::AudioProcessorGraph::NodeID dest);
 

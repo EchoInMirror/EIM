@@ -34,6 +34,7 @@ private:
     juce::AudioProcessorPlayer graphPlayer;
 
     void calcPositionInfo();
+    juce::AudioProcessorGraph::Node::Ptr initTrack(std::unique_ptr<Track> track);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrack)
 };

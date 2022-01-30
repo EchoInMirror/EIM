@@ -115,6 +115,19 @@ const Tracks: React.FC = () => {
 
   useEffect(() => $client.refresh(), [])
 
+  const actions: JSX.Element[] = []
+  const midis: JSX.Element[] = []
+  for (let i = 1; i < state.tracks.length; i++) {
+    const it = state.tracks[i]
+    actions.push(<React.Fragment key={it.uuid}><TrackActions info={it} index={i} /><Divider variant='middle' /></React.Fragment>)
+    midis.push((
+      <Box key={it.uuid} sx={{ backgroundColor: alpha(it.color, 0.1), '& .notes div': { backgroundColor: it.color } }}>
+        <Track uuid={it.uuid} data={state.trackMidiData[it.uuid]?.notes} width={noteWidth} />
+        <Divider />
+      </Box>
+    ))
+  }
+
   return (
     <main className='tracks'>
       <Toolbar />
@@ -136,8 +149,7 @@ const Tracks: React.FC = () => {
       </div>
       <Box className='wrapper' sx={{ backgroundColor: theme => theme.palette.background.default }}>
         <Paper square elevation={3} component='ol' sx={{ background: theme => theme.palette.background.bright, zIndex: 1, '& li': { height } }}>
-          <Divider />
-          {state.tracks.map((it, i) => <React.Fragment key={it.uuid}><TrackActions info={it} index={i} /><Divider variant='middle' /></React.Fragment>)}
+          <Divider />{actions}
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}
@@ -158,12 +170,7 @@ const Tracks: React.FC = () => {
             <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
               <rect fill='url(#playlist-grid)' x='0' y='0' width='100%' height='100%' />
             </svg>
-            {state.tracks.map(it => (
-              <Box key={it.uuid} sx={{ backgroundColor: alpha(it.color, 0.1), '& .notes div': { backgroundColor: it.color } }}>
-                <Track uuid={it.uuid} data={state.trackMidiData[it.uuid]?.notes} width={noteWidth} />
-                <Divider />
-              </Box>
-            ))}
+            {midis}
           </div>
         </Box>
       </Box>

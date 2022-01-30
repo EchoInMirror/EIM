@@ -225,10 +225,10 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		break;
 	case ServerboundPacket::ServerboundConfig: {
 		auto out = EIMPackets::makeReplyPacket(buf.readUInt32());
-		auto& config = instance->config;
+		auto& cfg = instance->config;
 		auto& manager = instance->pluginManager;
 		if (buf.readBoolean()) {
-			config.config = juce::JSON::parse(buf.readString());
+			cfg.config = juce::JSON::parse(buf.readString());
 			out->writeString("");
 		} else {
 			auto obj = new juce::DynamicObject();
@@ -239,7 +239,7 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 				for (int i = 0; i < paths.getNumPaths(); i++) arr.add(paths[i].getFullPathName());
 				obj->setProperty(it->getName(), arr);
 			}
-			juce::var copy = config.config;
+			juce::var copy = cfg.config;
 			copy.getDynamicObject()->setProperty("vstSearchPaths", map);
 			out->writeString(juce::JSON::toString(copy));
 		}
@@ -251,6 +251,7 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		break;
 	case ServerboundPacket::ServerboundTrackMixerInfo:
 		session->send(EIMPackets::makeAllTrackMixerInfoPacket());
+		DBG("322222222");
 		break;
 	}
 }

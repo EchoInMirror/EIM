@@ -212,4 +212,8 @@ export default class Client {
   public scanVSTs () {
     this.send(this.buildPack(ServerboundPacket.ScanVSTs))
   }
+
+  public getTracksMixerInfo () {
+    this.send(this.buildPack(ServerboundPacket.TrackMixerInfo))
+  }
 }

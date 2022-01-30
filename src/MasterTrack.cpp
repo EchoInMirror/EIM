@@ -11,10 +11,14 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 
 	deviceManager.addAudioCallback(&graphPlayer);
 	graphPlayer.setProcessor(this);
-	outputNodeID = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
+	auto output = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
 
 	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
 	prepareToPlay(getSampleRate(), getBlockSize());
+
+	outputNodeID = initTrack(std::make_unique<Track>(juce::Uuid::null(), this))->nodeID;
+	addConnection({ { outputNodeID, 0 }, { output, 0 } });
+	addConnection({ { outputNodeID, 1 }, { output, 1 } });
 }
 
 void MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc, MasterTrack::PluginCreationCallback callback) {
@@ -23,23 +27,26 @@ void MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc, Mast
 	});
 }
 
+juce::AudioProcessorGraph::Node::Ptr MasterTrack::initTrack(std::unique_ptr<Track> track) {
+	track->setRateAndBufferSizeDetails(getSampleRate(), getBlockSize());
+	track->prepareToPlay(getSampleRate(), getBlockSize());
+	auto& obj = *track;
+	auto& node = tracks.emplace_back(addNode(std::move(track)));
+	obj.currentNode = node;
+	addConnection({ { node->nodeID, 0 }, { outputNodeID, 0 } });
+	addConnection({ { node->nodeID, 1 }, { outputNodeID, 1 } });
+	return node;
+}
+
 juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, std::string color) {
 	juce::MidiFile file;
 	auto track = std::make_unique<Track>(name, color, this);
-	auto trackVal = track.get();
-	track->setRateAndBufferSizeDetails(getSampleRate(), getBlockSize());
-	track->prepareToPlay(getSampleRate(), getBlockSize());
 	juce::FileInputStream theStream(juce::File("E:/Midis/UTMR&C VOL 1-14 [MIDI FILES] for other DAWs FINAL by Hunter UT/VOL 1/1. Sean Tyas & Darren Porter - Relentless LD.mid"));
 	file.readFrom(theStream);
 	file.getTimeFormat();
 	track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
 	endTime = juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator) * ppq;
-	auto node = addNode(std::move(track));
-	trackVal->currentNode = node;
-	tracks.push_back(node);
-	addConnection({ { node->nodeID, 0 }, { outputNodeID, 0 } });
-	addConnection({ { node->nodeID, 1 }, { outputNodeID, 1 } });
-	return node;
+	return initTrack(std::move(track));
 }
 
 void MasterTrack::removeTrack(int id) {
