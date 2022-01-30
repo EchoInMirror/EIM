@@ -21,10 +21,8 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	addConnection({ { outputNodeID, 1 }, { output, 1 } });
 }
 
-void MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc, MasterTrack::PluginCreationCallback callback) {
-	EIMApplication::getEIMInstance()->pluginManager->manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(), [callback](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
-		callback(std::make_unique<PluginWrapper>(std::move(instance)), err.toStdString());
-	});
+void MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback) {
+	EIMApplication::getEIMInstance()->pluginManager->manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(), callback);
 }
 
 juce::AudioProcessorGraph::Node::Ptr MasterTrack::initTrack(std::unique_ptr<Track> track) {
@@ -79,6 +77,16 @@ void MasterTrack::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffe
 	calcPositionInfo();
 	AudioProcessorGraph::processBlock(buffer, midiMessages);
 	if (currentPositionInfo.isPlaying) currentPositionInfo.timeInSamples += buffer.getNumSamples();
+}
+
+void MasterTrack::createPluginWindow(juce::AudioPluginInstance* instance) {
+	if (!instance) return;
+	if (pluginWindows.contains(instance)) {
+		auto& it = pluginWindows.at(instance);
+		it.setAlwaysOnTop(true);
+		it.grabKeyboardFocus();
+		it.setAlwaysOnTop(false);
+	} else pluginWindows.try_emplace(instance, instance, &pluginWindows);
 }
 
 void MasterTrack::stopAllNotes() {

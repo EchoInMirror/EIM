@@ -35,7 +35,7 @@ const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, inde
       />
       <div className='title'>
         <Button className='solo' variant='outlined' />
-        {info.hasInstrument && <IconButton size='small' className='instrument'><Power fontSize='small' /></IconButton>}
+        {info.hasInstrument && <IconButton size='small' className='instrument' onClick={() => $client.openPluginWindow(index)}><Power fontSize='small' /></IconButton>}
         <span className='name'>{info.name}</span>
       </div>
       <div>
@@ -153,12 +153,12 @@ const Tracks: React.FC = () => {
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}
-            onClick={() => $client.createTrack(state.tracks.length, '', '轨道' + (state.tracks.length + 1))}
+            onClick={() => $client.createTrack('', -1, '轨道' + (state.tracks.length + 1))}
             onDragOver={e => $dragObject?.type === 'loadPlugin' && e.preventDefault()}
             onDrop={() => {
               if (!$dragObject || $dragObject.type !== 'loadPlugin') return
               setLoading(true)
-              $client.createTrack(state.tracks.length, $dragObject.data).finally(() => setLoading(false))
+              $client.createTrack($dragObject.data).finally(() => setLoading(false))
             }}
           >
             新增轨道

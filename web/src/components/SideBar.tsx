@@ -48,12 +48,13 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type
       const [trueName, data] = name.split('#EIM#', 2)
       if (data) {
         const isInstrument = trueName.startsWith('I#')
+        const name2 = isInstrument ? trueName.slice(2) : trueName
         node = (
           <DraggableTreeItem
             key={cur}
             nodeId={cur}
             icon={isInstrument ? <Piano /> : <GraphicEq />}
-            label={isInstrument ? trueName.slice(2) : trueName}
+            label={name2.endsWith(' (VST)') ? <del>{name2}</del> : name2}
             draggable={!tree[name]}
             onDragStart={e => {
               $dragObject = { type: 'loadPlugin', isInstrument, data: data }

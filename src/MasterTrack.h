@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginWindow.h"
 #include "Track.h"
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -11,16 +12,15 @@ public:
     double endTime = 0;
     short ppq = 96;
 
-    using PluginCreationCallback = std::function<void(std::unique_ptr<PluginWrapper>, const std::string&)>;
-
     MasterTrack();
     ~MasterTrack() { deviceManager.closeAudioDevice(); }
 
     void removeTrack(int id);
     void stopAllNotes();
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
-    void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, PluginCreationCallback callback);
+    void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    void createPluginWindow(juce::AudioPluginInstance* instance);
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }
@@ -32,6 +32,7 @@ private:
     juce::AudioDeviceManager deviceManager;
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     juce::AudioProcessorPlayer graphPlayer;
+    std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
 
     void calcPositionInfo();
     juce::AudioProcessorGraph::Node::Ptr initTrack(std::unique_ptr<Track> track);

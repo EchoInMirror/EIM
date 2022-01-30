@@ -17,7 +17,9 @@ enum ServerboundPacket {
 	ServerboundOpenPluginManager,
 	ServerboundConfig,
 	ServerboundScanVSTs,
-	ServerboundTrackMixerInfo
+	ServerboundTrackMixerInfo,
+	ServerboundLoadPlugin,
+	ServerboundOpenPluginWindow
 };
 
 enum ClientboundPacket {

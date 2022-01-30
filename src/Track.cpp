@@ -23,19 +23,19 @@ void Track::init() {
 	chain.get<1>().setGainLinear(1);
 }
 
-void Track::addEffectPlugin(std::unique_ptr<PluginWrapper> plugin) {
-	auto node = addNode(std::move(plugin));
-	plugins.emplace_back(node);
+void Track::addEffectPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
+	auto node = plugins.emplace_back(addNode(std::move(plugin)))->nodeID;
 	juce::AudioProcessorGraph::NodeID prev;
 	for (auto& conn : getConnections()) if (conn.destination.nodeID == end) {
 		prev = conn.source.nodeID;
 		removeConnection(conn);
 	}
-	addAudioConnection(prev, instrumentNode->nodeID);
-	addAudioConnection(instrumentNode->nodeID, end);
+	addAudioConnection(prev, node);
+	addAudioConnection(node, end);
+	syncThisTrackMixerInfo();
 }
 
-void Track::setInstrument(std::unique_ptr<PluginWrapper> instance) {
+void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
 	if (instance == nullptr) {
 		instrumentNode = nullptr;
 		return;
@@ -43,6 +43,8 @@ void Track::setInstrument(std::unique_ptr<PluginWrapper> instance) {
 	instrumentNode = addNode(std::move(instance));
 	addAudioConnection(instrumentNode->nodeID, begin);
 	addConnection({ { midiIn, juce::AudioProcessorGraph::midiChannelIndex }, { instrumentNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex } });
+	EIMApplication::getEIMInstance()->listener->syncTrackInfo();
+	syncThisTrackMixerInfo();
 }
 
 void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
@@ -106,14 +108,20 @@ void Track::writeTrackInfo(ByteBuffer* buf) {
 
 void Track::writeTrackMixerInfo(ByteBuffer* buf) {
 	buf->writeUUID(uuid);
-	buf->writeInt8(pan);
-	buf->writeUInt8(std::to_underlying(panRule));
-	buf->writeUInt8(plugins.size());
+	buf->writeInt8((char)pan);
+	buf->writeUInt8((unsigned char)std::to_underlying(panRule));
+	buf->writeUInt8((unsigned char)plugins.size());
 	for (auto& it : plugins) {
-		auto plugin = (PluginWrapper*)it->getProcessor();
-		buf->writeString(plugin->getName());
-		buf->writeFloat(plugin->mixProportion);
+		buf->writeString(it->getProcessor()->getName());
 	}
+}
+
+juce::AudioPluginInstance* Track::getInstrumentInstance() { return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor(); }
+
+void Track::syncThisTrackMixerInfo() {
+	auto buf = EIMPackets::makeTrackMixerInfoPacket(1);
+	writeTrackMixerInfo(buf.get());
+	EIMApplication::getEIMInstance()->listener->state->send(buf);
 }
 
 void Track::writeMidiData(ByteBuffer* buf) {

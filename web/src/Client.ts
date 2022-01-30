@@ -16,7 +16,9 @@ export enum ServerboundPacket {
   OpenPluginManager,
   Config,
   ScanVSTs,
-  TrackMixerInfo
+  TrackMixerInfo,
+  LoadPlugin,
+  OpenPluginWindow
 }
 
 export enum ClientboundPacket {
@@ -155,11 +157,11 @@ export default class Client {
     return result
   }
 
-  public async createTrack (pos: number, identifier: string, name = '轨道', color = colorValues[Math.random() * colorValues.length | 0]) {
+  public async createTrack (identifier: string, pos = -1, name = '轨道', color = colorValues[Math.random() * colorValues.length | 0]) {
     const [packet, promise] = this.buildNeedReplyPack(ServerboundPacket.CreateTrack)
     this.send(packet.writeIString(name).writeIString(color).writeUint8(pos).writeIString(identifier))
     const err = (await promise).readIString()
-    if (err) throw new Error(err)
+    if (err) throw err
   }
 
   public refresh () { this.send(this.buildPack(ServerboundPacket.Refresh)) }
@@ -215,5 +217,16 @@ export default class Client {
 
   public getTracksMixerInfo () {
     this.send(this.buildPack(ServerboundPacket.TrackMixerInfo))
+  }
+
+  public async loadPlugin (track: number, identifier: string, pos = -1) {
+    const [packet, promise] = this.buildNeedReplyPack(ServerboundPacket.LoadPlugin)
+    this.send(packet.writeUint8(track).writeUint8(pos).writeIString(identifier))
+    const err = (await promise).readIString()
+    if (err) throw err
+  }
+
+  public openPluginWindow (track: number, pos = -1) {
+    this.send(this.buildPack(ServerboundPacket.OpenPluginWindow).writeUint8(track).writeUint8(pos))
   }
 }

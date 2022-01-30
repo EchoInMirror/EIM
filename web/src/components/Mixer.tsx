@@ -10,7 +10,7 @@ import VolumeUp from '@mui/icons-material/VolumeUp'
 import VolumeOff from '@mui/icons-material/VolumeOff'
 import LoadingButton from '@mui/lab/LoadingButton'
 
-interface MixerPlugin { name: string, mix: number }
+interface MixerPlugin { name: string }
 
 interface TrackMixerInfo {
   pan: number
@@ -18,10 +18,17 @@ interface TrackMixerInfo {
   plugins: MixerPlugin[]
 }
 
-const TrackPlugin: React.FC<{ plugin: MixerPlugin }> = ({ plugin }) => {
+const TrackPlugin: React.FC<{ plugin: MixerPlugin, track: number, index: number }> = ({ plugin, track, index }) => {
   return (
     <>
-      <Marquee gradient={false} pauseOnHover>{plugin.name}</Marquee>
+      <Button
+        fullWidth
+        size='small'
+        color='inherit'
+        onClick={() => $client.openPluginWindow(track, index)}
+      >
+        <Marquee gradient={false} pauseOnHover>{plugin.name}&nbsp;&nbsp;&nbsp;&nbsp;</Marquee>
+      </Button>
       <Divider variant='middle' />
     </>
   )
@@ -31,8 +38,7 @@ const defaultPan = [0, 0]
 
 const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, mixerInfo: TrackMixerInfo, dispatch: DispatchType }> = ({ info, active, index, mixerInfo, dispatch }) => {
   const [pan, setPan] = useState(defaultPan)
-  const [loading] = useState(false)
-  console.log(mixerInfo, info)
+  const [loading, setLoading] = useState(false)
 
   const isMaster = info.uuid === '0'
   useEffect(() => {
@@ -48,12 +54,12 @@ const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, mixerIn
         variant='contained'
         color={isMaster ? 'primary' : undefined}
         style={isMaster ? undefined : { backgroundColor: info.color, color: getLuminance(info.color) > 0.5 ? '#000' : '#fff' }}
-        onDragOver={e => $dragObject?.type === 'loadPlugin' && $dragObject.isInstrument && e.preventDefault()}
+        onClick={() => $client.openPluginWindow(index)}
+        onDragOver={e => !loading && $dragObject?.type === 'loadPlugin' && $dragObject.isInstrument && e.preventDefault()}
         onDrop={() => {
-          if (!$dragObject?.isInstrument || $dragObject.type !== 'loadPlugin') return
-          console.log($dragObject)
-          // setLoading(true)
-          // $client.createTrack(state.tracks.length, data.data).finally(() => setLoading(false))
+          if (loading || !$dragObject?.isInstrument || $dragObject.type !== 'loadPlugin') return
+          setLoading(true)
+          $client.loadPlugin(index, $dragObject.data).finally(() => setLoading(false))
         }}
       >
         {info.hasInstrument && <Power fontSize='small' />}<Marquee gradient={false} pauseOnHover>{isMaster ? '主轨道' : info.name || ' '}</Marquee>
@@ -94,12 +100,17 @@ const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, mixerIn
       </div>
       <Divider className='mid-divider' />
       <div className='plugins'>
-        {mixerInfo.plugins.map((it, i) => <TrackPlugin key={i} plugin={it} />)}
+        {mixerInfo.plugins.map((it, i) => <TrackPlugin key={i} plugin={it} track={index} index={i} />)}
         <LoadingButton
           size='small'
           loading={loading}
           sx={{ width: '100%', borderRadius: 0 }}
-          onDragOver={e => $dragObject?.type === 'loadPlugin' && e.preventDefault()}
+          onDragOver={e => !loading && $dragObject?.type === 'loadPlugin' && !$dragObject.isInstrument && e.preventDefault()}
+          onDrop={() => {
+            if (loading || $dragObject?.type !== 'loadPlugin' || $dragObject.isInstrument) return
+            setLoading(true)
+            $client.loadPlugin(index, $dragObject.data).finally(() => setLoading(false))
+          }}
         >
           添加插件
         </LoadingButton>
@@ -123,7 +134,7 @@ const Mixer: React.FC = () => {
           panRule: buf.readUint8(),
           plugins: [] as MixerPlugin[]
         }
-        for (let size = buf.readUint8(); size-- > 0;) plugins.push({ name: buf.readIString(), mix: buf.readFloat() })
+        for (let size = buf.readUint8(); size-- > 0;) plugins.push({ name: buf.readIString() })
       }
       setMixerInfo(onlyOne ? old => ({ ...old, ...map }) : map)
     })
