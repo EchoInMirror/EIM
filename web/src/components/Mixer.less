@@ -2,21 +2,37 @@
   height: 100%;
   padding: 10px;
   align-items: flex-start;
+  overflow: auto;
 
   .track {
     width: 80px;
     display: inline-block;
     overflow: visible;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.09));
+    counter-increment: track-mixer;
 
     .mid-divider { margin: 0 8px; }
 
     .name {
-      padding: 2px 0;
+      padding: 2px 0 0;
       font-size: 12px;
       min-height: 25px;
-      align-items: flex-start;
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
+      display: flex;
+      font-weight: bold;
+      
+      &::before {
+        content: counter(track-mixer);
+        padding: 0 4px;
+        font-size: 14px;
+        line-height: 0;
+        font-weight: bolder;
+      }
+
+      .marquee {
+        text-transform: none;
+      }
     }
 
     .content {

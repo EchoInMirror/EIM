@@ -4,7 +4,7 @@ import TreeView from '@mui/lab/TreeView'
 import TreeItem from '@mui/lab/TreeItem'
 import { Resizable } from 're-resizable'
 import { setIsMixer } from './BottomBar'
-import { Paper, Box, alpha, Toolbar, Button } from '@mui/material'
+import { Paper, Box, alpha, Toolbar, Button, colors } from '@mui/material'
 import { FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, Piano, Tune, GraphicEq } from '@mui/icons-material'
 
 import type { TreeItemProps } from '@mui/lab/TreeItem'
@@ -49,12 +49,14 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type
       if (data) {
         const isInstrument = trueName.startsWith('I#')
         const name2 = isInstrument ? trueName.slice(2) : trueName
+        const isVST = name2.endsWith(' (VST)')
         node = (
           <DraggableTreeItem
             key={cur}
             nodeId={cur}
             icon={isInstrument ? <Piano /> : <GraphicEq />}
-            label={name2.endsWith(' (VST)') ? <del>{name2}</del> : name2}
+            sx={isVST ? { color: colors.grey[500] } : undefined}
+            label={isVST ? <del>{name2}</del> : name2}
             draggable={!tree[name]}
             onDragStart={e => {
               $dragObject = { type: 'loadPlugin', isInstrument, data: data }
@@ -68,6 +70,13 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: number }> = ({ type
       }
     }
     nodes.push(node || <TreeItem key={cur} nodeId={cur} label={name} onClick={handleClick}>{children}</TreeItem>)
+  }
+  if (type === 1) {
+    nodes.sort((a, b) => {
+      const av = (a.key as string).includes(' (VST)#')
+      const bv = (b.key as string).includes(' (VST)#')
+      return av === bv ? (a.key as string).localeCompare(b.key as string) : av ? 1 : -1
+    })
   }
   return (
     <>

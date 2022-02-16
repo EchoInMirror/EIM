@@ -2,7 +2,7 @@ import './Mixer.less'
 import React, { useEffect, useState } from 'react'
 import useGlobalData, { TrackInfo, DispatchType, ReducerTypes } from '../reducer'
 import { ClientboundPacket } from '../Client'
-import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button } from '@mui/material'
+import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button, Tooltip } from '@mui/material'
 import Marquee from 'react-fast-marquee'
 
 import Power from '@mui/icons-material/Power'
@@ -21,14 +21,16 @@ interface TrackMixerInfo {
 const TrackPlugin: React.FC<{ plugin: MixerPlugin, track: number, index: number }> = ({ plugin, track, index }) => {
   return (
     <>
-      <Button
-        fullWidth
-        size='small'
-        color='inherit'
-        onClick={() => $client.openPluginWindow(track, index)}
-      >
-        <Marquee gradient={false} pauseOnHover>{plugin.name}&nbsp;&nbsp;&nbsp;&nbsp;</Marquee>
-      </Button>
+      <Tooltip title='233' arrow placement='right'>
+        <Button
+          fullWidth
+          size='small'
+          color='inherit'
+          onClick={() => $client.openPluginWindow(track, index)}
+        >
+          <Marquee gradient={false} pauseOnHover>{plugin.name}&nbsp;&nbsp;&nbsp;&nbsp;</Marquee>
+        </Button>
+      </Tooltip>
       <Divider variant='middle' />
     </>
   )
@@ -62,7 +64,7 @@ const Track: React.FC<{ info: TrackInfo, active: boolean, index: number, mixerIn
           $client.loadPlugin(index, $dragObject.data).finally(() => setLoading(false))
         }}
       >
-        {info.hasInstrument && <Power fontSize='small' />}<Marquee gradient={false} pauseOnHover>{isMaster ? '主轨道' : info.name || ' '}</Marquee>
+        <Marquee gradient={false} pauseOnHover>{isMaster ? '主轨道' : info.name}&nbsp;&nbsp;&nbsp;&nbsp;</Marquee>{info.hasInstrument && <Power fontSize='small' />}
       </Button>
       <div className='content'>
         <Slider

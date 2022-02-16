@@ -34,8 +34,9 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
   const gridXDeepColor = alpha(theme.palette.divider, 0.26)
   const beats = 16 / timeSigDenominator
   for (let i = 0; i < 12; i++) {
+    const y = (i + 1) * height - 1
     rects.push(<rect key={i} height={height} width='81' y={height * i} fill={scales[i] === (theme.palette.mode === 'dark') ? highlightColor : 'none'} />)
-    lines.push(<line x1='0' x2='80' y1={(i + 1) * height} y2={(i + 1) * height} key={i} />)
+    lines.push(<line x1='0' x2='80' y1={y} y2={y} key={i} />)
   }
   for (let j = 0, cur = 0; j < timeSigNumerator; j++) {
     rectsX.push(<rect width='1' height='3240' x={width * cur++} y='0' fill={j ? gridXDeepColor : alpha(theme.palette.divider, 0.44)} key={j << 5} />)
