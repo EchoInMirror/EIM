@@ -11,7 +11,7 @@
 ### Install boost
 
 ```bash
-vcpkg install boost:x64-windows-static
+vcpkg install boost:x64-windows-static protobuf:x64-windows-static
 ```
 
 ### Clone project
@@ -29,7 +29,7 @@ mkdir build
 
 cd build
 
-cmake -G "Visual Studio 17 2022" -A x64 ..
+cmake -G "Visual Studio 17 2022" -A x64 .. -DCMAKE_TOOLCHAIN_FILE=<VCPkg install location>/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
 ```
 
 Then open **EIM/build/EIM.sln**

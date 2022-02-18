@@ -4,6 +4,7 @@
   "description": "A simple daw",
   "main": "index.js",
   "dependencies": {
+    "@babel/core": "^7.16.7",
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
     "@fontsource/roboto": "^4.5.1",
@@ -14,20 +15,22 @@
     "@parcel/transformer-less": "^2.0.1",
     "babel-plugin-direct-import": "^1.0.0",
     "bytebuffer": "^5.0.1",
+    "jsdoc": "^3.6.10",
     "less": "^4.1.2",
     "long": "^3.2.0",
     "mui-color": "^2.0.0-beta.2",
     "notistack": "^2.0.3",
     "parcel": "^2.0.1",
+    "protobufjs": "^6.11.2",
     "re-resizable": "^6.9.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-fast-marquee": "^1.3.1",
     "react-router-dom": "^6.2.1",
+    "uglify-js": "^3.15.1",
     "use-debounce": "^7.0.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.16.7",
     "@types/bytebuffer": "^5.0.43",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
@@ -47,7 +50,8 @@
   },
   "scripts": {
     "start": "parcel src/index.html",
-    "build": "parcel build src/index.html"
+    "build": "parcel build src/index.html",
+    "proto": "pbjs -t static-module -w es6 -o ../packets/index.js ../packets/packets.proto && pbts -o ../packets/index.d.ts ../packets/index.js"
   },
   "repository": {
     "type": "git",

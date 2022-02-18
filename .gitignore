@@ -1,2 +1,4 @@
 build
 vst2sdk
+/packets/*
+!/packets/*.proto

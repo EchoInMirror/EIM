@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package eim;
+import "google/protobuf/empty.proto";
+
+message ProjectStatus {
+  optional uint32 bpm = 1;
+  optional uint32 time = 2;
+  optional uint32 timeSigNumerator = 3;
+  optional uint32 timeSigDenominator = 4;
+  optional uint32 sampleRate = 5;
+  optional bool isPlaying = 6;
+}
+
+service ServerService {
+  rpc setProjectStatus(ProjectStatus) returns(google.protobuf.Empty);
+}

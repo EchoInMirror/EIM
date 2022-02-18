@@ -3,16 +3,11 @@ project(EIM VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 23)
 set(Boost_USE_STATIC_LIBS ON)
+set(Protobuf_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-set(Boost_INCLUDE_DIR ${_VCPKG_INSTALLED_DIR}/x64-windows-static/include)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_definitions(-DJUCE_PLUGINHOST_VST3 -DJUCE_PLUGINHOST_VST)
-if(MSVC)
-    add_definitions(-D_WIN32_WINNT=0x0601)
-    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
-endif(MSVC)
 
 set(vst2sdkPath ${CMAKE_CURRENT_BINARY_DIR}/vst2sdk)
 set(vst2sdkDownloadPath ${vst2sdkPath}/pluginterfaces/vst2.x)
@@ -25,19 +20,26 @@ if(NOT EXISTS ${vst2sdkDownloadPath})
     message(STATUS "Downloaded VST2SDK.")
 endif()
 
-find_package(Boost COMPONENTS system REQUIRED)
-if (Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIRS})
-    link_directories(${Boost_LIBRARY_DIRS})
-endif ()
+find_package(Protobuf CONFIG REQUIRED)
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS packets/packets.proto)
 
-include_directories(${vst2sdkPath})
+find_package(Boost REQUIRED)
+link_directories(${Boost_LIBRARY_DIRS})
+
+include_directories(${vst2sdkPath} ${Boost_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 
 file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp")
 
 add_subdirectory(JUCE)
 juce_add_gui_app(EIM PRODUCT_NAME)
-target_sources(EIM PRIVATE ${SRC_FILES})
+target_sources(EIM PRIVATE ${SRC_FILES} ${PROTO_SRCS} ${PROTO_HDRS})
+
+if(MSVC)
+    add_definitions(-D_WIN32_WINNT=0x0601)
+    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
+    set_property(TARGET EIM PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif(MSVC)
 
 target_compile_definitions(EIM
     PRIVATE
@@ -49,6 +51,7 @@ target_compile_definitions(EIM
 target_link_libraries(EIM
     PRIVATE
         ${Boost_LIBRARIES}
+        ${Protobuf_LIBRARIES}
         juce::juce_gui_extra
         juce::juce_audio_utils
         juce::juce_dsp
