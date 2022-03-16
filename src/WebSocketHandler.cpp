@@ -1,7 +1,15 @@
 #include "Main.h"
-#include "websocket/Packets.h"
 #include "websocket/WebSocketSession.h"
 
+void WebSocketSession::handleSetProjectStatus(eim::ProjectStatus&) {
+
+}
+
+void WebSocketSession::handleGetExplorerData(eim::ServerboundExplorerData&, std::function<void(eim::ClientboundExplorerData)>) {
+
+}
+
+/*
 void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
 	auto instance = EIMApplication::getEIMInstance();
@@ -285,3 +293,4 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 	}
 	}
 }
+*/

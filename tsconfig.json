@@ -37,5 +37,11 @@
     // "allowUnreachableCode": true,                     /* Disable error reporting for unreachable code. */
 
     "skipLibCheck": true
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "commonjs"
+    }
   }
 }

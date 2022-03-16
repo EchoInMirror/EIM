@@ -3,7 +3,6 @@
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include "../Main.h"
-#include "Packets.h"
 
 WebSocketSession::~WebSocketSession() { state->leave(this); }
 
@@ -16,13 +15,13 @@ void WebSocketSession::onAccept(boost::beast::error_code ec) {
     if (ec) return;
     state->join(this);
     doRead();
-    send(EIMPackets::makeProjectStatusPacket());
-    send(EIMPackets::makeAllTrackMidiDataPacket());
-    if (EIMApplication::getEIMInstance()->pluginManager->isScanning) send(EIMPackets::makeScanVSTsPacket(true));
+    // send(EIMPackets::makeProjectStatusPacket());
+    // send(EIMPackets::makeAllTrackMidiDataPacket());
+    // if (EIMApplication::getEIMInstance()->pluginManager->isScanning) send(EIMPackets::makeScanVSTsPacket(true));
 }
-void WebSocketSession::onRead(boost::beast::error_code ec, std::size_t) {
+void WebSocketSession::onRead(boost::beast::error_code ec, std::size_t len) {
     if (ec) return;
-    EIMApplication::getEIMInstance()->handlePacket(this);
+    handlePacket(this, len);
     doRead();
 }
 void WebSocketSession::onWrite(boost::beast::error_code ec, std::size_t) {
@@ -30,10 +29,10 @@ void WebSocketSession::onWrite(boost::beast::error_code ec, std::size_t) {
     queue.erase(queue.begin());
     if (!queue.empty()) doWrite();
 }
-void WebSocketSession::send(std::shared_ptr<ByteBuffer> data) {
+void WebSocketSession::send(std::shared_ptr<boost::beast::flat_buffer> data) {
     boost::asio::post(ws.get_executor(), boost::beast::bind_front_handler(&WebSocketSession::onSend, shared_from_this(), data));
 }
-void WebSocketSession::onSend(std::shared_ptr<ByteBuffer> ss) {
+void WebSocketSession::onSend(std::shared_ptr<boost::beast::flat_buffer> ss) {
     queue.push_back(ss);
     if (queue.size() > 1) return;
     doWrite();

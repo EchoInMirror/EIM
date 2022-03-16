@@ -1,5 +1,4 @@
 #include "Listener.h"
-#include "Packets.h"
 #include "../Main.h"
 
 Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint) : ioc(ioc), acceptor(ioc), state(std::make_shared<SharedState>(".")) {
@@ -30,6 +29,7 @@ void Listener::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socke
 
 void Listener::syncTrackInfo() {
     auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracks;
+    /*
     auto buf = EIMPackets::makePacket(ClientboundPacket::ClientboundSyncTrackInfo);
     buf->writeInt8((char)tracks.size());
     for (auto& it : tracks) {
@@ -37,9 +37,9 @@ void Listener::syncTrackInfo() {
         buf->writeUUID(track->uuid);
         track->writeTrackInfo(buf.get());
     }
-    state->send(buf);
+    state->send(buf);*/
 }
 
 void Listener::broadcastProjectStatus() {
-    state->send(EIMPackets::makeProjectStatusPacket());
+    //state->send(EIMPackets::makeProjectStatusPacket());
 }

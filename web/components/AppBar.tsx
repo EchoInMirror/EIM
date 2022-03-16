@@ -4,10 +4,10 @@ import useGlobalData, { ReducerTypes } from '../reducer'
 import Settings from './Settings'
 import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Slider, ListItemIcon, ListItemText, Divider } from '@mui/material'
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
-import { ClientboundPacket } from '../Client'
 import { useSnackbar } from 'notistack'
-import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
-import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
+// import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
+// import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
+import { ClientboundPacket, HandlerTypes } from '../../packets'
 
 import NoteAdd from '@mui/icons-material/NoteAdd'
 import FileOpen from '@mui/icons-material/FileOpen'
@@ -63,7 +63,7 @@ const LeftSection: React.FC = () => {
         }}
         onChangeCommitted={(_, val) => {
           moving = false
-          $client.setProjectStatus(0, state.maxNoteTime / state.ppq / state.bpm * 60 * (val as number) / 100, state.isPlaying, 0, 0)
+          $client.rpc.setProjectStatus({ time: state.maxNoteTime / state.ppq / state.bpm * 60 * (val as number) / 100 })
         }}
         sx={{ color: theme => theme.palette.mode === 'dark' ? '#fff' : 'rgba(0,0,0,0.87)' }}
       />
@@ -125,8 +125,8 @@ const CenterSection: React.FC = () => {
       barsNode.innerText = (1 + beats / state.timeSigNumerator | 0).toString().padStart(2, '0')
       beatsNode.innerText = (1 + (beats | 0) % state.timeSigNumerator).toString().padStart(2, '0')
       stepsNode.innerText = (1 + (beats - (beats | 0)) * (16 / state.timeSigDenominator) | 0).toString()
-      if (bottomBarPlayHeadRef.current) bottomBarPlayHeadRef.current.style.transform = `translateX(${bottomBarLength * beats | 0}px)`
-      if (tracksPlayHeadRef.current) tracksPlayHeadRef.current.style.transform = `translateX(${tracksLength * beats | 0}px)`
+      // if (bottomBarPlayHeadRef.current) bottomBarPlayHeadRef.current.style.transform = `translateX(${bottomBarLength * beats | 0}px)`
+      // if (tracksPlayHeadRef.current) tracksPlayHeadRef.current.style.transform = `translateX(${tracksLength * beats | 0}px)`
     }
     update(state.currentTime)
     if (!moving) setProgress((state.currentTime / state.maxNoteTime * state.ppq * state.bpm / 60 * 100) || 0)
@@ -163,13 +163,13 @@ const CenterSection: React.FC = () => {
       </div>
       <IconButton
         color='inherit'
-        onClick={() => $client.setProjectStatus(0, -1, !state.isPlaying, 0, 0)}
+        onClick={() => $client.rpc.setProjectStatus({ isPlaying: !state.isPlaying })}
       >
         {state.isPlaying ? <Pause fontSize='large' /> : <PlayArrow fontSize='large' />}
       </IconButton>
       <IconButton
         color='inherit'
-        onClick={() => $client.setProjectStatus(0, 0, false, 0, 0)}
+        onClick={() => $client.rpc.setProjectStatus({ isPlaying: false })}
       >
         <Stop fontSize='large' />
       </IconButton>
@@ -189,7 +189,7 @@ const AppBar: React.FC = () => {
     const bpm = +bpmInteger + (+bpmDecimal / 100)
     if (bpm === state.bpm) return
     e.target.blur()
-    $client.setProjectStatus(bpm, -1, false, 0, 0)
+    $client.rpc.setProjectStatus({ isPlaying: false })
     enqueueSnackbar('操作成功!', { variant: 'success' })
   }
 
@@ -201,7 +201,7 @@ const AppBar: React.FC = () => {
           key={i}
           onClick={() => {
             setBeatsAnchor(undefined)
-            $client.setProjectStatus(0, -1, false, i, 0)
+            $client.rpc.setProjectStatus({ isPlaying: false, timeSigNumerator: i })
             enqueueSnackbar('操作成功!', { variant: 'success' })
           }}
         >
@@ -220,7 +220,7 @@ const AppBar: React.FC = () => {
           key={i}
           onClick={() => {
             setBeatsAnchor(undefined)
-            $client.setProjectStatus(0, -1, false, 0, i)
+            $client.rpc.setProjectStatus({ isPlaying: false, timeSigDenominator: i })
             enqueueSnackbar('操作成功!', { variant: 'success' })
           }}
         >
@@ -232,24 +232,24 @@ const AppBar: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    $client.on(ClientboundPacket.ProjectStatus, buf => {
-      const ppq = buf.readUint16()
-      const bpm = buf.readDouble()
+    const fn: HandlerTypes[ClientboundPacket.SetProjectStatus] = data => {
       dispatch({
         type: ReducerTypes.SetProjectStatus,
-        ppq,
-        bpm,
-        currentTime: buf.readDouble(),
-        startTime: buf.readInt64(),
-        isPlaying: !!buf.readUint8(),
-        timeSigNumerator: buf.readUint8(),
-        timeSigDenominator: buf.readUint8()
+        ppq: data.ppq,
+        bpm: data.bpm,
+        currentTime: data.time,
+        startTime: data.startTime,
+        isPlaying: data.isPlaying,
+        timeSigNumerator: data.timeSigNumerator,
+        timeSigDenominator: data.timeSigDenominator
       })
-      buf.readUint16()
-      setBPMInteger((bpm | 0).toString())
-      setBPMDecimal((bpm - bpm | 0).toFixed(2).slice(2))
-    })
-    return () => $client.off(ClientboundPacket.ProjectStatus)
+      // setBPMInteger((bpm | 0).toString())
+      // setBPMDecimal((bpm - bpm | 0).toFixed(2).slice(2))
+    }
+    $client.on(ClientboundPacket.SetProjectStatus, fn)
+    return () => {
+      $client.off(ClientboundPacket.SetProjectStatus as any, fn)
+    }
   }, [])
 
   return (

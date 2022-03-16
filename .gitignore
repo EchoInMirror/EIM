@@ -1,4 +1,6 @@
 build
-vst2sdk
+.parcel-cache
+dist
+node_modules
 /packets/*
 !/packets/*.proto

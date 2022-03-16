@@ -28,7 +28,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 include_directories(${vst2sdkPath} ${Boost_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 
-file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp")
+file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp" "packets/packets.h" "packets/packets.cpp")
 
 add_subdirectory(JUCE)
 juce_add_gui_app(EIM PRODUCT_NAME)

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSnackbar, SnackbarKey } from 'notistack'
-import { Config, ClientboundPacket } from '../Client'
+import { Config } from '../Client'
 import {
   Dialog, DialogTitle, Tabs, Tab, CircularProgress, IconButton, colors, List, ListItem, ListItemText,
   ListSubheader, ListItemSecondaryAction, DialogActions, Button, Divider
@@ -17,11 +17,11 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
   const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
   useEffect(() => {
-    $client.config().then(it => setConfig(JSON.parse(it)))
+    // $client.rpc.config().then(it => setConfig(JSON.parse(it)))
   }, [open])
 
   useEffect(() => {
-    $client.on(ClientboundPacket.ScanVSTs, buf => {
+    /* $client.on(ClientboundPacket.ScanVSTs, buf => {
       if (buf.readUint8()) {
         setScanning(true)
         scanningKey = enqueueSnackbar('插件扫描中...', { persist: true, variant: 'info' })
@@ -29,7 +29,7 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
         setScanning(false)
         closeSnackbar(scanningKey)
       }
-    })
+    }) */
   }, [])
   const onClose = () => setOpen(false)
 

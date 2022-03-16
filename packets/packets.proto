@@ -6,12 +6,34 @@ import "google/protobuf/empty.proto";
 message ProjectStatus {
   optional uint32 bpm = 1;
   optional uint32 time = 2;
-  optional uint32 timeSigNumerator = 3;
-  optional uint32 timeSigDenominator = 4;
-  optional uint32 sampleRate = 5;
-  optional bool isPlaying = 6;
+  optional uint32 startTime = 3;
+  optional uint32 timeSigNumerator = 4;
+  optional uint32 timeSigDenominator = 5;
+  optional uint32 sampleRate = 6;
+  optional uint32 ppq = 7;
+  optional bool isPlaying = 8;
 }
 
-service ServerService {
-  rpc setProjectStatus(ProjectStatus) returns(google.protobuf.Empty);
+message ServerboundExplorerData {
+  enum ExpolorerType {
+    FAVROITED = 0;
+    PLUGINS = 1;
+  }
+
+  ExpolorerType type = 1;
+  string path = 2;
+}
+
+message ClientboundExplorerData {
+  repeated string folders = 1;
+  repeated string files = 2;
+}
+
+service ServerService { // Server bound
+  rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
+  rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
+}
+
+service ClientService { // Client bound
+  rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
 }

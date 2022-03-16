@@ -3,13 +3,13 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include "SharedState.h"
-#include "ByteBuffer.h"
+#include "../packets/packets.h"
 
-class WebSocketSession : public boost::enable_shared_from_this<WebSocketSession> {
+class WebSocketSession : public boost::enable_shared_from_this<WebSocketSession>, private ServerService {
 public:
     explicit WebSocketSession(boost::asio::ip::tcp::socket&& socket, std::shared_ptr<SharedState> const& state) : ws(std::move(socket)), state(state) {}
     ~WebSocketSession();
-    ByteBuffer buffer;
+    boost::beast::flat_buffer buffer;
     std::shared_ptr<SharedState> state;
 
     void doWrite();
@@ -26,9 +26,12 @@ public:
     void onAccept(boost::beast::error_code ec);
     void onRead(boost::beast::error_code ec, std::size_t);
     void onWrite(boost::beast::error_code ec, std::size_t);
-    void onSend(std::shared_ptr<ByteBuffer> ss);
-    void send(std::shared_ptr<ByteBuffer> ss);
+    void onSend(std::shared_ptr<boost::beast::flat_buffer> ss);
+    void send(std::shared_ptr<boost::beast::flat_buffer> ss);
+
+    virtual void handleSetProjectStatus(eim::ProjectStatus&) override;
+    virtual void handleGetExplorerData(eim::ServerboundExplorerData&, std::function<void(eim::ClientboundExplorerData)>);
 private:
     boost::beast::websocket::stream<boost::beast::tcp_stream> ws;
-    std::vector<std::shared_ptr<ByteBuffer>> queue;
+    std::vector<std::shared_ptr<boost::beast::flat_buffer>> queue;
 };

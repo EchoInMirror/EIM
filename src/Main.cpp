@@ -1,7 +1,10 @@
 #include "Main.h"
+#include "packets.pb.h"
 #include <string>
 
 void EIMApplication::initialise(const juce::String& commandLine) {
+    eim::ProjectStatus a;
+    
     juce::ignoreUnused(commandLine);
     mainWindow.reset(new MainWindow());
     pluginManager.reset(new PluginManagerWindow(config.rootPath));

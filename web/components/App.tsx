@@ -12,9 +12,9 @@ import type { PaletteOptions } from '@mui/material/styles/createPalette'
 import { zhCN } from '@mui/material/locale'
 
 import AppBar from './AppBar'
-import SideBar from './SideBar'
-import BottomBar from './BottomBar'
-import Tracks from './Tracks'
+// import SideBar from './SideBar'
+// import BottomBar from './BottomBar'
+// import Tracks from './Tracks'
 import { GlobalDataContext, reducer, initialState } from '../reducer'
 
 const palette: PaletteOptions = {
@@ -61,11 +61,11 @@ const App: React.FC = () => {
       <SnackbarProvider maxSnack={6}>
         <GlobalDataContext.Provider value={ctx}>
           <AppBar />
-          <SideBar />
+          {/* <SideBar />
           <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
             <Tracks />
             <BottomBar />
-          </Paper>
+          </Paper> */}
         </GlobalDataContext.Provider>
       </SnackbarProvider>
     </ThemeProvider>

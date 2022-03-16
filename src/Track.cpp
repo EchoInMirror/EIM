@@ -2,7 +2,6 @@
 #include "ProcessorBase.h"
 #include "MasterTrack.h"
 #include "Main.h"
-#include "websocket/Packets.h"
 
 Track::Track(juce::Uuid uuid, MasterTrack* masterTrack) : uuid(uuid), AudioProcessorGraph(), masterTrack(masterTrack) { init(); }
 
@@ -92,9 +91,9 @@ void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
 		msg.setTimeStamp(juce::roundToInt(msg.getTimeStamp() / timeFormat * masterTrack->ppq));
 		midiSequence.addEvent(msg, 0);
 	}
-	auto buf = EIMPackets::makeTrackMidiDataPacket(1);
-	writeMidiData(buf.get());
-	EIMApplication::getEIMInstance()->listener->state->send(buf);
+	//auto buf = EIMPackets::makeTrackMidiDataPacket(1);
+	//writeMidiData(buf.get());
+	//EIMApplication::getEIMInstance()->listener->state->send(buf);
 }
 
 void Track::writeTrackInfo(ByteBuffer* buf) {
@@ -119,9 +118,9 @@ void Track::writeTrackMixerInfo(ByteBuffer* buf) {
 juce::AudioPluginInstance* Track::getInstrumentInstance() { return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor(); }
 
 void Track::syncThisTrackMixerInfo() {
-	auto buf = EIMPackets::makeTrackMixerInfoPacket(1);
-	writeTrackMixerInfo(buf.get());
-	EIMApplication::getEIMInstance()->listener->state->send(buf);
+	//auto buf = EIMPackets::makeTrackMixerInfoPacket(1);
+	//writeTrackMixerInfo(buf.get());
+	//EIMApplication::getEIMInstance()->listener->state->send(buf);
 }
 
 void Track::writeMidiData(ByteBuffer* buf) {
