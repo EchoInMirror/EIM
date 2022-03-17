@@ -30,7 +30,6 @@ export const initialState = {
   isPlaying: false,
   timeSigNumerator: 4,
   timeSigDenominator: 4,
-  startTime: Date.now(),
   currentTime: 0,
   maxNoteTime: 0,
   trackMidiData: { } as TrackMidiData,
@@ -40,7 +39,8 @@ export const initialState = {
 export interface Action { type: ReducerTypes, [key: string]: any }
 
 export const reducer = (state: typeof initialState, action: Action): typeof initialState => {
-  switch (action.type) {
+  const { type, ...others } = action
+  switch (type) {
     case ReducerTypes.ChangeActiveTrack:
       return {
         ...state,
@@ -49,13 +49,7 @@ export const reducer = (state: typeof initialState, action: Action): typeof init
     case ReducerTypes.SetProjectStatus:
       return {
         ...state,
-        ppq: action.ppq,
-        bpm: action.bpm,
-        isPlaying: action.isPlaying,
-        currentTime: action.currentTime,
-        timeSigNumerator: action.timeSigNumerator,
-        timeSigDenominator: action.timeSigDenominator,
-        startTime: action.startTime
+        ...others
       }
     case ReducerTypes.SetTrackMidiData:
       return {

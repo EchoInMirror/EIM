@@ -1,11 +1,37 @@
 #include "Main.h"
 #include "websocket/WebSocketSession.h"
 
-void WebSocketSession::handleSetProjectStatus(eim::ProjectStatus&) {
-
+void WebSocketSession::handleSetProjectStatus(std::unique_ptr<eim::ProjectStatus> data) {
+	auto shouldUpdate = false;
+	auto instance = EIMApplication::getEIMInstance();
+	auto& master = instance->mainWindow->masterTrack;
+	auto& info = master->currentPositionInfo;
+	if (data->has_bpm() && data->bpm() > 10) {
+		info.bpm = data->bpm();
+		shouldUpdate = true;
+	}
+	if (data->has_time()) {
+		info.ppqPosition = data->time();
+		shouldUpdate = true;
+	}
+	if (data->has_isplaying() && data->isplaying() != info.isPlaying) {
+		info.isPlaying = data->isplaying();
+		info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
+		if (!data->isplaying()) master->stopAllNotes();
+		shouldUpdate = true;
+	}
+	if (data->has_timesignumerator()) {
+		info.timeSigNumerator = data->timesignumerator();
+		shouldUpdate = true;
+	}
+	if (data->has_timesigdenominator()) {
+		info.timeSigDenominator = data->timesigdenominator();
+		shouldUpdate = true;
+	}
+	if (shouldUpdate) instance->listener->state->send(std::move(EIMPackets::makeSetProjectStatusPacket(data.get())));
 }
 
-void WebSocketSession::handleGetExplorerData(eim::ServerboundExplorerData&, std::function<void(eim::ClientboundExplorerData)>) {
+void WebSocketSession::handleGetExplorerData(std::unique_ptr<eim::ServerboundExplorerData>, std::function<void(eim::ClientboundExplorerData)>) {
 
 }
 
@@ -35,8 +61,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 	switch (buf.readUInt8()) {
 	case ServerboundPacket::ServerboundReply: break;
 	case ServerboundPacket::ServerboundSetProjectStatus: {
-		auto& master = mainWindow->masterTrack;
-		auto& info = master->currentPositionInfo;
 		auto bpm = buf.readDouble();
 		auto time = buf.readDouble();
 		auto isPlaying = buf.readBoolean();

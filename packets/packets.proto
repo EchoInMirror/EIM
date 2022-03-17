@@ -6,12 +6,11 @@ import "google/protobuf/empty.proto";
 message ProjectStatus {
   optional uint32 bpm = 1;
   optional uint32 time = 2;
-  optional uint32 startTime = 3;
-  optional uint32 timeSigNumerator = 4;
-  optional uint32 timeSigDenominator = 5;
-  optional uint32 sampleRate = 6;
-  optional uint32 ppq = 7;
-  optional bool isPlaying = 8;
+  optional uint32 timeSigNumerator = 3;
+  optional uint32 timeSigDenominator = 4;
+  optional uint32 sampleRate = 5;
+  optional uint32 ppq = 6;
+  optional bool isPlaying = 7;
 }
 
 message ServerboundExplorerData {

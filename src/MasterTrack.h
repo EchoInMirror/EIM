@@ -2,6 +2,7 @@
 
 #include "PluginWindow.h"
 #include "Track.h"
+#include "packets.pb.h"
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 
@@ -21,6 +22,7 @@ public:
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void createPluginWindow(juce::AudioPluginInstance* instance);
+    std::unique_ptr<eim::ProjectStatus> getProjectStatus();
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }

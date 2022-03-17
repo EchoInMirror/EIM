@@ -59,7 +59,7 @@ bool MasterTrack::getCurrentPosition(CurrentPositionInfo& result) {
 void MasterTrack::transportPlay(bool shouldStartPlaying) {
 	if (currentPositionInfo.isPlaying == shouldStartPlaying) return;
 	currentPositionInfo.isPlaying = shouldStartPlaying;
-	EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
+	// EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
 }
 
 void MasterTrack::calcPositionInfo() {
@@ -70,7 +70,7 @@ void MasterTrack::calcPositionInfo() {
 	currentPositionInfo.timeInSeconds = 0;
 	currentPositionInfo.timeInSamples = 0;
 	currentPositionInfo.ppqPosition = 0;
-	EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
+	// EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
 }
 
 void MasterTrack::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
@@ -87,6 +87,17 @@ void MasterTrack::createPluginWindow(juce::AudioPluginInstance* instance) {
 		it.grabKeyboardFocus();
 		it.setAlwaysOnTop(false);
 	} else pluginWindows.try_emplace(instance, instance, &pluginWindows);
+}
+
+std::unique_ptr<eim::ProjectStatus> MasterTrack::getProjectStatus() {
+	auto it = std::make_unique<eim::ProjectStatus>();
+	it->set_bpm(currentPositionInfo.bpm);
+	it->set_time((int)currentPositionInfo.ppqPosition);
+	it->set_timesignumerator(currentPositionInfo.timeSigNumerator);
+	it->set_timesigdenominator(currentPositionInfo.timeSigDenominator);
+	it->set_ppq(ppq);
+	it->set_isplaying(currentPositionInfo.isPlaying);
+	return it;
 }
 
 void MasterTrack::stopAllNotes() {

@@ -12,7 +12,6 @@ public:
 
     void doAccept();
     void syncTrackInfo();
-    void broadcastProjectStatus();
 private:
     boost::asio::io_context& ioc;
     boost::asio::ip::tcp::acceptor acceptor;

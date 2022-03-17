@@ -23,12 +23,11 @@ export default class Client extends ClientService {
 
   public rpc: eim.ServerService
 
-  constructor (address: string, callback: () => void) {
+  constructor (address: string) {
     super()
     this.ws = new WebSocket(address)
     this.ws.onopen = () => {
       this.ws.binaryType = 'arraybuffer'
-      callback()
     }
     this.ws.onmessage = e => {
       const event = e.data[0]
@@ -50,7 +49,7 @@ export default class Client extends ClientService {
       if (callbacks[name]) {
         this.replies[this.replyId] = callback
         new DataView(out).setUint32(1, this.replyId++)
-      } else callback(null)
+      } else callback(null, new Uint8Array())
       out.set(data, 1)
       this.ws.send(out)
     })

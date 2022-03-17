@@ -15,8 +15,8 @@ public:
 
     void join(WebSocketSession* session);
     void leave(WebSocketSession* session);
-    void send(std::shared_ptr<ByteBuffer> message);
-    void sendExclude(std::shared_ptr<ByteBuffer> message, WebSocketSession* session);
+    void send(std::shared_ptr<boost::beast::flat_buffer> message);
+    void sendExclude(std::shared_ptr<boost::beast::flat_buffer> message, WebSocketSession* session);
     int size();
     std::string const& getDocRoot() const noexcept { return docRoot; }
 private:

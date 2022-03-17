@@ -39,7 +39,3 @@ void Listener::syncTrackInfo() {
     }
     state->send(buf);*/
 }
-
-void Listener::broadcastProjectStatus() {
-    //state->send(EIMPackets::makeProjectStatusPacket());
-}

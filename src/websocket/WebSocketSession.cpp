@@ -15,7 +15,7 @@ void WebSocketSession::onAccept(boost::beast::error_code ec) {
     if (ec) return;
     state->join(this);
     doRead();
-    // send(EIMPackets::makeProjectStatusPacket());
+    send(EIMPackets::makeSetProjectStatusPacket(EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus().get()));
     // send(EIMPackets::makeAllTrackMidiDataPacket());
     // if (EIMApplication::getEIMInstance()->pluginManager->isScanning) send(EIMPackets::makeScanVSTsPacket(true));
 }

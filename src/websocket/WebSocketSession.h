@@ -29,8 +29,8 @@ public:
     void onSend(std::shared_ptr<boost::beast::flat_buffer> ss);
     void send(std::shared_ptr<boost::beast::flat_buffer> ss);
 
-    virtual void handleSetProjectStatus(eim::ProjectStatus&) override;
-    virtual void handleGetExplorerData(eim::ServerboundExplorerData&, std::function<void(eim::ClientboundExplorerData)>);
+    virtual void handleSetProjectStatus(std::unique_ptr<eim::ProjectStatus>) override;
+    virtual void handleGetExplorerData(std::unique_ptr<eim::ServerboundExplorerData>, std::function<void(eim::ClientboundExplorerData)>) override;
 private:
     boost::beast::websocket::stream<boost::beast::tcp_stream> ws;
     std::vector<std::shared_ptr<boost::beast::flat_buffer>> queue;

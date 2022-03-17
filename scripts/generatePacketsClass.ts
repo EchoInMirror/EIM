@@ -26,11 +26,14 @@ for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) 
               ? ''
               : `unsigned int replyId = *(boost::asio::buffer_cast<unsigned int*>(buf.data()));
             buf.consume(4);`}
-            ${noArg ? '' : argName + ' a;\n            a.ParseFromArray(ptr, len - 1);'}
-            handle${name}(${noArg ? '' : 'a'}${noReturn
+            ${noArg
+              ? ''
+              : `auto a = std::make_unique<${argName}>();
+            a->ParseFromArray(ptr, len - 1);`}
+            handle${name}(${noArg ? '' : 'std::move(a)'}${noReturn
               ? ''
               : `${noArg ? '' : ', '}[replyId, session] (eim::${returnType} a) {
-              auto replyBuf = std::make_shared<boost::beast::flat_buffer>();
+              auto replyBuf = std::make_unique<boost::beast::flat_buffer>();
               *(boost::asio::buffer_cast<unsigned char*>(replyBuf->prepare(1))) = 0;
               replyBuf->commit(1);
               *(boost::asio::buffer_cast<unsigned int*>(replyBuf->prepare(4))) = replyId;
@@ -38,11 +41,11 @@ for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) 
               auto len = a.ByteSizeLong();
               a.SerializePartialToArray(boost::asio::buffer_cast<void*>(replyBuf->prepare(len)), len);
               replyBuf->commit(len);
-              session->send(replyBuf);
+              session->send(std::move(replyBuf));
             }`});
             break;
         }\n`
-  serverServiceClass += `\tvirtual void handle${name}(${noArg ? '' : argName + '&'}${noReturn ? '' : `${noArg ? '' : ', '}std::function<void (eim::${returnType})>`});\n`
+  serverServiceClass += `\tvirtual void handle${name}(${noArg ? '' : `std::unique_ptr<${argName}>`}${noReturn ? '' : `${noArg ? '' : ', '}std::function<void (eim::${returnType})>`}) = 0;\n`
   clientServiceServerPackets += `  ${name},\n`
   if (!noReturn) clientCallbacks += `  ${name}: true,\n`
 }
@@ -52,16 +55,16 @@ id = 0
 for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) \((\w+)\) returns \((\w+|google\.protobuf\.Empty)\);/g)) {
   const name = method[0].toUpperCase() + method.slice(1)
   const noArg = argType === EMPTY
-  const methodDesc = `    std::shared_ptr<boost::beast::flat_buffer> make${name}Packet(${noArg ? '' : 'eim::' + argType + '& a'})`
+  const methodDesc = `    std::unique_ptr<boost::beast::flat_buffer> make${name}Packet(${noArg ? '' : 'eim::' + argType + '* a'})`
   serverServiceHMethods += methodDesc + ';\n'
   serverServiceMethods += `${methodDesc} {
-        auto buf = std::make_shared<boost::beast::flat_buffer>();
+        auto buf = std::make_unique<boost::beast::flat_buffer>();
         *boost::asio::buffer_cast<unsigned char*>(buf->prepare(sizeof(unsigned char))) = ${++id};
         buf->commit(1);
         ${noArg
           ? ''
-          : `        auto len = a.ByteSizeLong();
-        a.SerializePartialToArray(boost::asio::buffer_cast<void*>(buf->prepare(len)), len);
+          : `auto len = a->ByteSizeLong();
+        a->SerializePartialToArray(boost::asio::buffer_cast<void*>(buf->prepare(len)), len);
         buf->commit(len);`}
         return buf;
     }
@@ -134,7 +137,6 @@ export const callbacks: Record<string, true> = {
 ${clientCallbacks.slice(0, clientCallbacks.length - 2)}
 }
 
-// @ts-ignore
 class ClientService extends EventEmitter {
   public handlePacket (data: ArrayBuffer) {
     const buf = new Uint8Array(data)
@@ -148,9 +150,15 @@ ${clientServiceHandlers.trimEnd()}
   }
 }
 
-// @ts-ignore
 interface ClientService {
-  on <T extends number> (name: T, fn: HandlerTypes[T]): void
+  on <T extends number> (name: T, fn: HandlerTypes[T]): this
+  on (name: string | symbol, listener: (...args: any[]) => void): this
+  once <T extends number> (name: T, fn: HandlerTypes[T]): this
+  once (name: string | symbol, listener: (...args: any[]) => void): this
+  off <T extends number> (name: T, fn: HandlerTypes[T]): this
+  off (name: string | symbol, listener: (...args: any[]) => void): this
+  emit <T extends number> (name: T, ...args: HandlerTypes[T] extends (...args: infer Args) => any ? Args : any[]): boolean
+  emit (name: string | symbol, ...args: any[]): boolean
 }
 
 export default ClientService

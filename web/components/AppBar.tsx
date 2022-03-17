@@ -8,6 +8,7 @@ import { useSnackbar } from 'notistack'
 // import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
 // import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 import { ClientboundPacket, HandlerTypes } from '../../packets'
+import { merge } from '../utils'
 
 import NoteAdd from '@mui/icons-material/NoteAdd'
 import FileOpen from '@mui/icons-material/FileOpen'
@@ -233,22 +234,15 @@ const AppBar: React.FC = () => {
 
   useEffect(() => {
     const fn: HandlerTypes[ClientboundPacket.SetProjectStatus] = data => {
-      dispatch({
-        type: ReducerTypes.SetProjectStatus,
-        ppq: data.ppq,
-        bpm: data.bpm,
-        currentTime: data.time,
-        startTime: data.startTime,
-        isPlaying: data.isPlaying,
-        timeSigNumerator: data.timeSigNumerator,
-        timeSigDenominator: data.timeSigDenominator
-      })
-      // setBPMInteger((bpm | 0).toString())
-      // setBPMDecimal((bpm - bpm | 0).toFixed(2).slice(2))
+      dispatch(merge(data, { type: ReducerTypes.SetProjectStatus }))
+      if (data.bpm != null) {
+        setBPMInteger((data.bpm | 0).toString())
+        setBPMDecimal((data.bpm - data.bpm | 0).toFixed(2).slice(2))
+      }
     }
     $client.on(ClientboundPacket.SetProjectStatus, fn)
     return () => {
-      $client.off(ClientboundPacket.SetProjectStatus as any, fn)
+      $client.off(ClientboundPacket.SetProjectStatus, fn)
     }
   }, [])
 
