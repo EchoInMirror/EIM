@@ -96,13 +96,12 @@ void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
 	//EIMApplication::getEIMInstance()->listener->state->send(buf);
 }
 
-void Track::writeTrackInfo(ByteBuffer* buf) {
-	buf->writeString(name);
-	buf->writeString(color);
-	buf->writeFloat(chain.get<1>().getGainLinear());
-	buf->writeBoolean(instrumentNode != nullptr);
-	buf->writeBoolean(currentNode->isBypassed());
-	buf->writeBoolean(false);
+std::unique_ptr<EIMPackets::ClientboundTrackInfo> Track::getTrackInfo() {
+	auto data = std::make_unique<EIMPackets::ClientboundTrackInfo>();
+	data->mutable_uuid()->set_data(uuidToString(uuid));
+	data->set_name(name);
+	data->set_color(color);
+	return std::move(data);
 }
 
 void Track::writeTrackMixerInfo(ByteBuffer* buf) {

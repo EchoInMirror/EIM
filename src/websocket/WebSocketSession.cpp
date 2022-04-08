@@ -15,13 +15,12 @@ void WebSocketSession::onAccept(boost::beast::error_code ec) {
     if (ec) return;
     state->join(this);
     doRead();
-    send(EIMPackets::makeSetProjectStatusPacket(EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus().get()));
     // send(EIMPackets::makeAllTrackMidiDataPacket());
     // if (EIMApplication::getEIMInstance()->pluginManager->isScanning) send(EIMPackets::makeScanVSTsPacket(true));
 }
 void WebSocketSession::onRead(boost::beast::error_code ec, std::size_t len) {
     if (ec) return;
-    handlePacket(this, len);
+    ServerService::handlePacket(this, len);
     doRead();
 }
 void WebSocketSession::onWrite(boost::beast::error_code ec, std::size_t) {

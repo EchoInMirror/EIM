@@ -1,7 +1,13 @@
 syntax = "proto3";
 
-package eim;
+package EIMPackets;
 import "google/protobuf/empty.proto";
+
+message Empty { }
+
+message UUID {
+  bytes data = 1;
+}
 
 message ProjectStatus {
   optional uint32 bpm = 1;
@@ -14,12 +20,12 @@ message ProjectStatus {
 }
 
 message ServerboundExplorerData {
-  enum ExpolorerType {
-    FAVROITED = 0;
+  enum ExplorerType {
+    FAVORITE = 0;
     PLUGINS = 1;
   }
 
-  ExpolorerType type = 1;
+  ExplorerType type = 1;
   string path = 2;
 }
 
@@ -28,11 +34,28 @@ message ClientboundExplorerData {
   repeated string files = 2;
 }
 
+message ServerboundCreateTrackData {
+  string name = 1;
+  string color = 2;
+  optional string position = 3;
+  optional string identifier = 4;
+}
+
+message ClientboundTrackInfo {
+  UUID uuid = 1;
+  string name = 2;
+  string color = 3;
+  optional string position = 4;
+}
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
+  rpc refresh (google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc createTrack (ServerboundCreateTrackData) returns (Empty);
 }
 
 service ClientService { // Client bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
+  rpc syncTracnInfo (ClientboundTrackInfo) returns (google.protobuf.Empty);
 }

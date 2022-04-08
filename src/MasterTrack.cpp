@@ -89,8 +89,8 @@ void MasterTrack::createPluginWindow(juce::AudioPluginInstance* instance) {
 	} else pluginWindows.try_emplace(instance, instance, &pluginWindows);
 }
 
-std::unique_ptr<eim::ProjectStatus> MasterTrack::getProjectStatus() {
-	auto it = std::make_unique<eim::ProjectStatus>();
+std::unique_ptr<EIMPackets::ProjectStatus> MasterTrack::getProjectStatus() {
+	auto it = std::make_unique<EIMPackets::ProjectStatus>();
 	it->set_bpm(currentPositionInfo.bpm);
 	it->set_time((int)currentPositionInfo.ppqPosition);
 	it->set_timesignumerator(currentPositionInfo.timeSigNumerator);

@@ -8,7 +8,7 @@ import Editor from './Editor'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
 export let setIsMixer = (_val: boolean) => { }
-
+// {isMixer ? <Mixer /> : <Editor />}
 const BottomBar: React.FC = () => {
   const [isMixer, fn] = useState(true)
   setIsMixer = fn
@@ -21,7 +21,6 @@ const BottomBar: React.FC = () => {
         sx={{ borderTop: theme => '1px solid ' + theme.palette.primary.main, background: theme => theme.palette.background.bright, zIndex: 2 }}
         component='footer'
       >
-        {isMixer ? <Mixer /> : <Editor />}
       </Paper>
     </Resizable>
   )

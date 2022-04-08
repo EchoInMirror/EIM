@@ -16,9 +16,9 @@ let clientCallbacks = ''
 let serverService = data.slice(data.indexOf('service ServerService {'))
 serverService = serverService.slice(0, serverService.indexOf('}'))
 let id = 0
-for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) \((\w+)\) returns \((\w+|google\.protobuf\.Empty)\);/g)) {
+for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) \((\w+|google\.protobuf\.Empty)\) returns \((\w+|google\.protobuf\.Empty)\);/g)) {
   const name = method[0].toUpperCase() + method.slice(1)
-  const argName = 'eim::' + argType
+  const argName = 'EIMPackets::' + argType
   const noArg = argType === EMPTY
   const noReturn = returnType === EMPTY
   serverServiceHandlers += `        case ${++id}: {
@@ -29,33 +29,33 @@ for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) 
             ${noArg
               ? ''
               : `auto a = std::make_unique<${argName}>();
-            a->ParseFromArray(ptr, len - 1);`}
-            handle${name}(${noArg ? '' : 'std::move(a)'}${noReturn
-              ? ''
-              : `${noArg ? '' : ', '}[replyId, session] (eim::${returnType} a) {
-              auto replyBuf = std::make_unique<boost::beast::flat_buffer>();
-              *(boost::asio::buffer_cast<unsigned char*>(replyBuf->prepare(1))) = 0;
-              replyBuf->commit(1);
-              *(boost::asio::buffer_cast<unsigned int*>(replyBuf->prepare(4))) = replyId;
-              replyBuf->commit(4);
-              auto len = a.ByteSizeLong();
-              a.SerializePartialToArray(boost::asio::buffer_cast<void*>(replyBuf->prepare(len)), len);
-              replyBuf->commit(len);
-              session->send(std::move(replyBuf));
+            a->ParseFromArray(boost::asio::buffer_cast<void*>(buf.data()), len - ${noReturn ? 1 : 5});`}
+            handle${name}(session${noArg ? '' : ', std::move(a)'}${noReturn
+                ? ''
+                : `${noArg ? '' : ', '}[replyId, session] (EIMPackets::${returnType}& a) {
+                auto replyBuf = std::make_unique<boost::beast::flat_buffer>();
+                *(boost::asio::buffer_cast<unsigned char*>(replyBuf->prepare(1))) = 0;
+                replyBuf->commit(1);
+                *(boost::asio::buffer_cast<unsigned int*>(replyBuf->prepare(4))) = replyId;
+                replyBuf->commit(4);
+                auto len = a.ByteSizeLong();
+                a.SerializePartialToArray(boost::asio::buffer_cast<void*>(replyBuf->prepare(len)), len);
+                replyBuf->commit(len);
+                session->send(std::move(replyBuf));
             }`});
             break;
         }\n`
-  serverServiceClass += `\tvirtual void handle${name}(${noArg ? '' : `std::unique_ptr<${argName}>`}${noReturn ? '' : `${noArg ? '' : ', '}std::function<void (eim::${returnType})>`}) = 0;\n`
+  serverServiceClass += `    void handle${name}(WebSocketSession*${noArg ? '' : `, std::unique_ptr<${argName}>`}${noReturn ? '' : `${noArg ? '' : ', '}std::function<void (EIMPackets::${returnType}&)>`});\n`
   clientServiceServerPackets += `  ${name},\n`
   if (!noReturn) clientCallbacks += `  ${name}: true,\n`
 }
 
 const clientService = data.slice(data.indexOf('service ClientService {'))
 id = 0
-for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) \((\w+)\) returns \((\w+|google\.protobuf\.Empty)\);/g)) {
+for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) \((\w+|google\.protobuf\.Empty)\) returns \((\w+|google\.protobuf\.Empty)\);/g)) {
   const name = method[0].toUpperCase() + method.slice(1)
   const noArg = argType === EMPTY
-  const methodDesc = `    std::unique_ptr<boost::beast::flat_buffer> make${name}Packet(${noArg ? '' : 'eim::' + argType + '* a'})`
+  const methodDesc = `    std::unique_ptr<boost::beast::flat_buffer> make${name}Packet(${noArg ? '' : 'EIMPackets::' + argType + '* a'})`
   serverServiceHMethods += methodDesc + ';\n'
   serverServiceMethods += `${methodDesc} {
         auto buf = std::make_unique<boost::beast::flat_buffer>();
@@ -71,9 +71,9 @@ for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) 
 `
 
   clientServicePackets += `  ${name},\n`
-  clientHandlerTypes += `  [ClientboundPacket.${name}]: (${noArg ? '' : 'data: eim.I' + argType}) ${returnType === EMPTY ? '=> void' : '=> Promise<eim.I' + returnType + '>'}\n`
+  clientHandlerTypes += `  [ClientboundPacket.${name}]: (${noArg ? '' : 'data: EIMPackets.I' + argType}) ${returnType === EMPTY ? '=> void' : '=> Promise<EIMPackets.I' + returnType + '>'}\n`
   clientServiceHandlers += `      case ${id}:
-        packet = ${noArg ? '' : 'eim.' + argType + '.decode(reader)'}
+        packet = ${noArg ? '' : 'EIMPackets.' + argType + '.decode(reader)'}
         break
 `
 }
@@ -84,14 +84,12 @@ fs.writeFileSync('packets/packets.h', `#pragma once
 
 class WebSocketSession;
 
-class ServerService {
-public:
+namespace ServerService {
     void handlePacket(WebSocketSession* session, std::size_t len);
-private:
 ${serverServiceClass.trimEnd()}
 };
 
-namespace EIMPackets {
+namespace EIMMakePackets {
 ${serverServiceHMethods.trimEnd()}
 }
 `)
@@ -103,20 +101,19 @@ void ServerService::handlePacket(WebSocketSession* session, std::size_t len) {
     auto& buf = session->buffer;
     unsigned char id = *(boost::asio::buffer_cast<unsigned char*>(buf.data()));
     buf.consume(1);
-    void* ptr = boost::asio::buffer_cast<void*>(buf.data());
     switch (id) {
 ${serverServiceHandlers.trimEnd()}
     }
     buf.consume(len - 1);
 };
 
-namespace EIMPackets {
+namespace EIMMakePackets {
 ${serverServiceMethods.trimEnd()}
 }
 `)
 
 fs.writeFileSync('packets/index.ts', `import { Reader } from 'protobufjs/minimal'
-import { eim } from './packets'
+import { EIMPackets } from './packets'
 import { EventEmitter } from 'events'
 
 export enum ClientboundPacket {
@@ -161,5 +158,6 @@ interface ClientService {
   emit (name: string | symbol, ...args: any[]): boolean
 }
 
-export default ClientService
+export default EIMPackets
+export { ClientService }
 `)

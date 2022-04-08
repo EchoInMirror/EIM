@@ -22,7 +22,7 @@ public:
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void createPluginWindow(juce::AudioPluginInstance* instance);
-    std::unique_ptr<eim::ProjectStatus> getProjectStatus();
+    std::unique_ptr<EIMPackets::ProjectStatus> getProjectStatus();
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }

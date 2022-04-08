@@ -1,7 +1,7 @@
 #include "Main.h"
 #include "websocket/WebSocketSession.h"
 
-void WebSocketSession::handleSetProjectStatus(std::unique_ptr<eim::ProjectStatus> data) {
+void ServerService::handleSetProjectStatus(WebSocketSession*, std::unique_ptr<EIMPackets::ProjectStatus> data) {
 	auto shouldUpdate = false;
 	auto instance = EIMApplication::getEIMInstance();
 	auto& master = instance->mainWindow->masterTrack;
@@ -28,11 +28,59 @@ void WebSocketSession::handleSetProjectStatus(std::unique_ptr<eim::ProjectStatus
 		info.timeSigDenominator = data->timesigdenominator();
 		shouldUpdate = true;
 	}
-	if (shouldUpdate) instance->listener->state->send(std::move(EIMPackets::makeSetProjectStatusPacket(data.get())));
+	if (shouldUpdate) instance->listener->state->send(std::move(EIMMakePackets::makeSetProjectStatusPacket(data.get())));
 }
 
-void WebSocketSession::handleGetExplorerData(std::unique_ptr<eim::ServerboundExplorerData>, std::function<void(eim::ClientboundExplorerData)>) {
+void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundExplorerData> data, std::function<void(EIMPackets::ClientboundExplorerData&)> reply) {
+	auto& path = data->path();
+	auto instance = EIMApplication::getEIMInstance();
+	EIMPackets::ClientboundExplorerData out;
+	switch (data->type()) {
+	case EIMPackets::ServerboundExplorerData::ExplorerType::ServerboundExplorerData_ExplorerType_PLUGINS:
+		if (path.empty()) {
+			std::unordered_set<juce::String> map;
+			for (auto& it : instance->pluginManager->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
+			for (auto& it : map) out.add_folders(it.toStdString());
+		}
+		else {
+			std::vector<juce::String> arr;
+			for (auto& it : instance->pluginManager->knownPluginList.getTypes()) {
+				if (path == it.manufacturerName) arr.emplace_back((it.isInstrument ? "I#" : "") + it.name +
+					(it.pluginFormatName == "VST" ? " (VST)" : "") + "#EIM#" + it.fileOrIdentifier);
+			}
+			for (auto& it : arr) out.add_files(it.toStdString());
+		}
+	}
+	reply(out);
+}
 
+void ServerService::handleRefresh(WebSocketSession* session) {
+	session->send(EIMMakePackets::makeSetProjectStatusPacket(EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus().get()));
+}
+
+void loadPluginAndAdd (std::string identifier, bool setName, Track* track, std::function<void(EIMPackets::Empty&)> reply) {
+	if (identifier.empty()) return;
+	auto instance = EIMApplication::getEIMInstance();
+	auto type = instance->pluginManager->knownPluginList.getTypeForFile(identifier);
+	if (setName) track->name = type->name.toStdString();
+	if (type != nullptr) {
+		instance->mainWindow->masterTrack->loadPlugin(std::move(type), [reply, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
+			if (err.isEmpty()) {
+				EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(instance.get());
+				if (instance->getPluginDescription().isInstrument) track->setInstrument(std::move(instance));
+				else track->addEffectPlugin(std::move(instance));
+			}
+			EIMPackets::Empty out;
+			reply(out);
+		});
+	}
+};
+
+void ServerService::handleCreateTrack(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data, std::function<void(EIMPackets::Empty&)> reply) {
+	auto instance = EIMApplication::getEIMInstance();
+	auto track = (Track*)instance->mainWindow->masterTrack->createTrack(data->name(), data->color())->getProcessor();
+	loadPluginAndAdd(data->identifier(), true, track, reply);
+	instance->listener->state->send(std::move(EIMMakePackets::makeSyncTracnInfoPacket(track->getTrackInfo().get())));
 }
 
 /*
@@ -40,23 +88,7 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
 	auto instance = EIMApplication::getEIMInstance();
 
-	auto const loadPluginAndAdd = [instance, session, this](std::string identifier, int replyId, bool setName, Track* track) {
-		if (identifier.empty()) return;
-		auto type = instance->pluginManager->knownPluginList.getTypeForFile(identifier);
-		if (setName) track->name = type->name.toStdString();
-		if (type != nullptr) {
-			mainWindow->masterTrack->loadPlugin(std::move(type), [this, track, session, replyId](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
-				auto out = EIMPackets::makeReplyPacket(replyId);
-				if (err.isEmpty()) {
-					mainWindow->masterTrack->createPluginWindow(instance.get());
-					if (instance->getPluginDescription().isInstrument) track->setInstrument(std::move(instance));
-					else track->addEffectPlugin(std::move(instance));
-				}
-				out->writeString(err);
-				session->send(out);
-			});
-		}
-	};
+
 
 	switch (buf.readUInt8()) {
 	case ServerboundPacket::ServerboundReply: break;
@@ -99,26 +131,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto type = buf.readUInt8();
 		auto path = buf.readString();
 		auto out = EIMPackets::makeReplyPacket(replyId);
-		switch (type) {
-		case 1:
-			if (path.empty()) {
-				std::unordered_set<juce::String> map;
-				for (auto& it : instance->pluginManager->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
-				out->writeUInt32((unsigned long)map.size());
-				for (auto& it : map) out->writeString(it);
-				out->writeUInt32(0);
-			} else {
-				out->writeUInt32(0);
-				std::vector<juce::String> arr;
-				for (auto& it : instance->pluginManager->knownPluginList.getTypes()) {
-					if (path == it.manufacturerName) arr.emplace_back((it.isInstrument ? "I#" : "") + it.name +
-						(it.pluginFormatName == "VST" ? " (VST)" : "") + "#EIM#" + it.fileOrIdentifier);
-				}
-				out->writeUInt32((unsigned long)arr.size());
-				for (auto& it : arr) out->writeString(it);
-			}
-			session->send(out);
-		}
 		break;
 	}
 	case ServerboundPacket::ServerboundCreateTrack: {
@@ -127,10 +139,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto color = buf.readString();
 		buf.readUInt8();
 		auto identifier = buf.readString();
-		auto track = (Track*)mainWindow->masterTrack->createTrack(name, color)->getProcessor();
-		loadPluginAndAdd(identifier, replyId, true, track);
-		listener->syncTrackInfo();
-		track->syncThisTrackMixerInfo();
 		break;
 	}
 	case ServerboundPacket::ServerboundLoadPlugin: {

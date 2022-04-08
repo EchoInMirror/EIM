@@ -1,6 +1,6 @@
 import './AppBar.less'
 import React, { useEffect, useRef, useState, useMemo } from 'react'
-import useGlobalData, { ReducerTypes } from '../reducer'
+import useGlobalData from '../reducer'
 import Settings from './Settings'
 import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Slider, ListItemIcon, ListItemText, Divider } from '@mui/material'
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
@@ -8,7 +8,6 @@ import { useSnackbar } from 'notistack'
 // import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
 // import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 import { ClientboundPacket, HandlerTypes } from '../../packets'
-import { merge } from '../utils'
 
 import NoteAdd from '@mui/icons-material/NoteAdd'
 import FileOpen from '@mui/icons-material/FileOpen'
@@ -135,15 +134,15 @@ const CenterSection: React.FC = () => {
     let cnt = 0
     const timer = setInterval(() => {
       if (!timeRef.current || !barRef.current) return
-      const curTime = state.currentTime + (Date.now() - state.startTime) / 1000
-      update(curTime)
-      if (!moving && ++cnt > 10) {
+      // const curTime = state.currentTime + (Date.now() - state.startTime) / 1000
+      // update(curTime)
+      /* if (!moving && ++cnt > 10) {
         setProgress((curTime / state.maxNoteTime * state.ppq * state.bpm / 60 * 100) || 0)
         cnt = 0
-      }
+      } */
     }, 30)
     return () => clearInterval(timer)
-  }, [state.startTime, timeRef.current, state.isPlaying, state.currentTime, barRef.current, state.bpm, state.timeSigNumerator, state.timeSigDenominator, state.maxNoteTime, state.ppq])
+  }, [timeRef.current, state.isPlaying, state.currentTime, barRef.current, state.bpm, state.timeSigNumerator, state.timeSigDenominator, state.maxNoteTime, state.ppq])
   return (
     <section className='center-section'>
       <div className='info-block'>
@@ -234,16 +233,12 @@ const AppBar: React.FC = () => {
 
   useEffect(() => {
     const fn: HandlerTypes[ClientboundPacket.SetProjectStatus] = data => {
-      dispatch(merge(data, { type: ReducerTypes.SetProjectStatus }))
-      if (data.bpm != null) {
-        setBPMInteger((data.bpm | 0).toString())
-        setBPMDecimal((data.bpm - data.bpm | 0).toFixed(2).slice(2))
-      }
+      if (data.bpm == null) return
+      setBPMInteger((data.bpm | 0).toString())
+      setBPMDecimal((data.bpm - data.bpm | 0).toFixed(2).slice(2))
     }
     $client.on(ClientboundPacket.SetProjectStatus, fn)
-    return () => {
-      $client.off(ClientboundPacket.SetProjectStatus, fn)
-    }
+    return () => { $client.off(ClientboundPacket.SetProjectStatus, fn) }
   }, [])
 
   return (

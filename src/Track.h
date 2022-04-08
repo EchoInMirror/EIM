@@ -2,6 +2,7 @@
 
 #include <juce_dsp/juce_dsp.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+#include "utils/utils.h"
 
 class MasterTrack;
 class ByteBuffer;
@@ -31,7 +32,7 @@ public:
     void setInstrument(std::unique_ptr<juce::AudioPluginInstance>);
     juce::AudioPluginInstance* getInstrumentInstance();
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
-    void writeTrackInfo(ByteBuffer* buf);
+    std::unique_ptr<EIMPackets::ClientboundTrackInfo> getTrackInfo();
     void writeTrackMixerInfo(ByteBuffer* buf);
     void writeMidiData(ByteBuffer* buf);
     void syncThisTrackMixerInfo();

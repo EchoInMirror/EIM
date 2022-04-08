@@ -10,12 +10,14 @@ import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { SnackbarProvider } from 'notistack'
 import type { PaletteOptions } from '@mui/material/styles/createPalette'
 import { zhCN } from '@mui/material/locale'
+import { merge } from '../utils'
 
 import AppBar from './AppBar'
-// import SideBar from './SideBar'
-// import BottomBar from './BottomBar'
-// import Tracks from './Tracks'
-import { GlobalDataContext, reducer, initialState } from '../reducer'
+import SideBar from './SideBar'
+import BottomBar from './BottomBar'
+import Tracks from './Tracks'
+import { GlobalDataContext, reducer, initialState, ReducerTypes } from '../reducer'
+import { ClientboundPacket, HandlerTypes } from '../../packets'
 
 const palette: PaletteOptions = {
   background: {
@@ -45,27 +47,44 @@ const palette: PaletteOptions = {
 
 const App: React.FC = () => {
   const theme = createTheme({ palette }, zhCN)
+
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', theme.palette.primary.main)
     document.documentElement.style.setProperty('--paper-background-color', theme.palette.background.bright)
     document.documentElement.style.setProperty('--scrollbar-color', theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main)
     document.documentElement.style.setProperty('--keyboard-black-key-color', theme.palette.background!.keyboardBlackKey)
     document.documentElement.style.setProperty('--keyboard-white-key-color', theme.palette.background!.keyboardWhiteKey)
-  }, [theme.palette.background!.paper, theme.palette.background!.keyboardBlackKey, theme.palette.background!.keyboardWhiteKey])
+  }, [
+    theme.palette.primary.main,
+    theme.palette.background.bright,
+    theme.palette.mode,
+    theme.palette.text.primary,
+    theme.palette.background!.paper,
+    theme.palette.background!.keyboardBlackKey,
+    theme.palette.background!.keyboardWhiteKey
+  ])
+
   const ctx = useReducer(reducer, initialState) as any
   window.$globalData = ctx[0]
   window.$dispatch = ctx[1]
+
+  useEffect(() => {
+    const fn: HandlerTypes[ClientboundPacket.SetProjectStatus] = data => $dispatch(merge(data, { type: ReducerTypes.SetProjectStatus }))
+    $client.on(ClientboundPacket.SetProjectStatus, fn)
+    return () => { $client.off(ClientboundPacket.SetProjectStatus, fn) }
+  }, [])
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SnackbarProvider maxSnack={6}>
         <GlobalDataContext.Provider value={ctx}>
           <AppBar />
-          {/* <SideBar />
+          <SideBar />
           <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
             <Tracks />
             <BottomBar />
-          </Paper> */}
+          </Paper>
         </GlobalDataContext.Provider>
       </SnackbarProvider>
     </ThemeProvider>

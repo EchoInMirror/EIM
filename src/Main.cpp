@@ -3,7 +3,7 @@
 #include <string>
 
 void EIMApplication::initialise(const juce::String& commandLine) {
-    eim::ProjectStatus a;
+    EIMPackets::ProjectStatus a;
     
     juce::ignoreUnused(commandLine);
     mainWindow.reset(new MainWindow());

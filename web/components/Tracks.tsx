@@ -4,7 +4,7 @@ import PlayRuler from './PlayRuler'
 import React, { useState, useEffect, createRef, useRef } from 'react'
 import useGlobalData, { ReducerTypes, TrackMidiNoteData, TrackInfo } from '../reducer'
 import { ColorPicker } from 'mui-color'
-import { colorMap } from '../utils'
+import { colorMap, colorValues } from '../utils'
 import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme } from '@mui/material'
 
 import Power from '@mui/icons-material/Power'
@@ -64,11 +64,6 @@ const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, inde
 }
 
 const Track: React.FC<{ data: TrackMidiNoteData[], width: number, uuid: string }> = ({ data, width, uuid }) => {
-  const fn = useState(0)[1]
-  useEffect(() => {
-    $client.trackUpdateNotifier[uuid] = () => fn(val => val + 1)
-    return () => { delete $client.trackUpdateNotifier[uuid] }
-  }, [])
   return (
     <div className='notes'>
       {data && data.map((it, i) => (
@@ -113,8 +108,6 @@ const Tracks: React.FC = () => {
   barLength = noteWidth * state.ppq
   const beatWidth = barLength / (16 / state.timeSigDenominator)
 
-  useEffect(() => $client.refresh(), [])
-
   const actions: JSX.Element[] = []
   const midis: JSX.Element[] = []
   for (let i = 1; i < state.tracks.length; i++) {
@@ -153,12 +146,12 @@ const Tracks: React.FC = () => {
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}
-            onClick={() => $client.createTrack('', -1, '轨道' + (state.tracks.length + 1))}
+            onClick={() => $client.rpc.createTrack({ name: '轨道' + (state.tracks.length + 1), color: colorValues[colorValues.length * Math.random() | 0] })}
             onDragOver={e => $dragObject?.type === 'loadPlugin' && e.preventDefault()}
             onDrop={() => {
               if (!$dragObject || $dragObject.type !== 'loadPlugin') return
               setLoading(true)
-              $client.createTrack($dragObject.data).finally(() => setLoading(false))
+              $client.rpc.createTrack({ name: '轨道' + (state.tracks.length + 1), color: colorValues[colorValues.length * Math.random() | 0] }).finally(() => setLoading(false))
             }}
           >
             新增轨道
