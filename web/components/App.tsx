@@ -70,6 +70,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     $client.on(ClientboundPacket.SetProjectStatus, $dispatch as any)
+    $client.rpc.refresh({ })
     return () => { $client.off(ClientboundPacket.SetProjectStatus, $dispatch as any) }
   }, [])
 

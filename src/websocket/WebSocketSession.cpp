@@ -15,11 +15,6 @@ void WebSocketSession::onAccept(boost::beast::error_code ec) {
     if (ec) return;
     state->join(this);
     doRead();
-    EIMPackets::ClientboundTracksInfo info;
-    info.set_isreplacing(true);
-    auto instance = EIMApplication::getEIMInstance();
-    for (auto& track : instance->mainWindow->masterTrack->tracks) info.add_tracks()->CopyFrom(((Track*)track->getProcessor())->getTrackInfo());
-    instance->listener->state->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(&info)));
     // send(EIMPackets::makeAllTrackMidiDataPacket());
     // if (EIMApplication::getEIMInstance()->pluginManager->isScanning) send(EIMPackets::makeScanVSTsPacket(true));
 }

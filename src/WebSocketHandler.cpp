@@ -56,6 +56,11 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
 
 void ServerService::handleRefresh(WebSocketSession* session) {
 	session->send(EIMMakePackets::makeSetProjectStatusPacket(EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus().get()));
+	EIMPackets::ClientboundTracksInfo info;
+	info.set_isreplacing(true);
+	auto instance = EIMApplication::getEIMInstance();
+	for (auto& track : instance->mainWindow->masterTrack->tracks) info.add_tracks()->CopyFrom(((Track*)track->getProcessor())->getTrackInfo());
+	session->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(&info)));
 }
 
 void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EIMPackets::String>) {
