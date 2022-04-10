@@ -16,7 +16,7 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
 	prepareToPlay(getSampleRate(), getBlockSize());
 
-	outputNodeID = initTrack(std::make_unique<Track>(juce::Uuid::null(), this))->nodeID;
+	outputNodeID = initTrack(std::make_unique<Track>("", this))->nodeID;
 	addConnection({ { outputNodeID, 0 }, { output, 0 } });
 	addConnection({ { outputNodeID, 1 }, { output, 1 } });
 }
@@ -30,6 +30,7 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::initTrack(std::unique_ptr<Trac
 	track->prepareToPlay(getSampleRate(), getBlockSize());
 	auto& obj = *track;
 	auto& node = tracks.emplace_back(addNode(std::move(track)));
+	tracksMap[obj.uuid] = node;
 	obj.currentNode = node;
 	addConnection({ { node->nodeID, 0 }, { outputNodeID, 0 } });
 	addConnection({ { node->nodeID, 1 }, { outputNodeID, 1 } });
@@ -47,8 +48,15 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, 
 	return initTrack(std::move(track));
 }
 
-void MasterTrack::removeTrack(int id) {
-	removeNode(tracks[id]);
+void MasterTrack::removeTrack(std::string uuid) {
+	if (tracksMap.contains(uuid)) return;
+	auto& it = tracksMap[uuid];
+	removeNode(it);
+	for (auto iter = tracks.begin(); iter != tracks.end(); iter++) if (*iter == it) {
+		tracks.erase(iter);
+		break;
+	}
+	tracksMap.erase(uuid);
 }
 
 bool MasterTrack::getCurrentPosition(CurrentPositionInfo& result) {

@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { TypeBackground } from '@mui/material/styles/createPalette'
-import { Action, initialState } from './reducer'
+import { initialState } from './reducer'
 import Client from './Client'
 
 declare type EIMDragObject = Record<string | number, any> & { type: string }
@@ -20,12 +20,12 @@ declare global {
   const $client: Client
   const $globalData: typeof initialState
   let $dragObject: EIMDragObject | undefined
-  const $dispatch: (action: Action) => void
+  const $dispatch: (action: Partial<typeof initialState>) => void
 
   interface Window {
     $client: Client
     $globalData: typeof initialState
     $dragObject: EIMDragObject | undefined
-    $dispatch: (action: Action) => void
+    $dispatch: (action: Partial<typeof initialState>) => void
   }
 }

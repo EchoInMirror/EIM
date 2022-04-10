@@ -9,9 +9,9 @@ class ByteBuffer;
 
 class Track: public juce::AudioProcessorGraph {
 public:
-    Track(juce::Uuid uuid, MasterTrack* masterTrack);
+    Track(std::string uuid, MasterTrack* masterTrack);
     Track(std::string name, std::string color, MasterTrack* masterTrack);
-    juce::Uuid uuid;
+    std::string uuid;
     std::string name;
     std::string color;
     juce::MidiMessageSequence midiSequence;
@@ -32,7 +32,7 @@ public:
     void setInstrument(std::unique_ptr<juce::AudioPluginInstance>);
     juce::AudioPluginInstance* getInstrumentInstance();
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
-    std::unique_ptr<EIMPackets::ClientboundTrackInfo> getTrackInfo();
+    EIMPackets::TrackInfo getTrackInfo();
     void writeTrackMixerInfo(ByteBuffer* buf);
     void writeMidiData(ByteBuffer* buf);
     void syncThisTrackMixerInfo();

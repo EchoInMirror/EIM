@@ -58,29 +58,8 @@ void ServerService::handleRefresh(WebSocketSession* session) {
 	session->send(EIMMakePackets::makeSetProjectStatusPacket(EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus().get()));
 }
 
-void loadPluginAndAdd (std::string identifier, bool setName, Track* track, std::function<void(EIMPackets::Empty&)> reply) {
-	if (identifier.empty()) return;
-	auto instance = EIMApplication::getEIMInstance();
-	auto type = instance->pluginManager->knownPluginList.getTypeForFile(identifier);
-	if (setName) track->name = type->name.toStdString();
-	if (type != nullptr) {
-		instance->mainWindow->masterTrack->loadPlugin(std::move(type), [reply, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
-			if (err.isEmpty()) {
-				EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(instance.get());
-				if (instance->getPluginDescription().isInstrument) track->setInstrument(std::move(instance));
-				else track->addEffectPlugin(std::move(instance));
-			}
-			EIMPackets::Empty out;
-			reply(out);
-		});
-	}
-};
+void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EIMPackets::String>) {
 
-void ServerService::handleCreateTrack(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data, std::function<void(EIMPackets::Empty&)> reply) {
-	auto instance = EIMApplication::getEIMInstance();
-	auto track = (Track*)instance->mainWindow->masterTrack->createTrack(data->name(), data->color())->getProcessor();
-	loadPluginAndAdd(data->identifier(), true, track, reply);
-	instance->listener->state->send(std::move(EIMMakePackets::makeSyncTracnInfoPacket(track->getTrackInfo().get())));
 }
 
 /*
@@ -166,34 +145,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		break;
 	}
 	case ServerboundPacket::ServerboundUpdateTrackInfo: {
-		auto id = buf.readUInt8();
-		auto& tracks = mainWindow->masterTrack->tracks;
-		if (tracks.size() <= id) return;
-		auto track = (Track*)tracks[id]->getProcessor();
-		auto name = buf.readString();
-		if (!name.empty()) track->name = name;
-		auto color = buf.readString();
-		auto flag = false;
-		if (!color.empty()) {
-			track->color = color;
-			flag = true;
-		}
-		auto volume = buf.readFloat();
-		if (volume > -1) track->chain.get<1>().setGainLinear(volume);
-		auto muted = buf.readBoolean();
-		if (muted != tracks[id]->isBypassed()) {
-			track->setMuted(muted);
-			flag = true;
-		}
-		buf.readBoolean();
-		if (flag || session->state->size() > 1) {
-			auto out = EIMPackets::makePacket(ClientboundPacket::ClientboundUpdateTrackInfo);
-			out->writeUInt8(id);
-			track->writeTrackInfo(out.get());
-			if (flag) session->state->send(out);
-			else session->state->sendExclude(out, session);
-		}
-		break;
 	}
 	case ServerboundPacket::ServerboundMidiNotesAdd: {
 		auto id = buf.readUInt8();

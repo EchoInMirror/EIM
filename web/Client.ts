@@ -1,6 +1,6 @@
-import packets, { ServerboundPacket, callbacks, ClientService } from '../packets'
+import packets, { ServerboundPacket, callbacks, ClientService, ClientboundPacket } from '../packets'
 import { colorValues } from './utils'
-import { ReducerTypes, TrackInfo, TrackMidiNoteData } from './reducer'
+import { TrackMidiNoteData } from './reducer'
 import type { RPCImplCallback } from 'protobufjs'
 
 export enum ExplorerType {
@@ -33,7 +33,7 @@ export default class Client extends ClientService {
     this.ws.onmessage = e => {
       const view = new DataView(e.data)
       const event = view.getUint8(0)
-      if (event === 0) {
+      if (event === ClientboundPacket.Reply) {
         const id = view.getUint32(1)
         const fn = this.replies[id]
         if (fn) {
@@ -62,6 +62,12 @@ export default class Client extends ClientService {
         out.set(data, 1)
       }
       this.ws.send(out)
+    })
+
+    this.on(ClientboundPacket.SyncTracksInfo, data => {
+      const tracks = data.isReplacing ? { } : { ...$globalData.tracks }
+      data.tracks!.forEach(it => (tracks[it.uuid!] = it))
+      $dispatch({ tracks })
     })
   }
 }

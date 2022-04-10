@@ -2,7 +2,8 @@ import './Tracks.less'
 import LoadingButton from '@mui/lab/LoadingButton'
 import PlayRuler from './PlayRuler'
 import React, { useState, useEffect, createRef, useRef } from 'react'
-import useGlobalData, { ReducerTypes, TrackMidiNoteData, TrackInfo } from '../reducer'
+import useGlobalData, { TrackMidiNoteData } from '../reducer'
+import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
 import { colorMap, colorValues } from '../utils'
 import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme } from '@mui/material'
@@ -14,16 +15,18 @@ import VolumeOff from '@mui/icons-material/VolumeOff'
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
 
-const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, index }) => {
+const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
   const [state, dispatch] = useGlobalData()
-  const [color, setColor] = useState(info.color)
+  const [color, setColor] = useState(info.color!)
 
-  useEffect(() => setColor(info.color), [info.color])
+  const uuid = info.uuid!
+
+  useEffect(() => setColor(info.color!), [info.color])
   return (
     <Box
       component='li'
-      onClick={() => dispatch({ type: ReducerTypes.ChangeActiveTrack, activeTrack: info.uuid })}
-      sx={state.activeTrack === info.uuid ? { backgroundColor: theme => theme.palette.background.brighter } : undefined}
+      onClick={() => dispatch({ activeTrack: uuid })}
+      sx={state.activeTrack === uuid ? { backgroundColor: theme => theme.palette.background.brighter } : undefined}
     >
       <ColorPicker
         deferred
@@ -31,30 +34,30 @@ const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, inde
         hideTextfield
         value={color}
         palette={colorMap}
-        onChange={(color: any) => $client.updateTrackInfo(index, undefined, '#' + color.hex, -1, info.muted, info.solo)}
+        onChange={(color: any) => $client.rpc.updateTrackInfo({ uuid, color: '#' + color.hex })}
       />
       <div className='title'>
         <Button className='solo' variant='outlined' />
-        {info.hasInstrument && <IconButton size='small' className='instrument' onClick={() => $client.openPluginWindow(index)}><Power fontSize='small' /></IconButton>}
+        {info.hasInstrument && <IconButton size='small' className='instrument' onClick={() => $client.rpc.openPluginWindow({ value: uuid })}><Power fontSize='small' /></IconButton>}
         <span className='name'>{info.name}</span>
       </div>
       <div>
         <Stack spacing={1} direction='row' alignItems='center'>
-          <IconButton size='small' sx={{ marginLeft: '-4px' }} onClick={() => $client.updateTrackInfo(index, undefined, undefined, -1, !info.muted, info.solo)}>
+          <IconButton size='small' sx={{ marginLeft: '-4px' }} onClick={() => $client.rpc.updateTrackInfo({ uuid, muted: !info.muted })}>
             {info.muted ? <VolumeOff fontSize='small' /> : <VolumeUp fontSize='small' />}
           </IconButton>
           <Slider
             size='small'
             valueLabelDisplay='auto'
-            value={Math.sqrt(info.volume) * 100}
+            value={Math.sqrt(info.volume!) * 100}
             sx={{ margin: '0!important' }}
             max={140}
             min={0}
             valueLabelFormat={val => `${Math.round(val)}% ${val > 0 ? (Math.log10((val / 100) ** 2) * 20).toFixed(2) + '分贝' : '静音'}`}
             onChange={(_, val) => {
-              const volume = ((val as number) / 100) ** 2
-              $client.updateTrackInfo(index, undefined, undefined, volume, info.muted, info.solo)
-              dispatch({ type: ReducerTypes.UpdateTrack, index, volume })
+              const volume = info.volume = ((val as number) / 100) ** 2
+              $client.rpc.updateTrackInfo({ uuid, volume })
+              dispatch({ tracks: { ...state.tracks, [uuid]: info } })
             }}
           />
         </Stack>
@@ -63,7 +66,7 @@ const TrackActions: React.FC<{ info: TrackInfo, index: number }> = ({ info, inde
   )
 }
 
-const Track: React.FC<{ data: TrackMidiNoteData[], width: number, uuid: string }> = ({ data, width, uuid }) => {
+const Track: React.FC<{ data: TrackMidiNoteData[], width: number }> = ({ data, width }) => {
   return (
     <div className='notes'>
       {data && data.map((it, i) => (
@@ -110,15 +113,18 @@ const Tracks: React.FC = () => {
 
   const actions: JSX.Element[] = []
   const midis: JSX.Element[] = []
-  for (let i = 1; i < state.tracks.length; i++) {
-    const it = state.tracks[i]
-    actions.push(<React.Fragment key={it.uuid}><TrackActions info={it} index={i} /><Divider variant='middle' /></React.Fragment>)
+  let trackCount = 0
+  for (const id in state.tracks) {
+    if (!id) continue
+    const it = state.tracks[id]!
+    actions.push(<React.Fragment key={id}><TrackActions info={it} /><Divider variant='middle' /></React.Fragment>)
     midis.push((
-      <Box key={it.uuid} sx={{ backgroundColor: alpha(it.color, 0.1), '& .notes div': { backgroundColor: it.color } }}>
-        <Track uuid={it.uuid} data={state.trackMidiData[it.uuid]?.notes} width={noteWidth} />
+      <Box key={id} sx={{ backgroundColor: alpha(it.color!, 0.1), '& .notes div': { backgroundColor: it.color! } }}>
+        <Track data={[]} width={noteWidth} />
         <Divider />
       </Box>
     ))
+    trackCount++
   }
 
   return (
@@ -146,12 +152,12 @@ const Tracks: React.FC = () => {
           <LoadingButton
             loading={loading}
             sx={{ width: '100%', borderRadius: 0 }}
-            onClick={() => $client.rpc.createTrack({ name: '轨道' + (state.tracks.length + 1), color: colorValues[colorValues.length * Math.random() | 0] })}
+            onClick={() => $client.rpc.createTrack({ name: '轨道' + (trackCount + 1), color: colorValues[colorValues.length * Math.random() | 0] })}
             onDragOver={e => $dragObject?.type === 'loadPlugin' && e.preventDefault()}
             onDrop={() => {
               if (!$dragObject || $dragObject.type !== 'loadPlugin') return
               setLoading(true)
-              $client.rpc.createTrack({ name: '轨道' + (state.tracks.length + 1), color: colorValues[colorValues.length * Math.random() | 0] }).finally(() => setLoading(false))
+              $client.rpc.createTrack({ name: '轨道' + (trackCount + 1), color: colorValues[colorValues.length * Math.random() | 0] }).finally(() => setLoading(false))
             }}
           >
             新增轨道

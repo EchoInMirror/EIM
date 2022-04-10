@@ -9,6 +9,7 @@
 class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead {
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
+    std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     double endTime = 0;
     short ppq = 96;
@@ -16,7 +17,7 @@ public:
     MasterTrack();
     ~MasterTrack() { deviceManager.closeAudioDevice(); }
 
-    void removeTrack(int id);
+    void removeTrack(std::string id);
     void stopAllNotes();
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);

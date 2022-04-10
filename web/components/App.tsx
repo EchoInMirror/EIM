@@ -16,7 +16,7 @@ import AppBar from './AppBar'
 import SideBar from './SideBar'
 import BottomBar from './BottomBar'
 import Tracks from './Tracks'
-import { GlobalDataContext, reducer, initialState, ReducerTypes } from '../reducer'
+import { GlobalDataContext, reducer, initialState } from '../reducer'
 import { ClientboundPacket, HandlerTypes } from '../../packets'
 
 const palette: PaletteOptions = {
@@ -69,9 +69,8 @@ const App: React.FC = () => {
   window.$dispatch = ctx[1]
 
   useEffect(() => {
-    const fn: HandlerTypes[ClientboundPacket.SetProjectStatus] = data => $dispatch(merge(data, { type: ReducerTypes.SetProjectStatus }))
-    $client.on(ClientboundPacket.SetProjectStatus, fn)
-    return () => { $client.off(ClientboundPacket.SetProjectStatus, fn) }
+    $client.on(ClientboundPacket.SetProjectStatus, $dispatch as any)
+    return () => { $client.off(ClientboundPacket.SetProjectStatus, $dispatch as any) }
   }, [])
 
   return (

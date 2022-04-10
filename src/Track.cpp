@@ -3,9 +3,9 @@
 #include "MasterTrack.h"
 #include "Main.h"
 
-Track::Track(juce::Uuid uuid, MasterTrack* masterTrack) : uuid(uuid), AudioProcessorGraph(), masterTrack(masterTrack) { init(); }
+Track::Track(std::string id, MasterTrack* masterTrack) : uuid(id), AudioProcessorGraph(), masterTrack(masterTrack) { init(); }
 
-Track::Track(std::string name, std::string color, MasterTrack* masterTrack): AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) { init(); }
+Track::Track(std::string name, std::string color, MasterTrack* masterTrack): uuid(randomUuid()), AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) { init(); }
 
 void Track::init() {
 	setChannelLayoutOfBus(true, 0, juce::AudioChannelSet::canonicalChannelSet(2));
@@ -96,22 +96,26 @@ void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
 	//EIMApplication::getEIMInstance()->listener->state->send(buf);
 }
 
-std::unique_ptr<EIMPackets::ClientboundTrackInfo> Track::getTrackInfo() {
-	auto data = std::make_unique<EIMPackets::ClientboundTrackInfo>();
-	data->mutable_uuid()->set_data(uuidToString(uuid));
-	data->set_name(name);
-	data->set_color(color);
+EIMPackets::TrackInfo Track::getTrackInfo() {
+	EIMPackets::TrackInfo data;
+	data.set_uuid(uuid);
+	data.set_name(name);
+	data.set_color(color);
+	data.set_muted(currentNode->isBypassed());
+	data.set_solo(false);
+	data.set_hasinstrument(instrumentNode != nullptr);
+	data.set_volume(chain.get<1>().getGainLinear());
 	return std::move(data);
 }
 
 void Track::writeTrackMixerInfo(ByteBuffer* buf) {
-	buf->writeUUID(uuid);
+	/*buf->writeUUID(uuid);
 	buf->writeInt8((char)pan);
 	buf->writeUInt8((unsigned char)std::to_underlying(panRule));
 	buf->writeUInt8((unsigned char)plugins.size());
 	for (auto& it : plugins) {
 		buf->writeString(it->getProcessor()->getName());
-	}
+	}*/
 }
 
 juce::AudioPluginInstance* Track::getInstrumentInstance() { return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor(); }
@@ -123,7 +127,7 @@ void Track::syncThisTrackMixerInfo() {
 }
 
 void Track::writeMidiData(ByteBuffer* buf) {
-	buf->writeUUID(uuid);
+	/*buf->writeUUID(uuid);
 	std::vector<std::tuple<juce::uint8, juce::uint8, juce::uint32, juce::uint32>> arr;
 	midiSequence.updateMatchedPairs();
 	for (auto& it : midiSequence) {
@@ -140,7 +144,7 @@ void Track::writeMidiData(ByteBuffer* buf) {
 		buf->writeUInt8(vel);
 		buf->writeUInt32(on);
 		buf->writeUInt32(off);
-	}
+	}*/
 }
 
 void Track::setProcessingPrecision(ProcessingPrecision newPrecision) {

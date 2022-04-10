@@ -53,8 +53,7 @@
   "scripts": {
     "start": "parcel web/index.html",
     "build": "parcel build web/index.html",
-    "generate:packetsClass": "ts-node scripts/generatePacketsClass",
-    "generate:proto": "pbjs -t static-module -w es6 -o packets/packets.js packets/packets.proto && pbts -o packets/packets.d.ts packets/packets.js"
+    "generate:proto": "pbjs -t static-module -w es6 -o packets/packets.js packets/packets.proto && pbts -o packets/packets.d.ts packets/packets.js && ts-node scripts/generatePacketsClass"
   },
   "repository": {
     "type": "git",

@@ -41,11 +41,24 @@ message ServerboundCreateTrackData {
   optional string identifier = 4;
 }
 
-message ClientboundTrackInfo {
-  UUID uuid = 1;
-  string name = 2;
-  string color = 3;
-  optional string position = 4;
+message TrackInfo {
+  string uuid = 1;
+  optional string name = 2;
+  optional string color = 3;
+  optional bool muted = 4;
+  optional bool solo = 5;
+  optional bool hasInstrument = 6;
+  optional double volume = 7;
+  optional string position = 8;
+}
+
+message ClientboundTracksInfo {
+  repeated TrackInfo tracks = 1;
+  bool isReplacing = 2;
+}
+
+message String {
+  string value = 1;
 }
 
 service ServerService { // Server bound
@@ -53,9 +66,11 @@ service ServerService { // Server bound
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
   rpc refresh (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc createTrack (ServerboundCreateTrackData) returns (Empty);
+  rpc updateTrackInfo (TrackInfo) returns (google.protobuf.Empty);
+  rpc openPluginWindow (String) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
-  rpc syncTracnInfo (ClientboundTrackInfo) returns (google.protobuf.Empty);
+  rpc syncTracksInfo (ClientboundTracksInfo) returns (google.protobuf.Empty);
 }

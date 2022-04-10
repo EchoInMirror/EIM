@@ -20,6 +20,7 @@ class EIMApplication : public juce::JUCEApplication {
 public:
     EIMApplication() {}
     Config config;
+    juce::UndoManager undoManager;
     std::unique_ptr<MainWindow> mainWindow;
     std::unique_ptr<PluginManagerWindow> pluginManager;
     boost::shared_ptr<Listener> listener;
