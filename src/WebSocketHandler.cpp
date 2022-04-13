@@ -63,6 +63,11 @@ void ServerService::handleRefresh(WebSocketSession* session) {
 	auto instance = EIMApplication::getEIMInstance();
 	for (auto& track : instance->mainWindow->masterTrack->tracks) info.add_tracks()->CopyFrom(((Track*)track->getProcessor())->getTrackInfo());
 	session->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+	if (EIMApplication::getEIMInstance()->pluginManager->isScanning) {
+		EIMPackets::Boolean val;
+		val.set_value(true);
+		session->send(EIMMakePackets::makeSetIsScanningVSTsPacket(val));
+	}
 }
 
 void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) {
@@ -76,15 +81,42 @@ void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EI
 	if (plugin) juce::MessageManager::callAsync([plugin] { EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(plugin); });
 }
 
+void ServerService::handleConfig(WebSocketSession*, std::unique_ptr<EIMPackets::OptionalString> data, std::function<void(EIMPackets::OptionalString&)> reply) {
+	auto instance = EIMApplication::getEIMInstance();
+	auto& cfg = instance->config;
+	auto& manager = instance->pluginManager;
+	if (data->has_value()) {
+		cfg.config = juce::JSON::parse(data->value());
+		data->clear_value();
+	} else {
+		auto obj = new juce::DynamicObject();
+		juce::var map(obj);
+		for (auto it : manager->manager.getFormats()) {
+			auto paths = juce::PluginListComponent::getLastSearchPath(manager->scanningProperties, *it);
+			juce::StringArray arr;
+			for (int i = 0; i < paths.getNumPaths(); i++) arr.add(paths[i].getFullPathName());
+			obj->setProperty(it->getName(), arr);
+		}
+		juce::var copy = cfg.config;
+		copy.getDynamicObject()->setProperty("vstSearchPaths", map);
+		data->set_value(juce::JSON::toString(copy).toStdString());
+	}
+	reply(*data);
+}
+
+void ServerService::handleOpenPluginManager(WebSocketSession*) {
+	juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->setVisible(true); });
+}
+
+void ServerService::handleScanVSTs(WebSocketSession*) {
+	juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->scanPlugins(); });
+}
+
 /*
 void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
 	auto instance = EIMApplication::getEIMInstance();
-
-
-
 	switch (buf.readUInt8()) {
-	case ServerboundPacket::ServerboundReply: break;
 	case ServerboundPacket::ServerboundSetProjectStatus: {
 		auto bpm = buf.readDouble();
 		auto time = buf.readDouble();
@@ -229,35 +261,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		masterTrack->endTime = juce::jmax(midiSequence.getEndTime(), (double)info.timeSigNumerator * masterTrack->ppq);
 		break;
 	}
-	case ServerboundPacket::ServerboundOpenPluginManager:
-		juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->setVisible(true); });
-		break;
-	case ServerboundPacket::ServerboundConfig: {
-		auto out = EIMPackets::makeReplyPacket(buf.readUInt32());
-		auto& cfg = instance->config;
-		auto& manager = instance->pluginManager;
-		if (buf.readBoolean()) {
-			cfg.config = juce::JSON::parse(buf.readString());
-			out->writeString("");
-		} else {
-			auto obj = new juce::DynamicObject();
-			juce::var map(obj);
-			for (auto it : manager->manager.getFormats()) {
-				auto paths = juce::PluginListComponent::getLastSearchPath(manager->scanningProperties, *it);
-				juce::StringArray arr;
-				for (int i = 0; i < paths.getNumPaths(); i++) arr.add(paths[i].getFullPathName());
-				obj->setProperty(it->getName(), arr);
-			}
-			juce::var copy = cfg.config;
-			copy.getDynamicObject()->setProperty("vstSearchPaths", map);
-			out->writeString(juce::JSON::toString(copy));
-		}
-		session->send(out);
-		break;
-	}
-	case ServerboundPacket::ServerboundScanVSTs:
-		juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->scanPlugins(); });
-		break;
 	case ServerboundPacket::ServerboundTrackMixerInfo:
 		session->send(EIMPackets::makeAllTrackMixerInfoPacket());
 		break;

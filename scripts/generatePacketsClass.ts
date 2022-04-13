@@ -29,7 +29,7 @@ for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) 
             ${noArg
               ? ''
               : `auto a = std::make_unique<${argName}>();
-            a->ParseFromArray(boost::asio::buffer_cast<void*>(buf.data()), len - ${noReturn ? 1 : 5});`}
+            a->ParseFromArray(boost::asio::buffer_cast<void*>(buf.data()), (int)len - ${noReturn ? 1 : 5});`}
             handle${name}(session${noArg ? '' : ', std::move(a)'}${noReturn
                 ? ''
                 : `${noArg ? '' : ', '}[replyId, session] (EIMPackets::${returnType}& a) {

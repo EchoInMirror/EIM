@@ -1,5 +1,6 @@
 #include "PluginManagerWindow.h"
 #include "Main.h"
+#include "../packets/packets.h"
 
 class Scanner : public juce::KnownPluginList::CustomScanner {
 public:
@@ -11,7 +12,9 @@ public:
     bool findPluginTypesFor(juce::AudioPluginFormat& format, juce::OwnedArray<juce::PluginDescription>& result, const juce::String& fileOrIdentifier) override {
         if (!*isScanning) {
             *isScanning = true;
-            //EIMApplication::getEIMInstance()->listener->state->send(EIMPackets::makeScanVSTsPacket(true));
+            EIMPackets::Boolean val;
+            val.set_value(true);
+            EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetIsScanningVSTsPacket(val));
         }
         format.findAllTypesForFile(result, fileOrIdentifier);
         knownPluginList->createXml().release()->writeTo(knownPluginListXMLFile);
@@ -20,7 +23,9 @@ public:
 
     void scanFinished() override {
         if (*isScanning) {
-            //EIMApplication::getEIMInstance()->listener->state->send(EIMPackets::makeScanVSTsPacket(false));
+            EIMPackets::Boolean val;
+            val.set_value(false);
+            EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetIsScanningVSTsPacket(val));
             *isScanning = false;
         }
         knownPluginList->createXml().release()->writeTo(knownPluginListXMLFile);

@@ -9,8 +9,16 @@ message UUID {
   bytes data = 1;
 }
 
+message Boolean {
+  bool value = 1;
+}
+
 message String {
   string value = 1;
+}
+
+message OptionalString {
+  optional string value = 1;
 }
 
 message ProjectStatus {
@@ -74,9 +82,13 @@ service ServerService { // Server bound
   rpc createTrack (ServerboundCreateTrackData) returns (Empty);
   rpc updateTrackInfo (TrackInfo) returns (google.protobuf.Empty);
   rpc openPluginWindow (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
+  rpc config (OptionalString) returns (OptionalString);
+  rpc openPluginManager (google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc scanVSTs (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc syncTracksInfo (ClientboundTracksInfo) returns (google.protobuf.Empty);
+  rpc setIsScanningVSTs (Boolean) returns (google.protobuf.Empty);
 }

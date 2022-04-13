@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { ClientboundPacket } from '../../packets'
 import { useSnackbar, SnackbarKey } from 'notistack'
 import { Config } from '../Client'
 import {
@@ -17,19 +18,19 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
   const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
   useEffect(() => {
-    // $client.rpc.config().then(it => setConfig(JSON.parse(it)))
+    $client.rpc.config({ }).then(it => setConfig(JSON.parse(it.value!)))
   }, [open])
 
   useEffect(() => {
-    /* $client.on(ClientboundPacket.ScanVSTs, buf => {
-      if (buf.readUint8()) {
+    $client.on(ClientboundPacket.SetIsScanningVSTs, data => {
+      if (data.value) {
         setScanning(true)
         scanningKey = enqueueSnackbar('插件扫描中...', { persist: true, variant: 'info' })
       } else {
         setScanning(false)
         closeSnackbar(scanningKey)
       }
-    }) */
+    })
   }, [])
   const onClose = () => setOpen(false)
 
@@ -79,8 +80,8 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
             </div>
             {tab === 2 && (
               <DialogActions>
-                <Button onClick={() => $client.openPluginManager()} color='primary'>打开插件管理器</Button>
-                <Button onClick={() => $client.scanVSTs()} color='primary' disabled={scanning}>扫描插件</Button>
+                <Button onClick={() => $client.rpc.openPluginManager({ })} color='primary'>打开插件管理器</Button>
+                <Button onClick={() => $client.rpc.scanVSTs({ })} color='primary' disabled={scanning}>扫描插件</Button>
               </DialogActions>
             )}
           </>
