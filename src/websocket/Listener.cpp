@@ -39,3 +39,6 @@ void Listener::syncTrackInfo() {
     }
     state->send(buf);*/
 }
+
+void Listener::boardcast(std::shared_ptr<boost::beast::flat_buffer> message) { state->send(message); }
+void Listener::boardcastExclude(std::shared_ptr<boost::beast::flat_buffer> message, WebSocketSession* session) { state->sendExclude(message, session); }

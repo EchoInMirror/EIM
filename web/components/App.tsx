@@ -10,14 +10,13 @@ import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { SnackbarProvider } from 'notistack'
 import type { PaletteOptions } from '@mui/material/styles/createPalette'
 import { zhCN } from '@mui/material/locale'
-import { merge } from '../utils'
 
 import AppBar from './AppBar'
 import SideBar from './SideBar'
 import BottomBar from './BottomBar'
 import Tracks from './Tracks'
-import { GlobalDataContext, reducer, initialState } from '../reducer'
-import { ClientboundPacket, HandlerTypes } from '../../packets'
+import { GlobalDataContext, reducer, initialState, StateType } from '../reducer'
+import packets, { ClientboundPacket } from '../../packets'
 
 const palette: PaletteOptions = {
   background: {
@@ -69,9 +68,14 @@ const App: React.FC = () => {
   window.$dispatch = ctx[1]
 
   useEffect(() => {
-    $client.on(ClientboundPacket.SetProjectStatus, $dispatch as any)
+    const fn = (data: packets.IProjectStatus) => {
+      if (typeof data.position === 'number' || data.isPlaying) {
+        $dispatch({ ...(data as any), startTime: Date.now() })
+      } else $dispatch(data as any)
+    }
+    $client.on(ClientboundPacket.SetProjectStatus, fn)
     $client.rpc.refresh({ })
-    return () => { $client.off(ClientboundPacket.SetProjectStatus, $dispatch as any) }
+    return () => { $client.off(ClientboundPacket.SetProjectStatus, fn) }
   }, [])
 
   return (

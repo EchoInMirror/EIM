@@ -11,7 +11,6 @@ public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
-    double endTime = 0;
     short ppq = 96;
 
     MasterTrack();
@@ -31,6 +30,7 @@ public:
     virtual void transportRecord(bool shouldStartRecording) override { juce::ignoreUnused(shouldStartRecording); }
     virtual void transportRewind() override { }
 private:
+    int endTime = 0;
     juce::AudioProcessorGraph::NodeID outputNodeID;
     juce::AudioDeviceManager deviceManager;
     juce::AudioDeviceManager::AudioDeviceSetup setup;

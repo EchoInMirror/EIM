@@ -9,14 +9,19 @@ message UUID {
   bytes data = 1;
 }
 
+message String {
+  string value = 1;
+}
+
 message ProjectStatus {
   optional uint32 bpm = 1;
-  optional uint32 time = 2;
+  optional uint32 position = 2;
   optional uint32 timeSigNumerator = 3;
   optional uint32 timeSigDenominator = 4;
   optional uint32 sampleRate = 5;
   optional uint32 ppq = 6;
   optional bool isPlaying = 7;
+  optional uint32 maxNoteTime = 8;
 }
 
 message ServerboundExplorerData {
@@ -37,7 +42,7 @@ message ClientboundExplorerData {
 message ServerboundCreateTrackData {
   string name = 1;
   string color = 2;
-  optional string position = 3;
+  optional uint32 position = 3;
   optional string identifier = 4;
 }
 
@@ -57,8 +62,9 @@ message ClientboundTracksInfo {
   bool isReplacing = 2;
 }
 
-message String {
-  string value = 1;
+message ServerboundOpenPluginWindow {
+  string uuid = 1;
+  optional uint32 index = 2;
 }
 
 service ServerService { // Server bound
@@ -67,7 +73,7 @@ service ServerService { // Server bound
   rpc refresh (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc createTrack (ServerboundCreateTrackData) returns (Empty);
   rpc updateTrackInfo (TrackInfo) returns (google.protobuf.Empty);
-  rpc openPluginWindow (String) returns (google.protobuf.Empty);
+  rpc openPluginWindow (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound

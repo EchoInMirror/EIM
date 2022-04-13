@@ -38,7 +38,10 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
       />
       <div className='title'>
         <Button className='solo' variant='outlined' />
-        {info.hasInstrument && <IconButton size='small' className='instrument' onClick={() => $client.rpc.openPluginWindow({ value: uuid })}><Power fontSize='small' /></IconButton>}
+        {info.hasInstrument && <IconButton size='small' className='instrument' onClick={() => {
+          console.log(Date.now())
+          $client.rpc.openPluginWindow({ uuid })
+        }}><Power fontSize='small' /></IconButton>}
         <span className='name'>{info.name}</span>
       </div>
       <div>
@@ -157,7 +160,7 @@ const Tracks: React.FC = () => {
             onDrop={() => {
               if (!$dragObject || $dragObject.type !== 'loadPlugin') return
               setLoading(true)
-              $client.rpc.createTrack({ name: '轨道' + (trackCount + 1), color: colorValues[colorValues.length * Math.random() | 0] }).finally(() => setLoading(false))
+              $client.rpc.createTrack({ name: '轨道' + (trackCount + 1), color: colorValues[colorValues.length * Math.random() | 0], identifier: $dragObject.data }).finally(() => setLoading(false))
             }}
           >
             新增轨道

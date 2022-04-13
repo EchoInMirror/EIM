@@ -55,7 +55,7 @@ id = 0
 for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) \((\w+|google\.protobuf\.Empty)\) returns \((\w+|google\.protobuf\.Empty)\);/g)) {
   const name = method[0].toUpperCase() + method.slice(1)
   const noArg = argType === EMPTY
-  const methodDesc = `    std::unique_ptr<boost::beast::flat_buffer> make${name}Packet(${noArg ? '' : 'EIMPackets::' + argType + '* a'})`
+  const methodDesc = `    std::unique_ptr<boost::beast::flat_buffer> make${name}Packet(${noArg ? '' : 'EIMPackets::' + argType + '& a'})`
   serverServiceHMethods += methodDesc + ';\n'
   serverServiceMethods += `${methodDesc} {
         auto buf = std::make_unique<boost::beast::flat_buffer>();
@@ -63,8 +63,8 @@ for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) 
         buf->commit(1);
         ${noArg
           ? ''
-          : `auto len = a->ByteSizeLong();
-        a->SerializePartialToArray(boost::asio::buffer_cast<void*>(buf->prepare(len)), len);
+          : `auto len = a.ByteSizeLong();
+        a.SerializePartialToArray(boost::asio::buffer_cast<void*>(buf->prepare(len)), len);
         buf->commit(len);`}
         return buf;
     }

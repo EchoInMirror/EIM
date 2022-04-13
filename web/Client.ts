@@ -1,6 +1,4 @@
 import packets, { ServerboundPacket, callbacks, ClientService, ClientboundPacket } from '../packets'
-import { colorValues } from './utils'
-import { TrackMidiNoteData } from './reducer'
 import type { RPCImplCallback } from 'protobufjs'
 
 export enum ExplorerType {

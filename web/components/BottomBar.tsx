@@ -21,6 +21,7 @@ const BottomBar: React.FC = () => {
         sx={{ borderTop: theme => '1px solid ' + theme.palette.primary.main, background: theme => theme.palette.background.bright, zIndex: 2 }}
         component='footer'
       >
+        {isMixer ? <Mixer /> : <div />}
       </Paper>
     </Resizable>
   )

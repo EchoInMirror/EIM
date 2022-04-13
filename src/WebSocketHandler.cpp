@@ -10,13 +10,14 @@ void ServerService::handleSetProjectStatus(WebSocketSession*, std::unique_ptr<EI
 		info.bpm = data->bpm();
 		shouldUpdate = true;
 	}
-	if (data->has_time()) {
-		info.ppqPosition = data->time();
+	if (data->has_position()) {
+		info.ppqPosition = data->position();
+		info.timeInSeconds = info.ppqPosition * 60.0 / info.bpm / master->ppq;
+		info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
 		shouldUpdate = true;
 	}
 	if (data->has_isplaying() && data->isplaying() != info.isPlaying) {
 		info.isPlaying = data->isplaying();
-		info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
 		if (!data->isplaying()) master->stopAllNotes();
 		shouldUpdate = true;
 	}
@@ -28,7 +29,8 @@ void ServerService::handleSetProjectStatus(WebSocketSession*, std::unique_ptr<EI
 		info.timeSigDenominator = data->timesigdenominator();
 		shouldUpdate = true;
 	}
-	if (shouldUpdate) instance->listener->state->send(std::move(EIMMakePackets::makeSetProjectStatusPacket(data.get())));
+	data->set_position((int)info.ppqPosition);
+	if (shouldUpdate) instance->listener->boardcast(std::move(EIMMakePackets::makeSetProjectStatusPacket(*data)));
 }
 
 void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundExplorerData> data, std::function<void(EIMPackets::ClientboundExplorerData&)> reply) {
@@ -55,16 +57,23 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
 }
 
 void ServerService::handleRefresh(WebSocketSession* session) {
-	session->send(EIMMakePackets::makeSetProjectStatusPacket(EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus().get()));
+	session->send(EIMMakePackets::makeSetProjectStatusPacket(*EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus()));
 	EIMPackets::ClientboundTracksInfo info;
 	info.set_isreplacing(true);
 	auto instance = EIMApplication::getEIMInstance();
 	for (auto& track : instance->mainWindow->masterTrack->tracks) info.add_tracks()->CopyFrom(((Track*)track->getProcessor())->getTrackInfo());
-	session->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(&info)));
+	session->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
 }
 
-void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EIMPackets::String>) {
-
+void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) {
+	auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracksMap;
+	auto& uuid = data->uuid();
+	if (!tracks.contains(uuid)) return;
+	auto track = (Track*) tracks[uuid]->getProcessor();
+	auto plugin = data->has_index()
+		? track->plugins.size() > data->index() ? (juce::AudioPluginInstance*)track->plugins[data->index()]->getProcessor() : nullptr
+		: track->getInstrumentInstance();
+	if (plugin) juce::MessageManager::callAsync([plugin] { EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(plugin); });
 }
 
 /*
@@ -108,21 +117,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 			shouldUpdate = true;
 		}
 		if (shouldUpdate) listener->broadcastProjectStatus();
-		break;
-	}
-	case ServerboundPacket::ServerboundGetExplorerData: {
-		auto replyId = buf.readUInt32();
-		auto type = buf.readUInt8();
-		auto path = buf.readString();
-		auto out = EIMPackets::makeReplyPacket(replyId);
-		break;
-	}
-	case ServerboundPacket::ServerboundCreateTrack: {
-		auto replyId = buf.readInt32();
-		auto name = buf.readString();
-		auto color = buf.readString();
-		buf.readUInt8();
-		auto identifier = buf.readString();
 		break;
 	}
 	case ServerboundPacket::ServerboundLoadPlugin: {

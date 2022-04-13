@@ -6,7 +6,7 @@ import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Sl
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { useSnackbar } from 'notistack'
 // import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
-// import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
+import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 import { ClientboundPacket, HandlerTypes } from '../../packets'
 
 import NoteAdd from '@mui/icons-material/NoteAdd'
@@ -48,22 +48,25 @@ let setProgress = (_val: number) => { }
 let moving = false
 const LeftSection: React.FC = () => {
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement>()
-  const [val, fn] = useState(0)
+  const [progress, fn] = useState(0)
   const [open, setOpen] = useState(false)
   const [state] = useGlobalData()
   setProgress = fn
+
   return (
     <section className='left-section'>
       <IconButton color='inherit' onClick={e => setAnchorEl(e.target as HTMLButtonElement)} sx={{ margin: '0 -6px 0 -20px' }}>{icon}</IconButton>
       <Slider
-        value={val}
+        value={progress}
         onChange={(_, val) => {
           moving = true
           fn(val as number)
         }}
-        onChangeCommitted={(_, val) => {
+        max={state.maxNoteTime}
+        step={1}
+        onChangeCommitted={(_, position) => {
           moving = false
-          $client.rpc.setProjectStatus({ time: state.maxNoteTime / state.ppq / state.bpm * 60 * (val as number) / 100 })
+          $client.rpc.setProjectStatus({ position: position as number })
         }}
         sx={{ color: theme => theme.palette.mode === 'dark' ? '#fff' : 'rgba(0,0,0,0.87)' }}
       />
@@ -109,6 +112,7 @@ const CenterSection: React.FC = () => {
   const [state] = useGlobalData()
   const timeRef = useRef<HTMLSpanElement | null>(null)
   const barRef = useRef<HTMLSpanElement | null>(null)
+
   useEffect(() => {
     if (!timeRef.current || !barRef.current) return
     const minutesNode = timeRef.current as HTMLSpanElement
@@ -117,32 +121,31 @@ const CenterSection: React.FC = () => {
     const barsNode = barRef.current as HTMLSpanElement
     const beatsNode = barsNode.nextElementSibling as HTMLSpanElement
     const stepsNode = beatsNode.nextElementSibling as HTMLSpanElement
-    const update = (time: number) => {
+    const update = () => {
+      const beats = $globalData.position / $globalData.ppq + ($globalData.isPlaying ? (Date.now() - $globalData.startTime) / 1000 / 60 * $globalData.bpm : 0)
+      const time = beats / $globalData.bpm * 60
       minutesNode.innerText = (time / 60 | 0).toString().padStart(2, '0')
       secondsNode.innerText = (time % 60 | 0).toString().padStart(2, '0')
       msNode.innerText = (time - (time | 0)).toFixed(3).slice(2)
-      const beats = time / 60 * state.bpm
-      barsNode.innerText = (1 + beats / state.timeSigNumerator | 0).toString().padStart(2, '0')
-      beatsNode.innerText = (1 + (beats | 0) % state.timeSigNumerator).toString().padStart(2, '0')
-      stepsNode.innerText = (1 + (beats - (beats | 0)) * (16 / state.timeSigDenominator) | 0).toString()
+      barsNode.innerText = (1 + beats / $globalData.timeSigNumerator | 0).toString().padStart(2, '0')
+      beatsNode.innerText = (1 + (beats | 0) % $globalData.timeSigNumerator).toString().padStart(2, '0')
+      stepsNode.innerText = (1 + (beats - (beats | 0)) * (16 / $globalData.timeSigDenominator) | 0).toString()
       // if (bottomBarPlayHeadRef.current) bottomBarPlayHeadRef.current.style.transform = `translateX(${bottomBarLength * beats | 0}px)`
-      // if (tracksPlayHeadRef.current) tracksPlayHeadRef.current.style.transform = `translateX(${tracksLength * beats | 0}px)`
+      if (tracksPlayHeadRef.current) tracksPlayHeadRef.current.style.transform = `translateX(${tracksLength * beats | 0}px)`
     }
-    update(state.currentTime)
-    if (!moving) setProgress((state.currentTime / state.maxNoteTime * state.ppq * state.bpm / 60 * 100) || 0)
-    if (!state.isPlaying) return
     let cnt = 0
     const timer = setInterval(() => {
       if (!timeRef.current || !barRef.current) return
       // const curTime = state.currentTime + (Date.now() - state.startTime) / 1000
-      // update(curTime)
-      /* if (!moving && ++cnt > 10) {
-        setProgress((curTime / state.maxNoteTime * state.ppq * state.bpm / 60 * 100) || 0)
+      update()
+      if (!moving && ++cnt > 10) {
+        setProgress($globalData.position + ($globalData.isPlaying ? (Date.now() - $globalData.startTime) / 1000 / 60 * $globalData.bpm * $globalData.ppq | 0 : 0))
         cnt = 0
-      } */
+      }
     }, 30)
     return () => clearInterval(timer)
-  }, [timeRef.current, state.isPlaying, state.currentTime, barRef.current, state.bpm, state.timeSigNumerator, state.timeSigDenominator, state.maxNoteTime, state.ppq])
+  }, [timeRef.current, barRef.current])
+
   return (
     <section className='center-section'>
       <div className='info-block'>
@@ -169,7 +172,7 @@ const CenterSection: React.FC = () => {
       </IconButton>
       <IconButton
         color='inherit'
-        onClick={() => $client.rpc.setProjectStatus({ isPlaying: false })}
+        onClick={() => $client.rpc.setProjectStatus({ isPlaying: false, position: 0 })}
       >
         <Stop fontSize='large' />
       </IconButton>
@@ -178,7 +181,7 @@ const CenterSection: React.FC = () => {
 }
 
 const AppBar: React.FC = () => {
-  const [state, dispatch] = useGlobalData()
+  const [state] = useGlobalData()
   const [bpmInteger, setBPMInteger] = useState('120')
   const [bpmDecimal, setBPMDecimal] = useState('00')
   const [beatsAnchor, setBeatsAnchor] = useState<HTMLElement | undefined>()

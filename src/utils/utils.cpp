@@ -9,7 +9,7 @@ const std::string randomUuid() {
         arr[i++] = 48 + (time & 63);
         time >>= 6;
     }
-    while (i < 10) arr[i++] = 32 + random.nextInt(96);
+    while (i < 10) arr[i++] = 32 + (char)random.nextInt(96);
     arr[10] = 0;
 	return arr;
 }

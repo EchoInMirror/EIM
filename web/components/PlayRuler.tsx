@@ -1,3 +1,4 @@
+import './PlayRuler.less'
 import React, { useEffect, useRef } from 'react'
 import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded'
 import useGlobalData from '../reducer'
@@ -109,7 +110,7 @@ const PlayRuler: React.FC<{
         sx={{ '& > span': { width: noteWidth * state.ppq * 4 } }}
         onClick={e => {
           const rect = e.currentTarget!.firstElementChild!.getBoundingClientRect()
-          $client.setProjectStatus(0, Math.max(e.pageX - rect.left, 0) / noteWidth / state.ppq / state.bpm * 60, state.isPlaying, 0, 0)
+          // $client.rpc.setProjectStatus(0, Math.max(e.pageX - rect.left, 0) / noteWidth / state.ppq / state.bpm * 60, state.isPlaying, 0, 0)
         }}
         onWheel={e => onWidthLevelChange(e.deltaY > 0)}
       >

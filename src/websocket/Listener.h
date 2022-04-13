@@ -12,6 +12,8 @@ public:
 
     void doAccept();
     void syncTrackInfo();
+    void boardcast(std::shared_ptr<boost::beast::flat_buffer> message);
+    void boardcastExclude(std::shared_ptr<boost::beast::flat_buffer> message, WebSocketSession* session);
 private:
     boost::asio::io_context& ioc;
     boost::asio::ip::tcp::acceptor acceptor;

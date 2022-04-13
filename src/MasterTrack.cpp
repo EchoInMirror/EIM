@@ -1,5 +1,6 @@
 #include "MasterTrack.h"
 #include "Main.h"
+#include "../packets/packets.h"
 
 MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	setPlayHead(this);
@@ -13,7 +14,7 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	graphPlayer.setProcessor(this);
 	auto output = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
 
-	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
+	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 96000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
 	prepareToPlay(getSampleRate(), getBlockSize());
 
 	outputNodeID = initTrack(std::make_unique<Track>("", this))->nodeID;
@@ -44,7 +45,13 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, 
 	file.readFrom(theStream);
 	file.getTimeFormat();
 	track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
-	endTime = juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator) * ppq;
+	auto newEndTime = (int)std::ceil(juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator)) * ppq;
+	if (endTime != newEndTime) {
+		endTime = newEndTime;
+		EIMPackets::ProjectStatus info;
+		info.set_maxnotetime(endTime);
+		EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
+	}
 	return initTrack(std::move(track));
 }
 
@@ -67,7 +74,10 @@ bool MasterTrack::getCurrentPosition(CurrentPositionInfo& result) {
 void MasterTrack::transportPlay(bool shouldStartPlaying) {
 	if (currentPositionInfo.isPlaying == shouldStartPlaying) return;
 	currentPositionInfo.isPlaying = shouldStartPlaying;
-	// EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
+	EIMPackets::ProjectStatus info;
+	info.set_isplaying(shouldStartPlaying);
+	info.set_position((int)currentPositionInfo.ppqPosition);
+	EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
 }
 
 void MasterTrack::calcPositionInfo() {
@@ -78,7 +88,9 @@ void MasterTrack::calcPositionInfo() {
 	currentPositionInfo.timeInSeconds = 0;
 	currentPositionInfo.timeInSamples = 0;
 	currentPositionInfo.ppqPosition = 0;
-	// EIMApplication::getEIMInstance()->listener->broadcastProjectStatus();
+	EIMPackets::ProjectStatus info;
+	info.set_position((int)currentPositionInfo.ppqPosition);
+	EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
 }
 
 void MasterTrack::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
@@ -100,11 +112,12 @@ void MasterTrack::createPluginWindow(juce::AudioPluginInstance* instance) {
 std::unique_ptr<EIMPackets::ProjectStatus> MasterTrack::getProjectStatus() {
 	auto it = std::make_unique<EIMPackets::ProjectStatus>();
 	it->set_bpm(currentPositionInfo.bpm);
-	it->set_time((int)currentPositionInfo.ppqPosition);
+	it->set_position((int)currentPositionInfo.ppqPosition);
 	it->set_timesignumerator(currentPositionInfo.timeSigNumerator);
 	it->set_timesigdenominator(currentPositionInfo.timeSigDenominator);
 	it->set_ppq(ppq);
 	it->set_isplaying(currentPositionInfo.isPlaying);
+	it->set_maxnotetime(endTime);
 	return it;
 }
 
