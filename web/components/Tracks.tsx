@@ -1,7 +1,7 @@
 import './Tracks.less'
 import LoadingButton from '@mui/lab/LoadingButton'
 import PlayRuler from './PlayRuler'
-import React, { useState, useEffect, createRef, useRef } from 'react'
+import React, { useState, useEffect, createRef, useRef, useMemo } from 'react'
 import useGlobalData, { TrackMidiNoteData } from '../reducer'
 import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
@@ -69,19 +69,35 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
   )
 }
 
-const Track: React.FC<{ data: TrackMidiNoteData[], width: number }> = ({ data, width }) => {
+const Track: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data, width }) => {
   return (
     <div className='notes'>
-      {data && data.map((it, i) => (
-        <div
-          key={i}
-          style={{
-            bottom: (it[0] / 132 * 100) + '%',
-            left: it[2] * width,
-            width: it[3] * width
-          }}
-        />
-      ))}
+      {useMemo(() => {
+        const arr: JSX.Element[] = []
+        const midiOn: Record<number, number | undefined> = { }
+        data.forEach(({ time, data }, i) => {
+          switch (data! & 0xf0) {
+            case 0x90: // NoteOn
+              midiOn[data! >> 8 & 0xff] = time!
+              break
+            case 0x80: // NoteOff
+              const key = data! >> 8 & 0xff
+              const val = midiOn[key]
+              if (val !== undefined) {
+                midiOn[key] = undefined
+                arr.push(<div
+                  key={i}
+                  style={{
+                    bottom: (key / 132 * 100) + '%',
+                    left: val * width,
+                    width: (time! - val) * width
+                  }}
+                />)
+              }
+          }
+        })
+        return arr
+      }, [data, width])}
     </div>
   )
 }
@@ -123,7 +139,7 @@ const Tracks: React.FC = () => {
     actions.push(<React.Fragment key={id}><TrackActions info={it} /><Divider variant='middle' /></React.Fragment>)
     midis.push((
       <Box key={id} sx={{ backgroundColor: alpha(it.color!, 0.1), '& .notes div': { backgroundColor: it.color! } }}>
-        <Track data={[]} width={noteWidth} />
+        <Track data={it.midi!} width={noteWidth} />
         <Divider />
       </Box>
     ))

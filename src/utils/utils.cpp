@@ -13,3 +13,13 @@ const std::string randomUuid() {
     arr[10] = 0;
 	return arr;
 }
+
+int encodeMidiMessage(juce::MidiMessage& data) {
+    auto raw = data.getRawData();
+    int result = raw[0];
+    switch (data.getRawDataSize()) {
+    case 3: result |= raw[2] << 16;
+    case 2: result |= raw[1] << 8;
+    }
+    return result;
+}

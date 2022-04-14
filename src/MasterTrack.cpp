@@ -41,16 +41,19 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::initTrack(std::unique_ptr<Trac
 juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, std::string color) {
 	juce::MidiFile file;
 	auto track = std::make_unique<Track>(name, color, this);
-	juce::FileInputStream theStream(juce::File("E:/Midis/UTMR&C VOL 1-14 [MIDI FILES] for other DAWs FINAL by Hunter UT/VOL 1/1. Sean Tyas & Darren Porter - Relentless LD.mid"));
-	file.readFrom(theStream);
-	file.getTimeFormat();
-	track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
-	auto newEndTime = (int)std::ceil(juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator)) * ppq;
-	if (endTime != newEndTime) {
-		endTime = newEndTime;
-		EIMPackets::ProjectStatus info;
-		info.set_maxnotetime(endTime);
-		EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
+	auto env = juce::SystemStats::getEnvironmentVariable("MIDI_IMPORT_PATH", "");
+	if (env.isNotEmpty()) {
+		juce::FileInputStream theStream(env);
+		file.readFrom(theStream);
+		file.getTimeFormat();
+		track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
+		auto newEndTime = (int)std::ceil(juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator)) * ppq;
+		if (endTime != newEndTime) {
+			endTime = newEndTime;
+			EIMPackets::ProjectStatus info;
+			info.set_maxnotetime(endTime);
+			EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
+		}
 	}
 	return initTrack(std::move(track));
 }

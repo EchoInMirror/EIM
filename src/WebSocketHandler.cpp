@@ -112,10 +112,18 @@ void ServerService::handleScanVSTs(WebSocketSession*) {
 	juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->scanPlugins(); });
 }
 
+void ServerService::handleSendMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundMidiMessages> data) {
+	auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracksMap;
+	auto& uuid = data->uuid();
+	if (!tracks.contains(uuid)) return;
+	auto& ctrl = ((Track*)tracks[uuid]->getProcessor())->messageCollector;
+	for (auto val : data->data()) ctrl.addMessageToQueue(juce::MidiMessage(val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff, juce::Time::getMillisecondCounterHiRes() * 0.001));
+}
+
 /*
 void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
-	auto instance = EIMApplication::getEIMInstance();
+	auto instance = ;
 	switch (buf.readUInt8()) {
 	case ServerboundPacket::ServerboundMidiMessage: {
 		auto id = buf.readUInt8();
@@ -124,7 +132,7 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		auto byte3 = buf.readUInt8();
 		auto& tracks = mainWindow->masterTrack->tracks;
 		if (tracks.size() <= id) return;
-		((Track*)tracks[id]->getProcessor())->messageCollector.addMessageToQueue(juce::MidiMessage(byte1, byte2, byte3, juce::Time::getMillisecondCounterHiRes() * 0.001));
+		
 		break;
 	}
 	case ServerboundPacket::ServerboundMidiNotesAdd: {

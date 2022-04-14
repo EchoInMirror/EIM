@@ -34,8 +34,6 @@ public:
     juce::AudioPluginInstance* getInstrumentInstance();
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
     EIMPackets::TrackInfo getTrackInfo();
-    void writeMidiData(ByteBuffer* buf);
-    void syncThisTrackMixerInfo();
     void setMuted(bool val);
 private:
     MasterTrack* masterTrack;

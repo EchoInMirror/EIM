@@ -81,7 +81,6 @@ let pressedKeys: number[] = []
 let activeNote: NoteElement | undefined
 
 let _data: TrackMidiNoteData[] = []
-let _currentIndex = 0
 let _alignment = 0
 
 let copiedData: TrackMidiNoteData[] = []
@@ -100,13 +99,11 @@ const Notes: React.FC<{
   ppq: number
   color: string
   alignment: number
-  index: number
   uuid: string
-}> = ({ data, width, height, ppq, color, alignment, index, uuid }) => {
+}> = ({ data, width, height, ppq, color, alignment, uuid }) => {
   const [contextMenu, setContextMenu] = React.useState<{ left: number, top: number } | undefined>()
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
-  _currentIndex = index
   _data = data
   _alignment = alignment
 
@@ -151,7 +148,7 @@ const Notes: React.FC<{
         case MouseState.Dragging: {
           _data.sort((a, b) => a[2] - b[2])
           const dx = resizeDirection === 1 ? 0 : offsetX * _alignment
-          $client.editMidiNotes(_currentIndex, selectedNotes.map(({ note }) => [note[0] + offsetY, note[2] - dx]), dx, -offsetY, resizeDirection * offsetX * _alignment, 0)
+          // $client.editMidiNotes(_currentIndex, selectedNotes.map(({ note }) => [note[0] + offsetY, note[2] - dx]), dx, -offsetY, resizeDirection * offsetX * _alignment, 0)
           break
         }
         case MouseState.Selecting: if (selectedBoxRef.current) {
@@ -182,8 +179,8 @@ const Notes: React.FC<{
         return elm
       })
       data.sort((a, b) => a[2] - b[2])
-      $client.addMidiNotes(index, notes)
-      $client.trackUpdateNotifier[uuid]?.()
+      // $client.addMidiNotes(index, notes)
+      // $client.trackUpdateNotifier[uuid]?.()
     }
   }
 
@@ -198,11 +195,11 @@ const Notes: React.FC<{
       it.remove()
       return note
     })
-    $client.deleteMidiNotes(index, notes)
+    // $client.deleteMidiNotes(index, notes)
     let i = 0
     notes.forEach(it => data.splice((i = data.indexOf(it, i)), 1))
     selectedNotes = []
-    $client.trackUpdateNotifier[uuid]?.()
+    // $client.trackUpdateNotifier[uuid]?.()
   }
 
   return (
@@ -259,14 +256,15 @@ const Notes: React.FC<{
               activeNote = elm
               if (!resizeDirection) {
                 if (pressedKeys.length) {
-                  pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
+                  $client.rpc.sendMidiMessages({ uuid, data: pressedKeys.map(it => 0x80 | (it << 8) | (70 << 16)) }) // MidiOff
                   pressedKeys = []
                 }
-                selectedNotes.forEach(it => {
-                  if (it.note[2] !== elm.note[2]) return
-                  pressedKeys.push(it.note[0])
-                  $client.midiMessage(index, 0x90, it.note[0], it.note[1])
-                })
+                // $client.rpc.sendMidiMessages({ uuid, data: selectedNotes.map(it => {
+                //   if (it.note[2] !== elm.note[2]) return
+                //   pressedKeys.push(it.note[0])
+                //   return 0x80 | (it << 8) | (70 << 16)
+                // })
+                // $client.rpc.sendMidiMessages(index, 0x90, it.note[0], it.note[1])
               }
               e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
               mouseState = MouseState.Dragging
@@ -275,10 +273,10 @@ const Notes: React.FC<{
             case 1:
               e.preventDefault()
               if (elm.dataset.isNote) {
-                $client.deleteMidiNotes(index, [elm.note])
+                // $client.deleteMidiNotes(index, [elm.note])
                 elm.remove()
                 data.splice(data.indexOf(elm.note), 1)
-                $client.trackUpdateNotifier[uuid]?.()
+                // $client.trackUpdateNotifier[uuid]?.()
               }
               selectedNotes.forEach(it => it.className && (it.className = ''))
               selectedNotes = []
@@ -318,7 +316,7 @@ const Notes: React.FC<{
                   return false
                 })) return
                 if (dy && pressedKeys.length) {
-                  pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
+                  // pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
                   pressedKeys = []
                 }
                 const curNote = activeNote?.dataset?.isNote ? activeNote.note[2] : -1
@@ -334,7 +332,7 @@ const Notes: React.FC<{
                     const keyId = Math.round(1.32 * (100 - top))
                     if (it.note[2] === curNote) {
                       pressedKeys.push(keyId)
-                      $client.midiMessage(index, 0x90, keyId, it.note[1])
+                      // $client.midiMessage(index, 0x90, keyId, it.note[1])
                     }
                     it.note[0] = keyId
                   }
@@ -342,7 +340,7 @@ const Notes: React.FC<{
               }
               offsetY = top
               offsetX = left
-              $client.trackUpdateNotifier[uuid]?.()
+              // $client.trackUpdateNotifier[uuid]?.()
               break
             }
             case MouseState.Selecting: {
@@ -380,10 +378,10 @@ const Notes: React.FC<{
             case MouseState.Deleting: {
               const elm = e.target as NoteElement
               if (elm.dataset.isNote) {
-                $client.deleteMidiNotes(index, [elm.note])
+                // $client.deleteMidiNotes(index, [elm.note])
                 elm.remove()
                 data.splice(data.indexOf(elm.note), 1)
-                $client.trackUpdateNotifier[uuid]?.()
+                // $client.trackUpdateNotifier[uuid]?.()
               }
             }
           }
@@ -497,7 +495,8 @@ const Editor: React.FC = () => {
   const noteWidth = noteWidths[noteWidthLevel]
   barLength = noteWidth * state.ppq
   const beatWidth = barLength / (16 / state.timeSigDenominator)
-  const index = $client.trackNameToIndex[state.activeTrack] || 0
+
+  const track = state.activeTrack ? state.tracks[state.activeTrack] : undefined
 
   useEffect(() => {
     clearInterval(timer!)
@@ -508,21 +507,23 @@ const Editor: React.FC = () => {
     const mousedown = (e: MouseEvent) => {
       const btn = e.target as HTMLButtonElement
       const key = btn?.dataset?.eimKeyboardKey
-      if (!key) return
-      const index = $client.trackNameToIndex[state.activeTrack]
-      if (index == null) return
+      if (!key || !$globalData.activeTrack) return
       const rect = btn.getBoundingClientRect()
       const keyId = +key & 127
       pressedKeys.push(keyId)
-      $client.midiMessage(index, 0x90, keyId, Math.min(rect.width, Math.max(0, e.pageX - rect.left)) / rect.width * 127 | 0)
+      $client.rpc.sendMidiMessages({
+        uuid: $globalData.activeTrack,
+        data: [0x90 | (keyId << 8) | (Math.min(rect.width, Math.max(0, e.pageX - rect.left)) / rect.width * 127 << 16)]
+      })
     }
     const mouseup = () => {
       clearInterval(timer!)
       timer = undefined
-      if (!pressedKeys.length) return
-      const index = $client.trackNameToIndex[state.activeTrack]
-      if (index == null) return
-      pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
+      if (!pressedKeys.length || !$globalData.activeTrack) return
+      $client.rpc.sendMidiMessages({
+        uuid: $globalData.activeTrack,
+        data: pressedKeys.map(it => 0x80 | (it << 8))
+      })
       pressedKeys = []
     }
     document.addEventListener('mousedown', mousedown)
@@ -531,7 +532,7 @@ const Editor: React.FC = () => {
       document.removeEventListener('mousedown', mousedown)
       document.removeEventListener('mouseup', mouseup)
     }
-  }, [state.activeTrack])
+  }, [])
 
   useEffect(() => {
     if (scrollableRef.current) scrollableRef.current.scrollTop = noteHeight * 50
@@ -549,7 +550,7 @@ const Editor: React.FC = () => {
           className='scale-slider'
           onChange={(_, val) => setNoteWidthLevel(val as number)}
         />
-        当前轨道: {state.tracks.find(it => it.uuid === state.activeTrack)?.name || '未选中'}
+        当前轨道: {track ? track.name : '未选中'}
         <br />
         <FormControl variant='standard'>
           <InputLabel id='bottom-bar-alignment-label'>对齐</InputLabel>
@@ -660,10 +661,9 @@ const Editor: React.FC = () => {
                 width={noteWidth}
                 height={noteHeight}
                 alignment={alignment}
-                data={state.trackMidiData[state.activeTrack]?.notes}
-                index={index}
-                uuid={state.tracks[index]?.uuid || ''}
-                color={state.tracks[index]?.color || ''}
+                data={[]}
+                uuid={state.activeTrack || ''}
+                color={track?.color || ''}
               />
             </div>
           </Box>

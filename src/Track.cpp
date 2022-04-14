@@ -31,7 +31,7 @@ void Track::addEffectPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
 	}
 	addAudioConnection(prev, node);
 	addAudioConnection(node, end);
-	syncThisTrackMixerInfo();
+	// syncThisTrackMixerInfo();
 }
 
 void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
@@ -43,7 +43,7 @@ void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
 	addAudioConnection(instrumentNode->nodeID, begin);
 	addConnection({ { midiIn, juce::AudioProcessorGraph::midiChannelIndex }, { instrumentNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex } });
 	EIMApplication::getEIMInstance()->listener->syncTrackInfo();
-	syncThisTrackMixerInfo();
+	// syncThisTrackMixerInfo();
 }
 
 void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
@@ -109,18 +109,17 @@ EIMPackets::TrackInfo Track::getTrackInfo() {
 	for (auto& it : plugins) {
 		data.add_plugins()->set_name(it->getProcessor()->getName().toStdString());
 	}
+	for (auto& it : midiSequence) {
+		auto note = data.add_midi();
+		note->set_time((int)it->message.getTimeStamp());
+		note->set_data(encodeMidiMessage(it->message));
+	}
 	return data;
 }
 
 juce::AudioPluginInstance* Track::getInstrumentInstance() { return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor(); }
 
-void Track::syncThisTrackMixerInfo() {
-	//auto buf = EIMPackets::makeTrackMixerInfoPacket(1);
-	//writeTrackMixerInfo(buf.get());
-	//EIMApplication::getEIMInstance()->listener->state->send(buf);
-}
-
-void Track::writeMidiData(ByteBuffer* buf) {
+//void Track::writeMidiData(ByteBuffer* buf) {
 	/*buf->writeUUID(uuid);
 	std::vector<std::tuple<juce::uint8, juce::uint8, juce::uint32, juce::uint32>> arr;
 	midiSequence.updateMatchedPairs();
@@ -139,7 +138,7 @@ void Track::writeMidiData(ByteBuffer* buf) {
 		buf->writeUInt32(on);
 		buf->writeUInt32(off);
 	}*/
-}
+// }
 
 void Track::setProcessingPrecision(ProcessingPrecision newPrecision) {
 	AudioProcessorGraph::setProcessingPrecision(newPrecision);

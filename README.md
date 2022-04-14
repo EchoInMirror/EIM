@@ -25,6 +25,10 @@ cd EIM
 ### Build backend application
 
 ```bash
+npm install
+
+npm run generate:proto
+
 mkdir build
 
 cd build
@@ -34,13 +38,16 @@ cmake -G "Visual Studio 17 2022" -A x64 .. -DCMAKE_TOOLCHAIN_FILE=<VCPkg install
 
 Then open **EIM/build/EIM.sln**
 
+### Development
+
+```bash
+
+npm start
+```
+
 ### Build frontend application
 
 ```bash
-cd web
-
-npm install --production
-
 npm run build
 ```
 
