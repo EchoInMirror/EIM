@@ -50,11 +50,15 @@ message ClientboundExplorerData {
 message ServerboundCreateTrackData {
   string name = 1;
   string color = 2;
-  optional uint32 position = 3;
+  optional uint32 index = 3;
   optional string identifier = 4;
 }
 
 message TrackInfo {
+  message PluginData {
+    string name = 1;
+  }
+
   string uuid = 1;
   optional string name = 2;
   optional string color = 3;
@@ -62,7 +66,9 @@ message TrackInfo {
   optional bool solo = 5;
   optional bool hasInstrument = 6;
   optional double volume = 7;
-  optional string position = 8;
+  optional string index = 8;
+  optional int32 pan = 9;
+  repeated PluginData plugins = 10;
 }
 
 message ClientboundTracksInfo {
@@ -75,6 +81,12 @@ message ServerboundOpenPluginWindow {
   optional uint32 index = 2;
 }
 
+message ServerboundLoadVST {
+  string uuid = 1;
+  string identifier = 2;
+  optional uint32 index = 3;
+}
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
@@ -85,6 +97,7 @@ service ServerService { // Server bound
   rpc config (OptionalString) returns (OptionalString);
   rpc openPluginManager (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc scanVSTs (google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc loadVST (ServerboundLoadVST) returns (Empty);
 }
 
 service ClientService { // Client bound

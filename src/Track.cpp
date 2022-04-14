@@ -105,17 +105,11 @@ EIMPackets::TrackInfo Track::getTrackInfo() {
 	data.set_solo(false);
 	data.set_hasinstrument(instrumentNode != nullptr);
 	data.set_volume(chain.get<1>().getGainLinear());
-	return std::move(data);
-}
-
-void Track::writeTrackMixerInfo(ByteBuffer* buf) {
-	/*buf->writeUUID(uuid);
-	buf->writeInt8((char)pan);
-	buf->writeUInt8((unsigned char)std::to_underlying(panRule));
-	buf->writeUInt8((unsigned char)plugins.size());
+	data.set_pan(pan);
 	for (auto& it : plugins) {
-		buf->writeString(it->getProcessor()->getName());
-	}*/
+		data.add_plugins()->set_name(it->getProcessor()->getName().toStdString());
+	}
+	return data;
 }
 
 juce::AudioPluginInstance* Track::getInstrumentInstance() { return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor(); }

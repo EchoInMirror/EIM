@@ -117,54 +117,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 	auto &buf = session->buffer;
 	auto instance = EIMApplication::getEIMInstance();
 	switch (buf.readUInt8()) {
-	case ServerboundPacket::ServerboundSetProjectStatus: {
-		auto bpm = buf.readDouble();
-		auto time = buf.readDouble();
-		auto isPlaying = buf.readBoolean();
-		auto timeSigNumerator = buf.readUInt8();
-		auto timeSigDenominator = buf.readUInt8();
-		buf.readUInt16();
-		auto shouldUpdate = false;
-		if (bpm > 10) {
-			info.bpm = bpm;
-			shouldUpdate = true;
-		}
-		if (time > -1) {
-			info.timeInSeconds = time;
-			info.timeInSamples = (juce::int64)(master->getSampleRate() * time);
-			shouldUpdate = true;
-		}
-		if (isPlaying != info.isPlaying) {
-			info.isPlaying = isPlaying;
-			info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
-			if (!isPlaying) master->stopAllNotes();
-			shouldUpdate = true;
-		}
-		if (timeSigNumerator > 0) {
-			info.timeSigNumerator = timeSigNumerator;
-			shouldUpdate = true;
-		}
-		if (timeSigDenominator > 0) {
-			info.timeSigDenominator = timeSigDenominator;
-			shouldUpdate = true;
-		}
-		if (shouldUpdate) listener->broadcastProjectStatus();
-		break;
-	}
-	case ServerboundPacket::ServerboundLoadPlugin: {
-		auto replyId = buf.readInt32();
-		auto id = buf.readUInt8();
-		buf.readUInt8();
-		auto& tracks = mainWindow->masterTrack->tracks;
-		if (tracks.size() <= id) return;
-		auto identifier = buf.readString();
-		loadPluginAndAdd(identifier, replyId, false, (Track*)tracks[id]->getProcessor());
-		listener->syncTrackInfo();
-		break;
-	}
-	case ServerboundPacket::ServerboundRefresh:
-		listener->syncTrackInfo();
-		break;
 	case ServerboundPacket::ServerboundMidiMessage: {
 		auto id = buf.readUInt8();
 		auto byte1 = buf.readUInt8();
@@ -174,8 +126,6 @@ void EIMApplication::handlePacket(WebSocketSession* session) {
 		if (tracks.size() <= id) return;
 		((Track*)tracks[id]->getProcessor())->messageCollector.addMessageToQueue(juce::MidiMessage(byte1, byte2, byte3, juce::Time::getMillisecondCounterHiRes() * 0.001));
 		break;
-	}
-	case ServerboundPacket::ServerboundUpdateTrackInfo: {
 	}
 	case ServerboundPacket::ServerboundMidiNotesAdd: {
 		auto id = buf.readUInt8();

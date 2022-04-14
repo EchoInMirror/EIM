@@ -49,6 +49,13 @@ public:
 	}
 };
 
+void ServerService::handleCreateTrack(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data, std::function<void(EIMPackets::Empty&)> reply) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new CreateTrackAction(std::move(data), [reply] {
+		EIMPackets::Empty out;
+		reply(out);
+	}));
+}
+
 class UpdateTrackInfoAction : public juce::UndoableAction {
 private:
 	std::unique_ptr<EIMPackets::TrackInfo> data;
@@ -65,9 +72,12 @@ public:
 		if (data->has_color()) track->color = data->color();
 		if (data->has_volume()) track->chain.get<1>().setGainLinear(data->volume());
 		if (data->has_muted() && data->muted() != trackPtr->isBypassed()) track->setMuted(data->muted());
-		EIMPackets::ClientboundTracksInfo info;
-		info.add_tracks()->CopyFrom(track->getTrackInfo());
-		instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+		if (data->has_pan() && data->pan() != track->pan) track->chain.get<0>().setPan((track->pan = data->pan()) / 100.0f);
+		if (!data->has_pan() && !data->has_volume()) {
+			EIMPackets::ClientboundTracksInfo info;
+			info.add_tracks()->CopyFrom(track->getTrackInfo());
+			instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+		}
 		return true;
 	}
 	bool undo() override {
@@ -76,13 +86,44 @@ public:
 	}
 };
 
-void ServerService::handleCreateTrack(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data, std::function<void(EIMPackets::Empty&)> reply) {
-	EIMApplication::getEIMInstance()->undoManager.perform(new CreateTrackAction(std::move(data), [reply] {
+void ServerService::handleUpdateTrackInfo(WebSocketSession*, std::unique_ptr<EIMPackets::TrackInfo> data) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new UpdateTrackInfoAction(std::move(data)));
+}
+
+class LoadVSTAction : public juce::UndoableAction {
+private:
+	std::unique_ptr<EIMPackets::ServerboundLoadVST> data;
+	std::function<void()> callback;
+public:
+	LoadVSTAction(std::unique_ptr<EIMPackets::ServerboundLoadVST> data) : data(std::move(data)), callback(nullptr) { }
+	LoadVSTAction(std::unique_ptr<EIMPackets::ServerboundLoadVST> data, std::function<void()> callback) : data(std::move(data)), callback(callback) { }
+	bool perform() override {
+		auto instance = EIMApplication::getEIMInstance();
+		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		auto& trackPtr = tracks[uuid];
+		auto track = (Track*)trackPtr->getProcessor();
+		loadPluginAndAdd(data->identifier(), false, track, [this, track]() {
+			if (callback != nullptr) {
+				callback();
+				callback = nullptr;
+			}
+			EIMPackets::ClientboundTracksInfo info;
+			info.add_tracks()->CopyFrom(track->getTrackInfo());
+			EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+		});
+		return true;
+	}
+	bool undo() override {
+		// TODO
+		return false;
+	}
+};
+
+void ServerService::handleLoadVST(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundLoadVST> data, std::function<void(EIMPackets::Empty&)> reply) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new LoadVSTAction(std::move(data), [reply] {
 		EIMPackets::Empty out;
 		reply(out);
 	}));
-}
-
-void ServerService::handleUpdateTrackInfo(WebSocketSession*, std::unique_ptr<EIMPackets::TrackInfo> data) {
-	EIMApplication::getEIMInstance()->undoManager.perform(new UpdateTrackInfoAction(std::move(data)));
 }

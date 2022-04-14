@@ -192,7 +192,7 @@ const AppBar: React.FC = () => {
     const bpm = +bpmInteger + (+bpmDecimal / 100)
     if (bpm === state.bpm) return
     e.target.blur()
-    $client.rpc.setProjectStatus({ isPlaying: false })
+    $client.rpc.setProjectStatus({ isPlaying: false, bpm })
     enqueueSnackbar('操作成功!', { variant: 'success' })
   }
 

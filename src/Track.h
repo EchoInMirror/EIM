@@ -15,6 +15,7 @@ public:
     std::string name;
     std::string color;
     juce::MidiMessageSequence midiSequence;
+    int pan = 0;
 
     juce::AudioProcessorGraph::Node* currentNode = nullptr;
     juce::MidiMessageCollector messageCollector;
@@ -33,7 +34,6 @@ public:
     juce::AudioPluginInstance* getInstrumentInstance();
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
     EIMPackets::TrackInfo getTrackInfo();
-    void writeTrackMixerInfo(ByteBuffer* buf);
     void writeMidiData(ByteBuffer* buf);
     void syncThisTrackMixerInfo();
     void setMuted(bool val);
@@ -45,7 +45,6 @@ private:
     juce::AudioProcessorGraph::NodeID midiIn, begin, end;
     juce::AudioProcessorGraph::Node::Ptr instrumentNode = nullptr;
     juce::dsp::PannerRule panRule = juce::dsp::PannerRule::balanced;
-    int pan = 0;
 
     void init();
     void addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages);

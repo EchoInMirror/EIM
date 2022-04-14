@@ -10,15 +10,7 @@ import VolumeUp from '@mui/icons-material/VolumeUp'
 import VolumeOff from '@mui/icons-material/VolumeOff'
 import LoadingButton from '@mui/lab/LoadingButton'
 
-interface MixerPlugin { name: string }
-
-interface TrackMixerInfo {
-  pan: number
-  panRule: number
-  plugins: MixerPlugin[]
-}
-
-const TrackPlugin: React.FC<{ plugin: MixerPlugin, uuid: string, index: number }> = ({ plugin, uuid, index }) => {
+const TrackPlugin: React.FC<{ plugin: packets.TrackInfo.IPluginData, uuid: string, index: number }> = ({ plugin, uuid, index }) => {
   return (
     <>
       <Tooltip title='233' arrow placement='right'>
@@ -38,7 +30,7 @@ const TrackPlugin: React.FC<{ plugin: MixerPlugin, uuid: string, index: number }
 
 const defaultPan = [0, 0]
 
-const Track: React.FC<{ info: packets.ITrackInfo, active: boolean, mixerInfo: TrackMixerInfo }> = ({ info, active, mixerInfo }) => {
+const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, active }) => {
   const [pan, setPan] = useState(defaultPan)
   const [loading, setLoading] = useState(false)
   const [state, dispatch] = useGlobalData()
@@ -46,9 +38,9 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean, mixerInfo: Tr
 
   const uuid = info.uuid!
   const isMaster = !uuid
-  // useEffect(() => {
-  //   setPan(old => (old[0] === 0 ? old[1] : old[0]) === mixerInfo.pan ? old : mixerInfo.pan > 0 ? [0, mixerInfo.pan] : [mixerInfo.pan, 0])
-  // }, [mixerInfo.pan])
+  useEffect(() => {
+    setPan(old => (old[0] === 0 ? old[1] : old[0]) === info.pan ? old : info.pan! > 0 ? [0, info.pan!] : [info.pan!, 0])
+  }, [info.pan])
 
   const color = uuid ? info.color! : theme.palette.primary.main
 
@@ -66,7 +58,7 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean, mixerInfo: Tr
         onDrop={() => {
           if (loading || !$dragObject?.isInstrument || $dragObject.type !== 'loadPlugin') return
           setLoading(true)
-          // $client.loadPlugin(index, $dragObject.data).finally(() => setLoading(false))
+          $client.rpc.loadVST({ uuid, identifier: $dragObject.data }).finally(() => setLoading(false))
         }}
       >
         <Marquee gradient={false} pauseOnHover>{isMaster ? '主轨道' : info.name}&nbsp;&nbsp;&nbsp;&nbsp;</Marquee>{info.hasInstrument && <Power fontSize='small' />}
@@ -78,8 +70,10 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean, mixerInfo: Tr
           min={-100}
           sx={{ [`& .MuiSlider-thumb[data-index="${pan[0] === 0 ? 0 : 1}"]`]: { opacity: 0 } }}
           onChange={(_, val) => {
+            console.log(val)
             const [a, b] = val as number[]
             const cur = a === 0 ? b : a
+            $client.rpc.updateTrackInfo({ uuid, pan: cur })
             setPan(cur > 0 ? [0, cur] : [cur, 0])
           }}
         />
@@ -107,7 +101,7 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean, mixerInfo: Tr
       </div>
       <Divider className='mid-divider' />
       <div className='plugins'>
-        {/* {mixerInfo.plugins.map((it, i) => <TrackPlugin key={i} plugin={it} uuid={uuid} index={i} />)} */}
+        {info.plugins!.map((it, i) => <TrackPlugin key={i} plugin={it} uuid={uuid} index={i} />)}
         <LoadingButton
           size='small'
           loading={loading}
@@ -116,7 +110,7 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean, mixerInfo: Tr
           onDrop={() => {
             if (loading || $dragObject?.type !== 'loadPlugin' || $dragObject.isInstrument) return
             setLoading(true)
-            // $client.loadPlugin(index, $dragObject.data).finally(() => setLoading(false))
+            $client.rpc.loadVST({ uuid, identifier: $dragObject.data }).finally(() => setLoading(false))
           }}
         >
           添加插件
@@ -127,31 +121,11 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean, mixerInfo: Tr
 }
 
 const Mixer: React.FC = () => {
-  const [globalData, dispatch] = useGlobalData()
-  const [mixerInfo, setMixerInfo] = useState<Record<string, TrackMixerInfo>>({})
-
-  // useEffect(() => {
-  //   $client.on(ClientboundPacket.TrackMixerInfo, buf => {
-  //     let len = buf.readUint8()
-  //     const onlyOne = len === 1
-  //     const map: Record<string, TrackMixerInfo> = { }
-  //     while (len-- > 0) {
-  //       const { plugins } = map[buf.readUint64().toString(32)] = {
-  //         pan: buf.readInt8(),
-  //         panRule: buf.readUint8(),
-  //         plugins: [] as MixerPlugin[]
-  //       }
-  //       for (let size = buf.readUint8(); size-- > 0;) plugins.push({ name: buf.readIString() })
-  //     }
-  //     setMixerInfo(onlyOne ? old => ({ ...old, ...map }) : map)
-  //   })
-  //   $client.getTracksMixerInfo()
-  //   return () => $client.off(ClientboundPacket.TrackMixerInfo)
-  // }, [])
+  const [globalData] = useGlobalData()
 
   const tracks: JSX.Element[] = []
   for (const uuid in globalData.tracks!) {
-    tracks.push(<Track key={uuid} info={globalData.tracks[uuid]!} active={globalData.activeTrack === uuid} mixerInfo={mixerInfo[uuid]} />)
+    tracks.push(<Track key={uuid} info={globalData.tracks[uuid]!} active={globalData.activeTrack === uuid} />)
   }
 
   return (
