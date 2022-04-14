@@ -15,7 +15,7 @@ import AppBar from './AppBar'
 import SideBar from './SideBar'
 import BottomBar from './BottomBar'
 import Tracks from './Tracks'
-import { GlobalDataContext, reducer, initialState, StateType } from '../reducer'
+import { GlobalDataContext, reducer, initialState } from '../reducer'
 import packets, { ClientboundPacket } from '../../packets'
 
 const palette: PaletteOptions = {

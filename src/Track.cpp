@@ -42,7 +42,6 @@ void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
 	instrumentNode = addNode(std::move(instance));
 	addAudioConnection(instrumentNode->nodeID, begin);
 	addConnection({ { midiIn, juce::AudioProcessorGraph::midiChannelIndex }, { instrumentNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex } });
-	EIMApplication::getEIMInstance()->listener->syncTrackInfo();
 	// syncThisTrackMixerInfo();
 }
 
@@ -91,30 +90,25 @@ void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
 		msg.setTimeStamp(juce::roundToInt(msg.getTimeStamp() / timeFormat * masterTrack->ppq));
 		midiSequence.addEvent(msg, 0);
 	}
-	//auto buf = EIMPackets::makeTrackMidiDataPacket(1);
-	//writeMidiData(buf.get());
-	//EIMApplication::getEIMInstance()->listener->state->send(buf);
 }
 
-EIMPackets::TrackInfo Track::getTrackInfo() {
-	EIMPackets::TrackInfo data;
-	data.set_uuid(uuid);
-	data.set_name(name);
-	data.set_color(color);
-	data.set_muted(currentNode->isBypassed());
-	data.set_solo(false);
-	data.set_hasinstrument(instrumentNode != nullptr);
-	data.set_volume(chain.get<1>().getGainLinear());
-	data.set_pan(pan);
+void Track::writeTrackInfo(EIMPackets::TrackInfo* data) {
+	data->set_uuid(uuid);
+	data->set_name(name);
+	data->set_color(color);
+	data->set_muted(currentNode->isBypassed());
+	data->set_solo(false);
+	data->set_hasinstrument(instrumentNode != nullptr);
+	data->set_volume(chain.get<1>().getGainLinear());
+	data->set_pan(pan);
 	for (auto& it : plugins) {
-		data.add_plugins()->set_name(it->getProcessor()->getName().toStdString());
+		data->add_plugins()->set_name(it->getProcessor()->getName().toStdString());
 	}
 	for (auto& it : midiSequence) {
-		auto note = data.add_midi();
+		auto note = data->add_midi();
 		note->set_time((int)it->message.getTimeStamp());
 		note->set_data(encodeMidiMessage(it->message));
 	}
-	return data;
 }
 
 juce::AudioPluginInstance* Track::getInstrumentInstance() { return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor(); }

@@ -2,9 +2,6 @@
 import { createContext, useContext } from 'react'
 import packets from '../packets'
 
-export type TrackMidiNoteData = [number, number, number, number]
-export type TrackMidiData = Record<string, { notes: TrackMidiNoteData[] }>
-
 export const initialState = {
   activeTrack: '',
   ppq: 96,
@@ -15,7 +12,6 @@ export const initialState = {
   position: 0,
   maxNoteTime: 0,
   startTime: 0,
-  trackMidiData: { } as TrackMidiData,
   tracks: { } as Record<string, packets.ITrackInfo | undefined>
 }
 

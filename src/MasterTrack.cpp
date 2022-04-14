@@ -112,16 +112,14 @@ void MasterTrack::createPluginWindow(juce::AudioPluginInstance* instance) {
 	} else pluginWindows.try_emplace(instance, instance, &pluginWindows);
 }
 
-std::unique_ptr<EIMPackets::ProjectStatus> MasterTrack::getProjectStatus() {
-	auto it = std::make_unique<EIMPackets::ProjectStatus>();
-	it->set_bpm(currentPositionInfo.bpm);
-	it->set_position((int)currentPositionInfo.ppqPosition);
-	it->set_timesignumerator(currentPositionInfo.timeSigNumerator);
-	it->set_timesigdenominator(currentPositionInfo.timeSigDenominator);
-	it->set_ppq(ppq);
-	it->set_isplaying(currentPositionInfo.isPlaying);
-	it->set_maxnotetime(endTime);
-	return it;
+void MasterTrack::writeProjectStatus(EIMPackets::ProjectStatus& it) {
+	it.set_bpm((int)currentPositionInfo.bpm);
+	it.set_position((int)currentPositionInfo.ppqPosition);
+	it.set_timesignumerator(currentPositionInfo.timeSigNumerator);
+	it.set_timesigdenominator(currentPositionInfo.timeSigDenominator);
+	it.set_ppq(ppq);
+	it.set_isplaying(currentPositionInfo.isPlaying);
+	it.set_maxnotetime(endTime);
 }
 
 void MasterTrack::stopAllNotes() {

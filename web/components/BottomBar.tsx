@@ -10,7 +10,7 @@ import Editor from './Editor'
 export let setIsMixer = (_val: boolean) => { }
 
 const BottomBar: React.FC = () => {
-  const [isMixer, fn] = useState(true)
+  const [isMixer, fn] = useState(false)
   setIsMixer = fn
   return (
     <Resizable enable={{ top: true }} className='bottom-bar' maxHeight='80vh' minHeight={0}>

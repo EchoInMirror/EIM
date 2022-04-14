@@ -1,5 +1,6 @@
 #include "../Main.h"
 #include "../websocket/WebSocketSession.h"
+#include "../utils/Utils.h"
 
 void loadPluginAndAdd(std::string identifier, bool setName, Track* track, std::function<void()> callback) {
 	if (identifier.empty()) return;
@@ -29,8 +30,8 @@ public:
 		if (data->has_identifier()) {
 			loadPluginAndAdd(data->identifier(), true, track, [this, track]() {
 				EIMPackets::ClientboundTracksInfo info;
-				info.add_tracks()->CopyFrom(track->getTrackInfo());
-				EIMApplication::getEIMInstance()->listener->state->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+				track->writeTrackInfo(info.add_tracks());
+				EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
 				if (callback != nullptr) {
 					callback();
 					callback = nullptr;
@@ -38,8 +39,8 @@ public:
 			});
 		} else {
 			EIMPackets::ClientboundTracksInfo info;
-			info.add_tracks()->CopyFrom(track->getTrackInfo());
-			EIMApplication::getEIMInstance()->listener->state->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+			track->writeTrackInfo(info.add_tracks());
+			EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
 		}
 		return true;
 	}
@@ -75,7 +76,7 @@ public:
 		if (data->has_pan() && data->pan() != track->pan) track->chain.get<0>().setPan((track->pan = data->pan()) / 100.0f);
 		if (!data->has_pan() && !data->has_volume()) {
 			EIMPackets::ClientboundTracksInfo info;
-			info.add_tracks()->CopyFrom(track->getTrackInfo());
+			info.add_tracks()->CopyFrom(*data);
 			instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
 		}
 		return true;
@@ -110,7 +111,7 @@ public:
 				callback = nullptr;
 			}
 			EIMPackets::ClientboundTracksInfo info;
-			info.add_tracks()->CopyFrom(track->getTrackInfo());
+			track->writeTrackInfo(info.add_tracks());
 			EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
 		});
 		return true;
@@ -126,4 +127,85 @@ void ServerService::handleLoadVST(WebSocketSession*, std::unique_ptr<EIMPackets:
 		EIMPackets::Empty out;
 		reply(out);
 	}));
+}
+
+class AddMidiMessagesAction : public juce::UndoableAction {
+private:
+	std::unique_ptr<EIMPackets::MidiMessages> data;
+public:
+	AddMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) { }
+	bool perform() override {
+		auto instance = EIMApplication::getEIMInstance();
+		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		auto track = (Track*)tracks[uuid]->getProcessor();
+		juce::MidiMessageSequence seq;
+		for (auto& it : data->midi()) seq.addEvent(decodeMidiMessage(it.data(), it.time()));
+		track->midiSequence.addSequence(seq, 0);
+		EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeAddMidiMessagesPacket(*data)));
+		return true;
+	}
+	bool undo() override {
+		// TODO
+		return false;
+	}
+};
+
+void ServerService::handleAddMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::MidiMessages> data) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new AddMidiMessagesAction(std::move(data)));
+}
+
+class DeleteMidiMessagesAction : public juce::UndoableAction {
+private:
+	std::unique_ptr<EIMPackets::MidiMessages> data;
+public:
+	DeleteMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) { }
+	bool perform() override {
+		auto instance = EIMApplication::getEIMInstance();
+		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		auto track = (Track*)tracks[uuid]->getProcessor();
+		int times = 0;
+		for (auto it : data->data()) track->midiSequence.deleteEvent(it - times++, false);
+		EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeDeleteMidiMessagesPacket(*data)));
+		return true;
+	}
+	bool undo() override {
+		// TODO
+		return false;
+	}
+};
+
+void ServerService::handleDeleteMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::MidiMessages> data) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new DeleteMidiMessagesAction(std::move(data)));
+}
+
+class EditMidiMessagesAction : public juce::UndoableAction {
+private:
+	std::unique_ptr<EIMPackets::MidiMessages> data;
+public:
+	EditMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) { }
+	bool perform() override {
+		auto instance = EIMApplication::getEIMInstance();
+		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		auto track = (Track*)tracks[uuid]->getProcessor();
+		int index = 0;
+		auto& ids = data->data();
+		for (auto& it : data->midi()) track->midiSequence.getEventPointer(ids[index++])->message = decodeMidiMessage(it.data(), it.time());
+		track->midiSequence.sort();
+		EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeEditMidiMessagesPacket(*data)));
+		return true;
+	}
+	bool undo() override {
+		// TODO
+		return false;
+	}
+};
+
+void ServerService::handleEditMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::MidiMessages> data) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new EditMidiMessagesAction(std::move(data)));
 }

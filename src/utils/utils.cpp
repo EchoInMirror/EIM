@@ -23,3 +23,13 @@ int encodeMidiMessage(juce::MidiMessage& data) {
     }
     return result;
 }
+
+juce::MidiMessage decodeMidiMessage(int data, double time) {
+    int b1 = data & 0xff, b2 = (data >> 8) & 0xff;
+    DBG("" << b1 << " " << b2 << " " << time);
+    switch (juce::MidiMessage::getMessageLengthFromFirstByte((juce::uint8)b1)) {
+    case 1: return juce::MidiMessage(b1, time);
+    case 2: return juce::MidiMessage(b1, b2, time);
+    default: return juce::MidiMessage(b1, b2, (data >> 16) & 0xff, time);
+    }
+}

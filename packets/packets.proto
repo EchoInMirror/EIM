@@ -70,7 +70,7 @@ message TrackInfo {
   optional bool muted = 4;
   optional bool solo = 5;
   optional bool hasInstrument = 6;
-  optional double volume = 7;
+  optional float volume = 7;
   optional string index = 8;
   optional int32 pan = 9;
   repeated PluginData plugins = 10;
@@ -93,19 +93,10 @@ message ServerboundLoadVST {
   optional uint32 index = 3;
 }
 
-message ServerboundEditMidiNotes {
-  string uuid = 1;
-  optional int32 dx = 2;
-  optional int32 dy = 3;
-  optional int32 dw = 4;
-  optional int32 dv = 5;
-  repeated uint32 starts = 6;
-  repeated uint64 ends = 7;
-}
-
-message ServerboundMidiMessages {
+message MidiMessages {
   string uuid = 1;
   repeated uint32 data = 2;
+  repeated MidiMessage midi = 3;
 }
 
 service ServerService { // Server bound
@@ -119,12 +110,17 @@ service ServerService { // Server bound
   rpc openPluginManager (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc scanVSTs (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc loadVST (ServerboundLoadVST) returns (Empty);
-  rpc sendMidiMessages (ServerboundMidiMessages) returns (google.protobuf.Empty);
-  // rpc editMidiNotes(ServerboundEditMidiNotes) returns (Empty);
+  rpc sendMidiMessages (MidiMessages) returns (google.protobuf.Empty);
+  rpc addMidiMessages (MidiMessages) returns (google.protobuf.Empty);
+  rpc deleteMidiMessages (MidiMessages) returns (google.protobuf.Empty);
+  rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc syncTracksInfo (ClientboundTracksInfo) returns (google.protobuf.Empty);
   rpc setIsScanningVSTs (Boolean) returns (google.protobuf.Empty);
+  rpc addMidiMessages (MidiMessages) returns (google.protobuf.Empty);
+  rpc deleteMidiMessages (MidiMessages) returns (google.protobuf.Empty);
+  rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);
 }

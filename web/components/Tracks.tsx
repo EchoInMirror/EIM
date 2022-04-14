@@ -1,8 +1,8 @@
 import './Tracks.less'
 import LoadingButton from '@mui/lab/LoadingButton'
 import PlayRuler from './PlayRuler'
-import React, { useState, useEffect, createRef, useRef, useMemo } from 'react'
-import useGlobalData, { TrackMidiNoteData } from '../reducer'
+import React, { useState, useEffect, createRef, useRef, useMemo, memo } from 'react'
+import useGlobalData from '../reducer'
 import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
 import { colorMap, colorValues } from '../utils'
@@ -38,10 +38,18 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
       />
       <div className='title'>
         <Button className='solo' variant='outlined' />
-        {info.hasInstrument && <IconButton size='small' className='instrument' onClick={() => {
-          console.log(Date.now())
-          $client.rpc.openPluginWindow({ uuid })
-        }}><Power fontSize='small' /></IconButton>}
+        {info.hasInstrument && (
+          <IconButton
+            size='small'
+            className='instrument'
+            onClick={() => {
+              console.log(Date.now())
+              $client.rpc.openPluginWindow({ uuid })
+            }}
+          >
+            <Power fontSize='small' />
+          </IconButton>
+        )}
         <span className='name'>{info.name}</span>
       </div>
       <div>
@@ -80,20 +88,23 @@ const Track: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data
             case 0x90: // NoteOn
               midiOn[data! >> 8 & 0xff] = time!
               break
-            case 0x80: // NoteOff
+            case 0x80: { // NoteOff
               const key = data! >> 8 & 0xff
               const val = midiOn[key]
               if (val !== undefined) {
                 midiOn[key] = undefined
-                arr.push(<div
-                  key={i}
-                  style={{
-                    bottom: (key / 132 * 100) + '%',
-                    left: val * width,
-                    width: (time! - val) * width
-                  }}
-                />)
+                arr.push((
+                  <div
+                    key={i}
+                    style={{
+                      bottom: (key / 132 * 100) + '%',
+                      left: val * width,
+                      width: (time! - val) * width
+                    }}
+                  />
+                ))
               }
+            }
           }
         })
         return arr
@@ -102,7 +113,7 @@ const Track: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data
   )
 }
 
-const Grid: React.FC<{ timeSigNumerator: number, width: number }> = ({ width, timeSigNumerator }) => {
+const Grid = memo(function Grid ({ width, timeSigNumerator }: { timeSigNumerator: number, width: number }) {
   const theme = useTheme()
   const rectsX = []
   for (let i = 1; i < timeSigNumerator; i++) rectsX.push(<rect width='1' height='3240' x={width * i * 4} y='0' key={i} />)
@@ -116,7 +127,7 @@ const Grid: React.FC<{ timeSigNumerator: number, width: number }> = ({ width, ti
       </defs>
     </svg>
   )
-}
+})
 
 const noteWidths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1, 1.5, 2, 3, 4.5]
 

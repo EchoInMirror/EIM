@@ -33,7 +33,7 @@ public:
     void setInstrument(std::unique_ptr<juce::AudioPluginInstance>);
     juce::AudioPluginInstance* getInstrumentInstance();
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
-    EIMPackets::TrackInfo getTrackInfo();
+    void writeTrackInfo(EIMPackets::TrackInfo* data);
     void setMuted(bool val);
 private:
     MasterTrack* masterTrack;

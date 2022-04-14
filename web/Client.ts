@@ -64,8 +64,30 @@ export default class Client extends ClientService {
 
     this.on(ClientboundPacket.SyncTracksInfo, data => {
       const tracks = data.isReplacing ? { } : { ...$globalData.tracks }
-      data.tracks!.forEach(it => (tracks[it.uuid!] = it))
+      data.tracks!.forEach(it => (tracks[it.uuid!] = tracks[it.uuid!] ? { ...tracks[it.uuid!], ...it } : it))
       $dispatch({ tracks })
+    }).on(ClientboundPacket.AddMidiMessages, data => {
+      const track = $globalData.tracks[data.uuid!]
+      if (!track) return
+      track.midi = track.midi!.concat(data.midi!).sort((a, b) => a.time! - b.time!)
+      $dispatch({ })
+    }).on(ClientboundPacket.DeleteMidiMessages, data => {
+      const track = $globalData.tracks[data.uuid!]
+      if (!track) return
+      let index = 0
+      track.midi = track.midi!.filter((it, i) => {
+        if (data.data![index] !== i) return it
+        index++
+      })
+      $dispatch({ })
+    }).on(ClientboundPacket.EditMidiMessages, data => {
+      const track = $globalData.tracks[data.uuid!]
+      if (!track) return
+      console.log(data.data)
+      track.midi = [...track.midi!]
+      data.data!.forEach((index, i) => (track.midi![index] = data.midi![i]))
+      track.midi!.sort((a, b) => a.time! - b.time!)
+      $dispatch({ })
     })
   }
 }

@@ -1,5 +1,5 @@
 import './SideBar.less'
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import packets from '../../packets'
 import TreeView from '@mui/lab/TreeView'
 import TreeItem from '@mui/lab/TreeItem'
@@ -147,10 +147,10 @@ const SideBarButton: React.FC<{ active?: boolean } & ButtonProps> = ({ active, c
   </Button>
 )
 
-const AppBar: React.FC = () => {
+const SideBar = memo(function SideBar () {
   const [width, setWidth] = useState(0)
   const [type, setType] = useState(1)
-  const [isMixer, setIsMixer0] = useState(true)
+  const [isMixer, setIsMixer0] = useState(false)
   return (
     <Box component='nav' className='side-bar' sx={{ zIndex: theme => theme.zIndex.appBar - 1 }}>
       <Paper square elevation={3} sx={{ background: theme => theme.palette.background.bright }}>
@@ -212,6 +212,6 @@ const AppBar: React.FC = () => {
       </Resizable>
     </Box>
   )
-}
+})
 
-export default AppBar
+export default SideBar

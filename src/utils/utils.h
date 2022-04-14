@@ -5,3 +5,4 @@
 
 const std::string randomUuid();
 int encodeMidiMessage(juce::MidiMessage& data);
+juce::MidiMessage decodeMidiMessage(int data, double time);

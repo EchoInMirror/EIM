@@ -1,8 +1,9 @@
 import './Editor.less'
-import React, { useEffect, useRef, useState, createRef } from 'react'
-import useGlobalData, { TrackMidiNoteData } from '../reducer'
+import React, { useEffect, useRef, useState, createRef, useMemo, memo } from 'react'
+import packets from '../../packets'
+import useGlobalData from '../reducer'
 import PlayRuler, { moveScrollbar } from './PlayRuler'
-import { Paper, Button, Box, useTheme, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon, ListItemText, Typography } from '@mui/material'
+import { Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon, ListItemText, Typography } from '@mui/material'
 
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import ContentCut from '@mui/icons-material/ContentCut'
@@ -12,20 +13,24 @@ export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
 
 const keyNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-const keys: JSX.Element[] = []
-for (let i = 0; i < 132; i++) {
-  const name = keyNames[i % 12]
-  let elm: string | JSX.Element = name + ' ' + (i / 12 | 0)
-  if (!(i % 12)) elm = <b>{elm}</b>
-  else if (name.length === 2) elm = <i>{elm}</i>
-  keys.push(<Button key={i} data-eim-keyboard-key={i}>{elm}</Button>)
-}
+const Keyboard = memo(function Keyboard () {
+  const keys: JSX.Element[] = []
+  for (let i = 0; i < 132; i++) {
+    const name = keyNames[i % 12]
+    let elm: string | JSX.Element = name + ' ' + (i / 12 | 0)
+    if (!(i % 12)) elm = <b>{elm}</b>
+    else if (name.length === 2) elm = <i>{elm}</i>
+    keys.push(<Button key={i} data-eim-keyboard-key={i}>{elm}</Button>)
+  }
+  return <>{keys}</>
+})
 
 const noteWidths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1, 1.5, 2, 3, 4.5]
 
 const scales = [true, false, true, false, true, true, false, true, false, true, false, true].reverse()
 
-const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: number, timeSigDenominator: number }> = ({ width, height, timeSigNumerator, timeSigDenominator }) => {
+const EditorGrid = memo(function EditorGrid ({ width, height, timeSigNumerator, timeSigDenominator }:
+  { width: number, height: number, timeSigNumerator: number, timeSigDenominator: number }) {
   const theme = useTheme()
   const rects = []
   const lines = []
@@ -34,7 +39,7 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
   const gridXDeepColor = alpha(theme.palette.divider, 0.26)
   const beats = 16 / timeSigDenominator
   for (let i = 0; i < 12; i++) {
-    const y = (i + 1) * height - 1
+    const y = (i + 1) * height
     rects.push(<rect key={i} height={height} width='81' y={height * i} fill={scales[i] === (theme.palette.mode === 'dark') ? highlightColor : 'none'} />)
     lines.push(<line x1='0' x2='80' y1={y} y2={y} key={i} />)
   }
@@ -61,12 +66,10 @@ const EditorGrid: React.FC<{ width: number, height: number, timeSigNumerator: nu
       </defs>
     </svg>
   )
-}
+})
 
 const scrollableRef = createRef<HTMLDivElement>()
 const selectedBoxRef = createRef<HTMLDivElement>()
-
-type NoteElement = HTMLDivElement & { note: TrackMidiNoteData }
 
 let startX = 0
 let startY = 0
@@ -76,14 +79,13 @@ let resizeDirection = 0
 let mouseState = 0
 let boxHeight = 0
 let boxWidth = 0
-let selectedNotes: NoteElement[] = []
+let selectedNotes: HTMLDivElement[] = []
 let pressedKeys: number[] = []
-let activeNote: NoteElement | undefined
+let activeNote: HTMLDivElement | undefined
 
-let _data: TrackMidiNoteData[] = []
 let _alignment = 0
 
-let copiedData: TrackMidiNoteData[] = []
+const copiedData: packets.IMidiMessage[] = []
 
 enum MouseState {
   None,
@@ -92,68 +94,50 @@ enum MouseState {
   Deleting
 }
 
-const Notes: React.FC<{
-  data: TrackMidiNoteData[]
+const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment, uuid }: {
+  midi: packets.IMidiMessage[] | null | undefined
   width: number
   height: number
   ppq: number
   color: string
   alignment: number
   uuid: string
-}> = ({ data, width, height, ppq, color, alignment, uuid }) => {
+}) {
   const [contextMenu, setContextMenu] = React.useState<{ left: number, top: number } | undefined>()
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
-  _data = data
   _alignment = alignment
 
-  const createMidiElement = (it: TrackMidiNoteData) => {
-    const elm = document.createElement('div') as NoteElement
-    elm.style.top = ((1 - it[0] / 132) * 100) + '%'
-    elm.style.left = (it[2] * width) + 'px'
-    if (it[3]) elm.style.width = (it[3] * width) + 'px'
-    else {
-      elm.style.width = '4px'
-      elm.style.transform = 'translateX(-2px)'
-    }
-    elm.style.backgroundColor = alpha(color, 0.3 + 0.7 * it[1] / 127)
-    elm.dataset.isNote = 'true'
-    elm.note = it
-    return elm
-  }
-
   useEffect(() => {
-    const cur = ref.current
-    if (!cur || !data) return
-    cur.innerText = ''
-    mouseState = MouseState.None
-    const map: Record<string, true> = { }
-    selectedNotes.forEach(({ note }) => (map[note.join(' ')] = true))
-    selectedNotes = []
-    data.forEach(it => {
-      const elm = createMidiElement(it)
-      if (map[it.join(' ')]) {
-        elm.className = 'selected'
-        selectedNotes.push(elm)
-      }
-      cur.appendChild(elm)
-    })
-  }, [data, width, color])
-
-  useEffect(() => {
-    if (!ref.current) return
     const fn = () => {
       if (!mouseState || !ref.current) return
       switch (mouseState) {
         case MouseState.Dragging: {
-          _data.sort((a, b) => a[2] - b[2])
           const dx = resizeDirection === 1 ? 0 : offsetX * _alignment
-          // $client.editMidiNotes(_currentIndex, selectedNotes.map(({ note }) => [note[0] + offsetY, note[2] - dx]), dx, -offsetY, resizeDirection * offsetX * _alignment, 0)
+          const uuid = $globalData.activeTrack
+          const track = $globalData.tracks[uuid]
+          if (uuid && track) {
+            const data: number[] = []
+            const midi: packets.IMidiMessage[] = []
+            selectedNotes.forEach(({ dataset: { noteOnIndex, noteIndex } }) => {
+              const onIndex = +noteOnIndex!
+              const offIndex = +noteIndex!
+              const noteOn = track.midi![onIndex]
+              const noteOff = track.midi![offIndex]
+              data.push(onIndex, offIndex)
+              const key = (((noteOn.data! >> 8) & 0xff) - offsetY) << 8
+              midi.push(
+                { time: noteOn.time! + dx, data: (noteOn.data! & 0xff) | key | (noteOn.data! >> 16 & 0xff << 16) },
+                { time: noteOff.time! + dx + resizeDirection * offsetX * _alignment, data: (noteOff.data! & 0xff) | key | (noteOff.data! >> 16 << 16) }
+              )
+            })
+            $client.rpc.editMidiMessages({ uuid, data, midi })
+          }
           break
         }
         case MouseState.Selecting: if (selectedBoxRef.current) {
           selectedNotes = []
-          for (const it of ref.current.children) if (it.className) selectedNotes.push(it as NoteElement)
+          for (const it of ref.current.children) if (it.className) selectedNotes.push(it as HTMLDivElement)
           selectedBoxRef.current.style.display = 'none'
           selectedBoxRef.current.style.width = '0'
           selectedBoxRef.current.style.height = '0'
@@ -164,43 +148,72 @@ const Notes: React.FC<{
     }
     document.addEventListener('mouseup', fn)
     return () => document.removeEventListener('mouseup', fn)
-  }, [ref.current])
+  }, [])
 
-  if (!data) return <div ref={ref} className='notes' style={{ cursor: 'no-drop' }} />
-
-  const addNotes = (notes: TrackMidiNoteData[]) => {
-    selectedNotes.forEach(it => (it.className = ''))
-    if (ref.current) {
-      selectedNotes = notes.map(it => {
-        data.push(it)
-        const elm = createMidiElement(it)
-        elm.className = 'selected'
-        ref.current!.appendChild(elm)
-        return elm
-      })
-      data.sort((a, b) => a[2] - b[2])
-      // $client.addMidiNotes(index, notes)
-      // $client.trackUpdateNotifier[uuid]?.()
-    }
-  }
+  // const addNotes = (notes: TrackMidiNoteData[]) => {
+  //   selectedNotes.forEach(it => (it.className = ''))
+  //   if (ref.current) {
+  //     selectedNotes = notes.map(it => {
+  //       data.push(it)
+  //       const elm = createMidiElement(it)
+  //       elm.className = 'selected'
+  //       ref.current!.appendChild(elm)
+  //       return elm
+  //     })
+  //     data.sort((a, b) => a[2] - b[2])
+  //     // $client.addMidiNotes(index, notes)
+  //     // $client.trackUpdateNotifier[uuid]?.()
+  //   }
+  // }
 
   const close = () => setContextMenu(undefined)
-  const copyNotes = () => {
-    const left = (selectedNotes.reduce((prev, { note }) => prev > note[2] ? note[2] : prev, Infinity) / alignment | 0) * alignment
-    copiedData = selectedNotes.map(({ note }) => [note[0], note[1], note[2] - left, note[3]])
-  }
+  // const copyNotes = () => {
+  //   const left = (selectedNotes.reduce((prev, { note }) => prev > note[2] ? note[2] : prev, Infinity) / alignment | 0) * alignment
+  //   copiedData = selectedNotes.map(({ note }) => [note[0], note[1], note[2] - left, note[3]])
+  // }
   const deleteNotes = () => {
-    const notes = selectedNotes.map(it => {
-      const { note } = it
-      it.remove()
-      return note
-    })
-    // $client.deleteMidiNotes(index, notes)
-    let i = 0
-    notes.forEach(it => data.splice((i = data.indexOf(it, i)), 1))
+    const data: number[] = []
+    selectedNotes.forEach(({ dataset: { noteOnIndex, noteIndex } }) => data.push(+noteOnIndex!, +noteIndex!))
+    $client.rpc.deleteMidiMessages({ uuid, data: data.sort((a, b) => a - b) })
     selectedNotes = []
-    // $client.trackUpdateNotifier[uuid]?.()
   }
+
+  const notes = useMemo(() => {
+    if (!midi) return
+    const arr: JSX.Element[] = []
+    const midiOn: Record<number, number | undefined> = { }
+    midi.forEach(({ time, data }, i) => {
+      switch (data! & 0xf0) {
+        case 0x90: // NoteOn
+          midiOn[data! >> 8 & 0xff] = i
+          break
+        case 0x80: { // NoteOff
+          const key = data! >> 8 & 0xff
+          const onIndex = midiOn[key]
+          if (onIndex !== undefined) {
+            const noteOn = midi[onIndex]
+            midiOn[key] = undefined
+            arr.push((
+              <div
+                key={i}
+                data-note-on-index={onIndex}
+                data-note-index={i}
+                style={{
+                  top: ((1 - key / 132) * 100) + '%',
+                  left: noteOn.time! * width,
+                  width: (time! - noteOn.time!) * width,
+                  backgroundColor: lighten(color, 0.3 + 0.7 * (noteOn.data! >> 24 & 0xff) / 127)
+                }}
+              />
+            ))
+          }
+        }
+      }
+    })
+    return arr
+  }, [midi, width])
+
+  if (!midi) return <div ref={ref} className='notes' style={{ cursor: 'no-drop' }} />
 
   return (
     <>
@@ -211,7 +224,7 @@ const Notes: React.FC<{
         onMouseUp={e => e.preventDefault()}
         onContextMenu={e => {
           e.preventDefault()
-          setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
+          // setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
         }}
         onCopy={e => console.log(e.clipboardData)}
         onMouseDown={e => {
@@ -234,10 +247,10 @@ const Notes: React.FC<{
             selectedBoxRef.current.style.display = 'block'
             return
           }
-          let elm = e.target as NoteElement
+          let elm = e.target as HTMLDivElement
           switch (e.button) {
             case 0: {
-              if (elm.dataset.isNote) {
+              if (elm.dataset.noteIndex) {
                 const rect = elm.getBoundingClientRect()
                 const currentX = e.pageX - rect.left
                 resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
@@ -250,21 +263,25 @@ const Notes: React.FC<{
               } else {
                 if (elm !== e.currentTarget) return
                 const { top, left } = e.currentTarget.getBoundingClientRect()
-                addNotes([[132 - ((e.pageY - top) / height | 0), 80, ((e.pageX - left) / alignmentWidth | 0) * alignmentWidth / width | 0, alignment]])
+                const time = ((e.pageX - left) / alignmentWidth | 0) * alignmentWidth / width | 0
+                const note = (132 - ((e.pageY - top) / height | 0)) << 8
+                $client.rpc.addMidiMessages({ uuid, midi: [{ time, data: 0x90 | note | (80 << 16) }, { time: time + alignment, data: 0x80 | note }] })
                 elm = selectedNotes[0]
               }
               activeNote = elm
               if (!resizeDirection) {
-                if (pressedKeys.length) {
-                  $client.rpc.sendMidiMessages({ uuid, data: pressedKeys.map(it => 0x80 | (it << 8) | (70 << 16)) }) // MidiOff
-                  pressedKeys = []
-                }
-                // $client.rpc.sendMidiMessages({ uuid, data: selectedNotes.map(it => {
-                //   if (it.note[2] !== elm.note[2]) return
-                //   pressedKeys.push(it.note[0])
-                //   return 0x80 | (it << 8) | (70 << 16)
+                // if (pressedKeys.length) {
+                //   $client.rpc.sendMidiMessages({ uuid, data: pressedKeys.map(it => 0x80 | (it << 8) | (70 << 16)) }) // NoteOff
+                //   pressedKeys = []
+                // }
+                // $client.rpc.sendMidiMessages({ // NoteOn
+                //   uuid,
+                //   data: selectedNotes.map(it => {
+                //     if (it.note[2] !== elm.note[2]) return
+                //     pressedKeys.push(it.note[0])
+                //     return 0x90 | (it.note[0] << 8) | (it.note[1] << 16)
+                //   })
                 // })
-                // $client.rpc.sendMidiMessages(index, 0x90, it.note[0], it.note[1])
               }
               e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
               mouseState = MouseState.Dragging
@@ -272,13 +289,12 @@ const Notes: React.FC<{
             }
             case 1:
               e.preventDefault()
-              if (elm.dataset.isNote) {
-                // $client.deleteMidiNotes(index, [elm.note])
-                elm.remove()
-                data.splice(data.indexOf(elm.note), 1)
-                // $client.trackUpdateNotifier[uuid]?.()
-              }
-              selectedNotes.forEach(it => it.className && (it.className = ''))
+              setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
+              break
+            case 2:
+              e.preventDefault()
+              if (elm.dataset.noteIndex) $client.rpc.deleteMidiMessages({ uuid, data: [+elm.dataset.noteOnIndex!, +elm.dataset.noteIndex].sort((a, b) => a - b) })
+              // selectedNotes.forEach(it => it.className && (it.className = ''))
               selectedNotes = []
               mouseState = MouseState.Deleting
               break
@@ -319,22 +335,25 @@ const Notes: React.FC<{
                   // pressedKeys.forEach(it => $client.midiMessage(index, 0x80, it, 80))
                   pressedKeys = []
                 }
-                const curNote = activeNote?.dataset?.isNote ? activeNote.note[2] : -1
+                const curNote = activeNote?.dataset?.noteOnIndex ? activeNote?.dataset?.noteOnIndex : -1
                 selectedNotes.forEach(it => {
                   if (dx) {
                     const left = parseFloat(it.style.left) + dx
                     it.style.left = left + 'px'
-                    it.note[2] = left / width | 0
+                    // midi[+it.dataset.noteOnIndex!].time = left / width | 0
                   }
                   if (dy) {
                     const top = Math.min(Math.max(parseFloat(it.style.top) + dy / 1.32, 0), 100)
                     it.style.top = top + '%'
                     const keyId = Math.round(1.32 * (100 - top))
-                    if (it.note[2] === curNote) {
+                    if (it.dataset.noteOnIndex === curNote) {
                       pressedKeys.push(keyId)
                       // $client.midiMessage(index, 0x90, keyId, it.note[1])
                     }
-                    it.note[0] = keyId
+                    // const note = midi[+it.dataset.noteOnIndex!]
+                    // note.time = left / width | 0
+                    // note.data! ^= (note.data! >> 8) & 0xff
+                    // note.data! |= keyId << 8
                   }
                 })
               }
@@ -363,57 +382,55 @@ const Notes: React.FC<{
               const maxLeft = Math.max(minLeft0, maxLeft0)
               const minTop = Math.min(minTop0, maxTop0)
               const maxTop = Math.max(minTop0, maxTop0)
-              box.width = Math.abs(boxWidth) + 'px'
+              box.width = Math.abs(boxWidth) + 1 + 'px'
               box.height = Math.abs(boxHeight) + 'px'
               box.transform = `translate(${boxWidth < 0 ? boxWidth : 0}px, ${boxHeight < 0 ? boxHeight : 0}px)`
-              for (const it of e.currentTarget.children) {
-                const elm = it as NoteElement
-                const { note } = elm
-                if (note[2] >= minLeft && note[2] < maxLeft && minTop <= (132 - note[0]) && maxTop > (132 - note[0])) {
+              for (const elm of e.currentTarget.children as any as HTMLDivElement[]) {
+                const { noteOnIndex } = elm.dataset
+                if (!noteOnIndex) return
+                const noteOn = midi[+noteOnIndex]
+                const key = 132 - ((noteOn.data! >> 8) & 0xff)
+                if (noteOn.time! >= minLeft && noteOn.time! < maxLeft && minTop <= key && maxTop > key) {
                   elm.className = 'selected'
                 } else if (elm.className) elm.className = ''
               }
               break
             }
             case MouseState.Deleting: {
-              const elm = e.target as NoteElement
-              if (elm.dataset.isNote) {
-                // $client.deleteMidiNotes(index, [elm.note])
-                elm.remove()
-                data.splice(data.indexOf(elm.note), 1)
-                // $client.trackUpdateNotifier[uuid]?.()
-              }
+              const { dataset } = e.target as HTMLDivElement
+              if (dataset.noteIndex) $client.rpc.deleteMidiMessages({ uuid, data: [+dataset.noteOnIndex!, +dataset.noteIndex!].sort((a, b) => a - b) })
             }
           }
         }}
-        onKeyUp={e => {
-          const ctrl = e.metaKey || e.ctrlKey
-          switch (e.code) {
-            case 'KeyX': {
-              if (!ctrl) break
-              copyNotes()
-            }
-            // eslint-disable-next-line no-fallthrough
-            case 'Delete': {
-              deleteNotes()
-              break
-            }
-            case 'KeyC': {
-              if (ctrl) copyNotes()
-              break
-            }
-            case 'KeyV': {
-              if (ctrl && copiedData.length) addNotes(copiedData)
-              break
-            }
-          }
-        }}
+        // onKeyUp={e => {
+        //   const ctrl = e.metaKey || e.ctrlKey
+        //   switch (e.code) {
+        //     case 'KeyX': {
+        //       if (!ctrl) break
+        //       copyNotes()
+        //     }
+        //     // eslint-disable-next-line no-fallthrough
+        //     case 'Delete': {
+        //       deleteNotes()
+        //       break
+        //     }
+        //     case 'KeyC': {
+        //       if (ctrl) copyNotes()
+        //       break
+        //     }
+        //     case 'KeyV': {
+        //       if (ctrl && copiedData.length) addNotes(copiedData)
+        //       break
+        //     }
+        //   }
+        // }}
       >
+        {notes}
         <Menu open={!!contextMenu} onClose={close} anchorReference='anchorPosition' anchorPosition={contextMenu} sx={{ '& .MuiPaper-root': { width: 170 } }}>
           <MenuItem
             disabled={!selectedNotes.length}
             onClick={() => {
-              copyNotes()
+              // copyNotes()
               deleteNotes()
               close()
             }}
@@ -425,7 +442,7 @@ const Notes: React.FC<{
           <MenuItem
             disabled={!selectedNotes.length}
             onClick={() => {
-              copyNotes()
+              // copyNotes()
               close()
             }}
           >
@@ -436,7 +453,7 @@ const Notes: React.FC<{
           <MenuItem
             disabled={!copiedData.length}
             onClick={() => {
-              if (copiedData.length) addNotes(copiedData)
+              // if (copiedData.length) addNotes(copiedData)
               close()
             }}
           >
@@ -447,10 +464,10 @@ const Notes: React.FC<{
           <MenuItem
             disabled={!selectedNotes.length}
             onClick={() => {
-              const left = (selectedNotes.reduce((prev, { note }) => prev > note[2] ? note[2] : prev, Infinity) / alignment | 0) * alignment
-              const arr = selectedNotes.map(({ note }) => [note[0], note[1], note[2] - left, note[3]])
-              arr.unshift(ppq as any)
-              navigator.clipboard.writeText('EIMNotes' + JSON.stringify(arr))
+              // const left = (selectedNotes.reduce((prev, { note }) => prev > note[2] ? note[2] : prev, Infinity) / alignment | 0) * alignment
+              // const arr = selectedNotes.map(({ note }) => [note[0], note[1], note[2] - left, note[3]])
+              // arr.unshift(ppq as any)
+              // navigator.clipboard.writeText('EIMNotes' + JSON.stringify(arr))
               close()
             }}
           >
@@ -469,7 +486,7 @@ const Notes: React.FC<{
                   it[2] = Math.round(it[2] / curPPQ * ppq)
                   it[3] = Math.round(it[3] / curPPQ * ppq)
                 })
-                addNotes(arr)
+                // addNotes(arr)
               }).catch(console.error)
               close()
             }}
@@ -481,7 +498,7 @@ const Notes: React.FC<{
       </div>
     </>
   )
-}
+})
 
 let mouseOut = false
 let direction = 0
@@ -632,7 +649,7 @@ const Editor: React.FC = () => {
             className='keyboard'
             sx={{ '& button': { height: noteHeight }, '& button:not(:nth-of-type(12n+1))': { fontSize: noteHeight >= 14 ? undefined : '0!important' } }}
           >
-            {keys}
+            <Keyboard />
           </Paper>
           <Box
             ref={editorRef}
@@ -661,7 +678,7 @@ const Editor: React.FC = () => {
                 width={noteWidth}
                 height={noteHeight}
                 alignment={alignment}
-                data={[]}
+                midi={track?.midi}
                 uuid={state.activeTrack || ''}
                 color={track?.color || ''}
               />

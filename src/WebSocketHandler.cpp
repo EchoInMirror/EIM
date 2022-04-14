@@ -43,8 +43,7 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
 			std::unordered_set<juce::String> map;
 			for (auto& it : instance->pluginManager->knownPluginList.getTypes()) map.emplace(it.manufacturerName);
 			for (auto& it : map) out.add_folders(it.toStdString());
-		}
-		else {
+		} else {
 			std::vector<juce::String> arr;
 			for (auto& it : instance->pluginManager->knownPluginList.getTypes()) {
 				if (path == it.manufacturerName) arr.emplace_back((it.isInstrument ? "I#" : "") + it.name +
@@ -57,11 +56,13 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
 }
 
 void ServerService::handleRefresh(WebSocketSession* session) {
-	session->send(EIMMakePackets::makeSetProjectStatusPacket(*EIMApplication::getEIMInstance()->mainWindow->masterTrack->getProjectStatus()));
+	EIMPackets::ProjectStatus data;
+	EIMApplication::getEIMInstance()->mainWindow->masterTrack->writeProjectStatus(data);
+	session->send(EIMMakePackets::makeSetProjectStatusPacket(data));
 	EIMPackets::ClientboundTracksInfo info;
 	info.set_isreplacing(true);
 	auto instance = EIMApplication::getEIMInstance();
-	for (auto& track : instance->mainWindow->masterTrack->tracks) info.add_tracks()->CopyFrom(((Track*)track->getProcessor())->getTrackInfo());
+	for (auto& track : instance->mainWindow->masterTrack->tracks) ((Track*)track->getProcessor())->writeTrackInfo(info.add_tracks());
 	session->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
 	if (EIMApplication::getEIMInstance()->pluginManager->isScanning) {
 		EIMPackets::Boolean val;
@@ -112,12 +113,12 @@ void ServerService::handleScanVSTs(WebSocketSession*) {
 	juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->scanPlugins(); });
 }
 
-void ServerService::handleSendMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundMidiMessages> data) {
+void ServerService::handleSendMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::MidiMessages> data) {
 	auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracksMap;
 	auto& uuid = data->uuid();
 	if (!tracks.contains(uuid)) return;
 	auto& ctrl = ((Track*)tracks[uuid]->getProcessor())->messageCollector;
-	for (auto val : data->data()) ctrl.addMessageToQueue(juce::MidiMessage(val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff, juce::Time::getMillisecondCounterHiRes() * 0.001));
+	for (auto it : data->data()) ctrl.addMessageToQueue(juce::MidiMessage(it & 0xff, (it >> 8) & 0xff, (it >> 16) & 0xff, juce::Time::getMillisecondCounterHiRes() * 0.001));
 }
 
 /*

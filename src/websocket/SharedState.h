@@ -5,7 +5,6 @@
 #include <boost/beast.hpp>
 #include <boost/beast/http/write.hpp>
 #include <mutex>
-#include "ByteBuffer.h"
 
 class WebSocketSession;
 

@@ -27,18 +27,5 @@ void Listener::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socke
     doAccept();
 }
 
-void Listener::syncTrackInfo() {
-    auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracks;
-    /*
-    auto buf = EIMPackets::makePacket(ClientboundPacket::ClientboundSyncTrackInfo);
-    buf->writeInt8((char)tracks.size());
-    for (auto& it : tracks) {
-        auto track = (Track*)it->getProcessor();
-        buf->writeUUID(track->uuid);
-        track->writeTrackInfo(buf.get());
-    }
-    state->send(buf);*/
-}
-
 void Listener::boardcast(std::shared_ptr<boost::beast::flat_buffer> message) { state->send(message); }
 void Listener::boardcastExclude(std::shared_ptr<boost::beast::flat_buffer> message, WebSocketSession* session) { state->sendExclude(message, session); }

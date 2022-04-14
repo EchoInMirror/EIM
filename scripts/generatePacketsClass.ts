@@ -39,7 +39,7 @@ for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) 
                 *(boost::asio::buffer_cast<unsigned int*>(replyBuf->prepare(4))) = replyId;
                 replyBuf->commit(4);
                 auto len = a.ByteSizeLong();
-                a.SerializePartialToArray(boost::asio::buffer_cast<void*>(replyBuf->prepare(len)), len);
+                a.SerializePartialToArray(boost::asio::buffer_cast<void*>(replyBuf->prepare(len)), (int)len);
                 replyBuf->commit(len);
                 session->send(std::move(replyBuf));
             }`});
@@ -64,7 +64,7 @@ for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) 
         ${noArg
           ? ''
           : `auto len = a.ByteSizeLong();
-        a.SerializePartialToArray(boost::asio::buffer_cast<void*>(buf->prepare(len)), len);
+        a.SerializePartialToArray(boost::asio::buffer_cast<void*>(buf->prepare(len)), (int)len);
         buf->commit(len);`}
         return buf;
     }
