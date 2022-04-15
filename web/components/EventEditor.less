@@ -1,0 +1,36 @@
+.bottom-bar .editor .event-editor {
+  & > :not(.MuiPaper-root) > div {
+    z-index: 1;
+  }
+
+  & > .MuiPaper-root {
+    height: 100%;
+    position: relative;
+    display: flex;
+    background-image: none;
+  }
+
+  .event-editor-actions {
+    display: flex;
+    z-index: 1;
+    width: var(--keyboard-width);
+    background-color: inherit;
+    background-image: none;
+  }
+
+  .content {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .velocity {
+    position: relative;
+    height: 100%;
+
+    div {
+      bottom: 0;
+      width: 2px;
+      position: absolute;
+    }
+  }
+}

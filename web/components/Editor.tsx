@@ -2,6 +2,7 @@ import './Editor.less'
 import React, { useEffect, useRef, useState, createRef, useMemo, memo } from 'react'
 import packets from '../../packets'
 import useGlobalData from '../reducer'
+import EventEditor from './EventEditor'
 import PlayRuler, { moveScrollbar } from './PlayRuler'
 import { Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon, ListItemText, Typography } from '@mui/material'
 
@@ -222,7 +223,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
     return arr
   }, [midi, width])
 
-  if (!midi) return <div ref={ref} className='notes' style={{ cursor: 'no-drop' }} />
+  if (!midi) return <div ref={ref} className='notes' />
 
   const close = () => setContextMenu(undefined)
   const copyNotes = () => {
@@ -258,64 +259,65 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
   }
 
   return (
-    <>
-      <div
-        ref={ref}
-        className='notes'
-        tabIndex={0}
-        onMouseUp={e => e.preventDefault()}
-        onContextMenu={e => e.preventDefault()}
-        onCopy={e => console.log(e.clipboardData)}
-        onMouseDown={e => {
-          if (!scrollableRef.current) return
-          const rect = e.currentTarget.getBoundingClientRect()
-          startX = e.pageX - rect.left
-          startY = e.pageY - rect.top
-          offsetX = offsetY = 0
-          if (mouseState === MouseState.Selecting && selectedBoxRef.current) {
-            selectedBoxRef.current.style.display = 'none'
-            selectedBoxRef.current.style.width = '0'
-            selectedBoxRef.current.style.height = '0'
-          }
-          if (e.button === 4 || e.ctrlKey) {
-            if (!selectedBoxRef.current) return
-            mouseState = MouseState.Selecting
-            boxHeight = boxWidth = 0
-            selectedBoxRef.current.style.left = (startX / alignmentWidth | 0) * alignmentWidth + 'px'
-            selectedBoxRef.current.style.top = (startY / height | 0) * height + 'px'
-            selectedBoxRef.current.style.display = 'block'
-            return
-          }
-          const elm = e.target as HTMLDivElement
-          switch (e.button) {
-            case 0: {
-              const { noteOnIndex } = elm.dataset
-              if (noteOnIndex) {
-                const rect = elm.getBoundingClientRect()
-                const currentX = e.pageX - rect.left
-                resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
-                e.currentTarget.style.cursor = 'grabbing'
-                if (!selectedNotes.includes(elm)) {
-                  selectedNotes.forEach(it => (it.className = ''))
-                  selectedNotes = [elm]
-                  selectedIndexes = { [activeIndex = +elm.dataset.noteIndex!]: true }
-                  elm.className = 'selected'
-                }
-                activeNote = elm
-              } else {
-                if (elm !== e.currentTarget) return
-                const { top, left } = e.currentTarget.getBoundingClientRect()
-                const time = ((e.pageX - left) / alignmentWidth | 0) * alignmentWidth / width | 0
-                const note = (132 - ((e.pageY - top) / height | 0)) << 8
-                selectedNotes = []
-                activeNote = undefined
-                activeIndex = addNotes([{ time, data: 0x90 | note | (80 << 16) }, { time: time + alignment, data: 0x80 | note }])
+    <div
+      ref={ref}
+      className='notes'
+      tabIndex={0}
+      onMouseUp={e => e.preventDefault()}
+      onContextMenu={e => e.preventDefault()}
+      onCopy={e => console.log(e.clipboardData)}
+      onMouseDown={e => {
+        if (!scrollableRef.current) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        startX = e.pageX - rect.left
+        startY = e.pageY - rect.top
+        offsetX = offsetY = 0
+        if (mouseState === MouseState.Selecting && selectedBoxRef.current) {
+          selectedBoxRef.current.style.display = 'none'
+          selectedBoxRef.current.style.width = '0'
+          selectedBoxRef.current.style.height = '0'
+        }
+        if (e.button === 4 || e.ctrlKey) {
+          if (!selectedBoxRef.current) return
+          mouseState = MouseState.Selecting
+          boxHeight = boxWidth = 0
+          selectedBoxRef.current.style.left = (startX / alignmentWidth | 0) * alignmentWidth + 'px'
+          selectedBoxRef.current.style.top = (startY / height | 0) * height + 'px'
+          selectedBoxRef.current.style.display = 'block'
+          return
+        }
+        const elm = e.target as HTMLDivElement
+        switch (e.button) {
+          case 0: {
+            const { noteOnIndex } = elm.dataset
+            let activeNoteKey = -1
+            if (noteOnIndex) {
+              const rect = elm.getBoundingClientRect()
+              const currentX = e.pageX - rect.left
+              resizeDirection = currentX <= 3 ? -1 : currentX >= rect.width - 3 ? 1 : 0
+              e.currentTarget.style.cursor = 'grabbing'
+              if (!selectedNotes.includes(elm)) {
+                selectedNotes.forEach(it => (it.className = ''))
+                selectedNotes = [elm]
+                selectedIndexes = { [activeIndex = +elm.dataset.noteIndex!]: true }
+                elm.className = 'selected'
               }
-              if (!resizeDirection) {
-                if (pressedKeys.length) {
-                  $client.rpc.sendMidiMessages({ uuid, data: pressedKeys.map(it => 0x80 | (it << 8)) }) // NoteOff
-                  pressedKeys = []
-                }
+              activeNote = elm
+            } else {
+              if (elm !== e.currentTarget) return
+              const { top, left } = e.currentTarget.getBoundingClientRect()
+              const time = ((e.pageX - left) / alignmentWidth | 0) * alignmentWidth / width | 0
+              let note = activeNoteKey = (132 - ((e.pageY - top) / height | 0))
+              selectedNotes = []
+              activeNote = undefined
+              activeIndex = addNotes([{ time, data: 0x90 | (note <<= 8) | (80 << 16) }, { time: time + alignment, data: 0x80 | note }])
+            }
+            if (!$globalData.isPlaying && !resizeDirection) {
+              if (pressedKeys.length) {
+                $client.rpc.sendMidiMessages({ uuid, data: pressedKeys.map(it => 0x80 | (it << 8)) }) // NoteOff
+                pressedKeys = []
+              }
+              if (activeNoteKey === -1) {
                 const time = midi[+noteOnIndex!].time
                 const arr: number[] = []
                 selectedNotes.forEach(it => {
@@ -325,214 +327,217 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
                   arr.push(data!)
                 })
                 $client.rpc.sendMidiMessages({ uuid, data: arr })
-              }
-              e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
-              mouseState = MouseState.Dragging
-              break
-            }
-            case 1:
-              e.preventDefault()
-              setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
-              break
-            case 2:
-              e.preventDefault()
-              if (elm.dataset.noteIndex) $client.rpc.deleteMidiMessages({ uuid, data: [+elm.dataset.noteOnIndex!, +elm.dataset.noteIndex].sort((a, b) => a - b) })
-              selectedNotes = []
-              mouseState = MouseState.Deleting
-              break
-          }
-        }}
-        onMouseMove={e => {
-          if (!mouseState) return
-          const rect = e.currentTarget.getBoundingClientRect()
-          switch (mouseState) {
-            case MouseState.Dragging: {
-              if (!selectedNotes.length) break
-              const left = Math.round((e.pageX - rect.left - startX) / alignmentWidth)
-              const top = Math.round((e.pageY - rect.top - startY) / height)
-              if (left === offsetX && top === offsetY) return
-              const dx = (left - offsetX) * alignmentWidth
-              const dy = top - offsetY
-              if (resizeDirection) {
-                if (!dx || selectedNotes.some(it => resizeDirection === 1
-                  ? dx < 0 && parseFloat(it.style.width) < alignmentWidth
-                  : dx > 0 && parseFloat(it.style.width) < alignmentWidth)) return
-                selectedNotes.forEach(it => {
-                  if (resizeDirection === 1) it.style.width = parseFloat(it.style.width) + dx + 'px'
-                  else {
-                    it.style.width = parseFloat(it.style.width) - dx + 'px'
-                    it.style.left = parseFloat(it.style.left) + dx + 'px'
-                  }
-                })
               } else {
-                if (selectedNotes.some(it => {
-                  if (dx && parseFloat(it.style.left) + dx < -0.005) return true
-                  if (dy) {
-                    const tmp = parseFloat(it.style.top) + dy / 1.32
-                    if (tmp < -0.005 || tmp >= 100) return true
-                  }
-                  return false
-                })) return
-                if (dy && pressedKeys.length) {
-                  $client.rpc.sendMidiMessages({ uuid, data: pressedKeys.map(it => 0x80 | (it << 8) | (70 << 16)) }) // NoteOff
-                  pressedKeys = []
+                pressedKeys.push(activeNoteKey)
+                $client.rpc.sendMidiMessages({ uuid, data: [0x90 | (activeNoteKey << 8) | (80 << 16)] })
+              }
+            }
+            e.currentTarget.style.cursor = resizeDirection ? 'e-resize' : 'grabbing'
+            mouseState = MouseState.Dragging
+            break
+          }
+          case 1:
+            e.preventDefault()
+            setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
+            break
+          case 2:
+            e.preventDefault()
+            if (elm.dataset.noteIndex) $client.rpc.deleteMidiMessages({ uuid, data: [+elm.dataset.noteOnIndex!, +elm.dataset.noteIndex].sort((a, b) => a - b) })
+            selectedNotes = []
+            mouseState = MouseState.Deleting
+            break
+        }
+      }}
+      onMouseMove={e => {
+        if (!mouseState) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        switch (mouseState) {
+          case MouseState.Dragging: {
+            if (!selectedNotes.length) break
+            const left = Math.round((e.pageX - rect.left - startX) / alignmentWidth)
+            const top = Math.round((e.pageY - rect.top - startY) / height)
+            if (left === offsetX && top === offsetY) return
+            const dx = (left - offsetX) * alignmentWidth
+            const dy = top - offsetY
+            if (resizeDirection) {
+              if (!dx || selectedNotes.some(it => resizeDirection === 1
+                ? dx < 0 && parseFloat(it.style.width) < alignmentWidth
+                : dx > 0 && parseFloat(it.style.width) < alignmentWidth)) return
+              selectedNotes.forEach(it => {
+                if (resizeDirection === 1) it.style.width = parseFloat(it.style.width) + dx + 'px'
+                else {
+                  it.style.width = parseFloat(it.style.width) - dx + 'px'
+                  it.style.left = parseFloat(it.style.left) + dx + 'px'
                 }
-                const curNote = activeNote?.dataset?.noteOnIndex ? midi[+activeNote.dataset.noteOnIndex].time! : -1
-                const data: number[] = []
-                selectedNotes.forEach(it => {
-                  if (dx) {
-                    const left = parseFloat(it.style.left) + dx
-                    it.style.left = left + 'px'
-                  }
-                  if (dy) {
-                    const top = Math.min(Math.max(parseFloat(it.style.top) + dy / 1.32, 0), 100)
-                    it.style.top = top + '%'
-                    const keyId = Math.round(1.32 * (100 - top))
-                    const note = midi[+it.dataset.noteOnIndex!]
-                    if (note.time === curNote) {
-                      pressedKeys.push(keyId)
-                      data.push((note.data! ^ ((note.data! >> 8) & 0xff) << 8) | (keyId << 8))
-                    }
-                  }
-                })
-                if (dy) $client.rpc.sendMidiMessages({ uuid, data })
+              })
+            } else {
+              if (selectedNotes.some(it => {
+                if (dx && parseFloat(it.style.left) + dx < -0.005) return true
+                if (dy) {
+                  const tmp = parseFloat(it.style.top) + dy / 1.32
+                  if (tmp < -0.005 || tmp >= 100) return true
+                }
+                return false
+              })) return
+              if (!$globalData.isPlaying && dy && pressedKeys.length) {
+                $client.rpc.sendMidiMessages({ uuid, data: pressedKeys.map(it => 0x80 | (it << 8) | (70 << 16)) }) // NoteOff
+                pressedKeys = []
               }
-              offsetY = top
-              offsetX = left
-              break
+              const curNote = activeNote?.dataset?.noteOnIndex ? midi[+activeNote.dataset.noteOnIndex].time! : -1
+              const data: number[] = []
+              selectedNotes.forEach(it => {
+                if (dx) {
+                  const left = parseFloat(it.style.left) + dx
+                  it.style.left = left + 'px'
+                }
+                if (dy) {
+                  const top = Math.min(Math.max(parseFloat(it.style.top) + dy / 1.32, 0), 100)
+                  it.style.top = top + '%'
+                  const keyId = Math.round(1.32 * (100 - top))
+                  const note = midi[+it.dataset.noteOnIndex!]
+                  if (!$globalData.isPlaying && note.time === curNote) {
+                    pressedKeys.push(keyId)
+                    data.push((note.data! ^ ((note.data! >> 8) & 0xff) << 8) | (keyId << 8))
+                  }
+                }
+              })
+              if (!$globalData.isPlaying && dy) $client.rpc.sendMidiMessages({ uuid, data })
             }
-            case MouseState.Selecting: {
-              if (!selectedBoxRef.current) break
-              const left0 = Math.ceil((e.pageX - rect.left - startX) / alignmentWidth)
-              const top0 = Math.ceil((e.pageY - rect.top - startY) / height)
-              if (left0 === offsetX && top0 === offsetY) return
-              boxWidth = boxWidth + (left0 - offsetX) * alignmentWidth
-              boxHeight = boxHeight + (top0 - offsetY) * height
-              offsetY = top0
-              offsetX = left0
-              const box = selectedBoxRef.current.style
-              const left = parseFloat(box.left)
-              const top = parseFloat(box.top)
-              const minLeft0 = Math.round(left / width)
-              const maxLeft0 = Math.round((left + boxWidth) / width)
-              const minTop0 = Math.round(top / height)
-              const maxTop0 = Math.round((top + boxHeight) / height)
-              const minLeft = Math.min(minLeft0, maxLeft0)
-              const maxLeft = Math.max(minLeft0, maxLeft0)
-              const minTop = Math.min(minTop0, maxTop0)
-              const maxTop = Math.max(minTop0, maxTop0)
-              box.width = Math.abs(boxWidth) + 1 + 'px'
-              box.height = Math.abs(boxHeight) + 'px'
-              box.transform = `translate(${boxWidth < 0 ? boxWidth : 0}px, ${boxHeight < 0 ? boxHeight : 0}px)`
-              for (const elm of e.currentTarget.children as any as HTMLDivElement[]) {
-                const { noteOnIndex } = elm.dataset
-                if (!noteOnIndex) return
-                const noteOn = midi[+noteOnIndex]
-                const key = 132 - ((noteOn.data! >> 8) & 0xff)
-                if ((noteOn.time || 0) >= minLeft && (noteOn.time || 0) < maxLeft && minTop <= key && maxTop > key) {
-                  elm.className = 'selected'
-                } else if (elm.className) elm.className = ''
-              }
-              break
-            }
-            case MouseState.Deleting: {
-              const { dataset } = e.target as HTMLDivElement
-              if (dataset.noteIndex) $client.rpc.deleteMidiMessages({ uuid, data: [+dataset.noteOnIndex!, +dataset.noteIndex!].sort((a, b) => a - b) })
-            }
+            offsetY = top
+            offsetX = left
+            break
           }
-        }}
-        onKeyUp={e => {
-          const ctrl = e.metaKey || e.ctrlKey
-          switch (e.code) {
-            case 'KeyX': {
-              if (!ctrl) break
-              copyNotes()
+          case MouseState.Selecting: {
+            if (!selectedBoxRef.current) break
+            const left0 = Math.ceil((e.pageX - rect.left - startX) / alignmentWidth)
+            const top0 = Math.ceil((e.pageY - rect.top - startY) / height)
+            if (left0 === offsetX && top0 === offsetY) return
+            boxWidth = boxWidth + (left0 - offsetX) * alignmentWidth
+            boxHeight = boxHeight + (top0 - offsetY) * height
+            offsetY = top0
+            offsetX = left0
+            const box = selectedBoxRef.current.style
+            const left = parseFloat(box.left)
+            const top = parseFloat(box.top)
+            const minLeft0 = Math.round(left / width)
+            const maxLeft0 = Math.round((left + boxWidth) / width)
+            const minTop0 = Math.round(top / height)
+            const maxTop0 = Math.round((top + boxHeight) / height)
+            const minLeft = Math.min(minLeft0, maxLeft0)
+            const maxLeft = Math.max(minLeft0, maxLeft0)
+            const minTop = Math.min(minTop0, maxTop0)
+            const maxTop = Math.max(minTop0, maxTop0)
+            box.width = Math.abs(boxWidth) + 1 + 'px'
+            box.height = Math.abs(boxHeight) + 'px'
+            box.transform = `translate(${boxWidth < 0 ? boxWidth : 0}px, ${boxHeight < 0 ? boxHeight : 0}px)`
+            for (const elm of e.currentTarget.children as any as HTMLDivElement[]) {
+              const { noteOnIndex } = elm.dataset
+              if (!noteOnIndex) return
+              const noteOn = midi[+noteOnIndex]
+              const key = 132 - ((noteOn.data! >> 8) & 0xff)
+              if ((noteOn.time || 0) >= minLeft && (noteOn.time || 0) < maxLeft && minTop <= key && maxTop > key) {
+                elm.className = 'selected'
+              } else if (elm.className) elm.className = ''
             }
-            // eslint-disable-next-line no-fallthrough
-            case 'Delete': {
-              deleteNotes()
-              break
-            }
-            case 'KeyC': {
-              if (ctrl) copyNotes()
-              break
-            }
-            case 'KeyV': {
-              if (ctrl && copiedData.length) addNotes(copiedData)
-              break
-            }
+            break
           }
-        }}
-      >
-        {notes}
-        <Menu open={!!contextMenu} onClose={close} anchorReference='anchorPosition' anchorPosition={contextMenu} sx={{ '& .MuiPaper-root': { width: 170 } }}>
-          <MenuItem
-            disabled={!selectedNotes.length}
-            onClick={() => {
-              copyNotes()
-              deleteNotes()
-              close()
-            }}
-          >
-            <ListItemIcon><ContentCut fontSize='small' /></ListItemIcon>
-            <ListItemText>剪切</ListItemText>
-            <Typography variant='body2' color='text.secondary'>⌘X</Typography>
-          </MenuItem>
-          <MenuItem
-            disabled={!selectedNotes.length}
-            onClick={() => {
-              copyNotes()
-              close()
-            }}
-          >
-            <ListItemIcon><ContentCopy fontSize='small' /></ListItemIcon>
-            <ListItemText>复制</ListItemText>
-            <Typography variant='body2' color='text.secondary'>⌘C</Typography>
-          </MenuItem>
-          <MenuItem
-            disabled={!copiedData.length}
-            onClick={() => {
-              if (copiedData.length) addNotes(copiedData)
-              close()
-            }}
-          >
-            <ListItemIcon><ContentPaste fontSize='small' /></ListItemIcon>
-            <ListItemText>粘贴</ListItemText>
-            <Typography variant='body2' color='text.secondary'>⌘V</Typography>
-          </MenuItem>
-          <MenuItem
-            disabled={!selectedNotes.length}
-            onClick={() => {
-              copyNotes()
-              const data = [...copiedData]
-              data.unshift(ppq as any)
-              navigator.clipboard.writeText('EIMNotes' + JSON.stringify(data))
-              close()
-            }}
-          >
-            <ListItemIcon><ContentCopy fontSize='small' /></ListItemIcon>
-            <ListItemText>复制到剪辑版</ListItemText>
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              navigator.clipboard.readText().then(data => {
-                if (!data.startsWith('EIMNotes')) return
-                const arr: packets.IMidiMessage[] = JSON.parse(data.slice(8))
-                if (!Array.isArray(arr)) return
-                const curPPQ = arr.shift() as any as number
-                if (typeof curPPQ !== 'number' || !arr.length) return
-                arr.forEach(it => (it.time = Math.round((it.time || 0) / curPPQ * ppq)))
-                addNotes(arr)
-              }).catch(console.error)
-              close()
-            }}
-          >
-            <ListItemIcon><ContentPaste fontSize='small' /></ListItemIcon>
-            <ListItemText>从剪辑版粘贴</ListItemText>
-          </MenuItem>
-        </Menu>
-      </div>
-    </>
+          case MouseState.Deleting: {
+            const { dataset } = e.target as HTMLDivElement
+            if (dataset.noteIndex) $client.rpc.deleteMidiMessages({ uuid, data: [+dataset.noteOnIndex!, +dataset.noteIndex!].sort((a, b) => a - b) })
+          }
+        }
+      }}
+      onKeyUp={e => {
+        const ctrl = e.metaKey || e.ctrlKey
+        switch (e.code) {
+          case 'KeyX': {
+            if (!ctrl) break
+            copyNotes()
+          }
+          // eslint-disable-next-line no-fallthrough
+          case 'Delete': {
+            deleteNotes()
+            break
+          }
+          case 'KeyC': {
+            if (ctrl) copyNotes()
+            break
+          }
+          case 'KeyV': {
+            if (ctrl && copiedData.length) addNotes(copiedData)
+            break
+          }
+        }
+      }}
+    >
+      {notes}
+      <Menu open={!!contextMenu} onClose={close} anchorReference='anchorPosition' anchorPosition={contextMenu} sx={{ '& .MuiPaper-root': { width: 170 } }}>
+        <MenuItem
+          disabled={!selectedNotes.length}
+          onClick={() => {
+            copyNotes()
+            deleteNotes()
+            close()
+          }}
+        >
+          <ListItemIcon><ContentCut fontSize='small' /></ListItemIcon>
+          <ListItemText>剪切</ListItemText>
+          <Typography variant='body2' color='text.secondary'>⌘X</Typography>
+        </MenuItem>
+        <MenuItem
+          disabled={!selectedNotes.length}
+          onClick={() => {
+            copyNotes()
+            close()
+          }}
+        >
+          <ListItemIcon><ContentCopy fontSize='small' /></ListItemIcon>
+          <ListItemText>复制</ListItemText>
+          <Typography variant='body2' color='text.secondary'>⌘C</Typography>
+        </MenuItem>
+        <MenuItem
+          disabled={!copiedData.length}
+          onClick={() => {
+            if (copiedData.length) addNotes(copiedData)
+            close()
+          }}
+        >
+          <ListItemIcon><ContentPaste fontSize='small' /></ListItemIcon>
+          <ListItemText>粘贴</ListItemText>
+          <Typography variant='body2' color='text.secondary'>⌘V</Typography>
+        </MenuItem>
+        <MenuItem
+          disabled={!selectedNotes.length}
+          onClick={() => {
+            copyNotes()
+            const data = [...copiedData]
+            data.unshift(ppq as any)
+            navigator.clipboard.writeText('EIMNotes' + JSON.stringify(data))
+            close()
+          }}
+        >
+          <ListItemIcon><ContentCopy fontSize='small' /></ListItemIcon>
+          <ListItemText>复制到剪辑版</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            navigator.clipboard.readText().then(data => {
+              if (!data.startsWith('EIMNotes')) return
+              const arr: packets.IMidiMessage[] = JSON.parse(data.slice(8))
+              if (!Array.isArray(arr)) return
+              const curPPQ = arr.shift() as any as number
+              if (typeof curPPQ !== 'number' || !arr.length) return
+              arr.forEach(it => (it.time = Math.round((it.time || 0) / curPPQ * ppq)))
+              addNotes(arr)
+            }).catch(console.error)
+            close()
+          }}
+        >
+          <ListItemIcon><ContentPaste fontSize='small' /></ListItemIcon>
+          <ListItemText>从剪辑版粘贴</ListItemText>
+        </MenuItem>
+      </Menu>
+    </div>
   )
 })
 
@@ -545,9 +550,11 @@ const Editor: React.FC = () => {
   const [state] = useGlobalData()
   const [alignment, setAlignment] = useState(state.ppq)
   const editorRef = useRef<HTMLElement | null>(null)
+  const eventEditorRef = useRef<HTMLDivElement | null>(null)
   const noteWidth = noteWidths[noteWidthLevel]
   barLength = noteWidth * state.ppq
   const beatWidth = barLength / (16 / state.timeSigDenominator)
+  const contentWidth = (state.maxNoteTime + state.ppq * 4) * noteWidth
 
   const track = state.activeTrack ? state.tracks[state.activeTrack] : undefined
 
@@ -594,7 +601,7 @@ const Editor: React.FC = () => {
   const steps = state.ppq / 16 * state.timeSigDenominator
 
   return (
-    <div className='editor'>
+    <div className='editor' style={{ cursor: track ? undefined : 'no-drop' }}>
       <Box className='actions' sx={{ backgroundColor: theme => theme.palette.background.bright }}>
         <Slider
           min={0}
@@ -632,95 +639,105 @@ const Editor: React.FC = () => {
           </Select>
         </FormControl>
       </Box>
-      <Paper
-        square
-        elevation={3}
-        className='scrollable'
-        ref={scrollableRef as any}
-        onMouseOut={() => (mouseOut = true)}
-        onMouseMove={e => {
-          if (!mouseState) return
-          mouseOut = false
-          const rect = e.currentTarget.getBoundingClientRect()
-          if (e.pageX - rect.left < 64) {
-            direction |= 0b0001
-            direction &= ~0b0010
-          } else if (rect.right - e.pageX < 16) {
-            direction &= ~0b0001
-            direction |= 0b0010
-          } else direction &= ~0b0011
-          if (e.pageY - rect.top < 40) {
-            direction |= 0b0100
-            direction &= ~0b1000
-          } else if (rect.bottom - e.pageY < 16) {
-            direction &= ~0b0100
-            direction |= 0b1000
-          } else direction &= ~0b1100
-          if (direction && timer == null) {
-            timer = setInterval(() => {
-              if (!direction || !scrollableRef.current) {
-                clearInterval(timer!)
-                timer = undefined
-                return
-              }
-              if (direction & 0b0001) moveScrollbar('bottom-bar', mouseOut ? -4 : -2)
-              else if (direction & 0b0010) moveScrollbar('bottom-bar', mouseOut ? 4 : 2)
-              if (direction & 0b0100) scrollableRef.current.scrollTop -= mouseOut ? 8 : 4
-              else if (direction & 0b1000) scrollableRef.current.scrollTop += mouseOut ? 8 : 4
-            }, 30)
-          }
-        }}
-      >
-        <PlayRuler
-          id='bottom-bar'
-          headRef={playHeadRef}
-          noteWidth={noteWidth}
-          movableRef={editorRef}
-          onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? -1 : 1), noteWidths.length - 1), 0))}
-        />
-        <div className='wrapper'>
-          <Paper
-            square
-            elevation={6}
-            className='keyboard'
-            sx={{ '& button': { height: noteHeight }, '& button:not(:nth-of-type(12n+1))': { fontSize: noteHeight >= 14 ? undefined : '0!important' } }}
-          >
-            <Keyboard />
-          </Paper>
-          <Box
-            ref={editorRef}
-            className='notes-wrapper'
-            sx={{
-              '& .notes div': {
-                boxShadow: theme => theme.shadows[1],
-                backgroundColor: theme => theme.palette.primary.main,
-                height: noteHeight
-              }
-            }}
-          >
-            <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth, height: '100%', minWidth: '100%' }}>
-              <EditorGrid width={beatWidth} height={noteHeight} timeSigNumerator={state.timeSigNumerator} timeSigDenominator={state.timeSigDenominator} />
-              <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
-                <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
-                <rect fill='url(#editor-grid-x)' x='0' y='0' width='100%' height='100%' />
-              </svg>
-              <Box
-                className='selected-box'
-                ref={selectedBoxRef}
-                sx={{ borderColor: theme => theme.palette.primary.main, backgroundColor: theme => alpha(theme.palette.primary.main, 0.2) }}
-              />
-              <Notes
-                ppq={state.ppq}
-                width={noteWidth}
-                height={noteHeight}
-                alignment={alignment}
-                midi={track?.midi}
-                uuid={state.activeTrack || ''}
-                color={track?.color || ''}
-              />
-            </div>
-          </Box>
+      <Paper square className='right-wrapper' elevation={3}>
+        <div
+          className='scrollable'
+          ref={scrollableRef as any}
+          onMouseOut={() => (mouseOut = true)}
+          onMouseMove={e => {
+            if (!mouseState) return
+            mouseOut = false
+            const rect = e.currentTarget.getBoundingClientRect()
+            if (e.pageX - rect.left < 64) {
+              direction |= 0b0001
+              direction &= ~0b0010
+            } else if (rect.right - e.pageX < 16) {
+              direction &= ~0b0001
+              direction |= 0b0010
+            } else direction &= ~0b0011
+            if (e.pageY - rect.top < 40) {
+              direction |= 0b0100
+              direction &= ~0b1000
+            } else if (rect.bottom - e.pageY < 16) {
+              direction &= ~0b0100
+              direction |= 0b1000
+            } else direction &= ~0b1100
+            if (direction && timer == null) {
+              timer = setInterval(() => {
+                if (!direction || !scrollableRef.current) {
+                  clearInterval(timer!)
+                  timer = undefined
+                  return
+                }
+                if (direction & 0b0001) moveScrollbar('bottom-bar', mouseOut ? -4 : -2)
+                else if (direction & 0b0010) moveScrollbar('bottom-bar', mouseOut ? 4 : 2)
+                if (direction & 0b0100) scrollableRef.current.scrollTop -= mouseOut ? 8 : 4
+                else if (direction & 0b1000) scrollableRef.current.scrollTop += mouseOut ? 8 : 4
+              }, 30)
+            }
+          }}
+        >
+          <PlayRuler
+            id='bottom-bar'
+            headRef={playHeadRef}
+            noteWidth={noteWidth}
+            movableRef={[editorRef, eventEditorRef]}
+            onWidthLevelChange={v => setNoteWidthLevel(Math.max(Math.min(noteWidthLevel + (v ? -1 : 1), noteWidths.length - 1), 0))}
+          />
+          <div className='wrapper'>
+            <Paper
+              square
+              elevation={6}
+              className='keyboard'
+              sx={{ '& button': { height: noteHeight }, '& button:not(:nth-of-type(12n+1))': { fontSize: noteHeight >= 14 ? undefined : '0!important' } }}
+            >
+              <Keyboard />
+            </Paper>
+            <Box
+              ref={editorRef}
+              className='notes-wrapper'
+              sx={{
+                '& .notes div': {
+                  boxShadow: theme => theme.shadows[1],
+                  backgroundColor: theme => theme.palette.primary.main,
+                  height: noteHeight
+                }
+              }}
+            >
+              <div style={{ width: contentWidth, height: '100%', minWidth: '100%' }}>
+                <EditorGrid width={beatWidth} height={noteHeight} timeSigNumerator={state.timeSigNumerator} timeSigDenominator={state.timeSigDenominator} />
+                <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
+                  <rect fill='url(#editor-grid-y)' x='0' y='0' width='100%' height='100%' />
+                  <rect fill='url(#editor-grid-x)' x='0' y='0' width='100%' height='100%' />
+                </svg>
+                <Box
+                  className='selected-box'
+                  ref={selectedBoxRef}
+                  sx={{ borderColor: theme => theme.palette.primary.main, backgroundColor: theme => alpha(theme.palette.primary.main, 0.2) }}
+                />
+                <Notes
+                  ppq={state.ppq}
+                  width={noteWidth}
+                  height={noteHeight}
+                  alignment={alignment}
+                  midi={track?.midi}
+                  uuid={state.activeTrack || ''}
+                  color={track?.color || ''}
+                />
+              </div>
+            </Box>
+          </div>
         </div>
+        <EventEditor
+          midi={track?.midi}
+          color={track?.color || ''}
+          beatWidth={beatWidth}
+          noteWidth={noteWidth}
+          contentWidth={contentWidth}
+          eventEditorRef={eventEditorRef}
+          timeSigNumerator={state.timeSigNumerator}
+          timeSigDenominator={state.timeSigDenominator}
+        />
       </Paper>
     </div>
   )

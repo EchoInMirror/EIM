@@ -7,7 +7,7 @@ import { Paper, Box } from '@mui/material'
 let movingPos = 0
 let curElement: HTMLDivElement | undefined
 
-const map: Record<string, React.RefObject<HTMLElement | null>> = { }
+const map: Record<string, React.RefObject<HTMLElement | null> | React.RefObject<HTMLElement | null>[]> = { }
 const map2: Record<string, React.RefObject<HTMLElement | null>> = { }
 const map3: Record<string, React.RefObject<HTMLElement | null>> = { }
 const map4: Record<string, HTMLElement> = { }
@@ -21,9 +21,18 @@ const calc = (target: HTMLElement, moveDelta: number) => {
   val = Math.max(Math.min(val, max), 0)
   target.style.transform = `translateX(${val}px)`
   const id = target.dataset.scrollbarId as any
-  const movable = map[id]?.current as HTMLElement
+  const movable0 = map[id]
+  if (!movable0) return
+  let movable: HTMLElement | null
+  let flag = false
+  if (Array.isArray(movable0)) {
+    movable = movable0[0].current
+    flag = true
+  } else movable = movable0.current
   if (!movable) return
-  const val2 = movable.scrollLeft = val / max * (movable.scrollWidth - movable.clientWidth)
+  const val2 = val / max * (movable.scrollWidth - movable.clientWidth)
+  if (flag) (movable0 as React.RefObject<HTMLElement | null>[]).forEach(it => it.current && (it.current.scrollLeft = val2))
+  else movable.scrollLeft = val2
   const movable2 = map2[id]?.current as HTMLElement
   if (movable2) movable2.scrollLeft = val2
   const movable3 = map3[id]?.current as HTMLElement
@@ -58,7 +67,7 @@ const PlayRuler: React.FC<{
   id: string
   headRef: React.Ref<HTMLDivElement>
   noteWidth: number
-  movableRef: React.RefObject<HTMLElement | null>
+  movableRef: React.RefObject<HTMLElement | null> | React.RefObject<HTMLElement | null>[]
   onWidthLevelChange: (value: boolean) => void
 }> = ({ id, headRef, noteWidth, movableRef, onWidthLevelChange }) => {
   const [state] = useGlobalData()

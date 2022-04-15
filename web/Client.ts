@@ -28,6 +28,7 @@ export default class Client extends ClientService {
       this.ws.binaryType = 'arraybuffer'
       callback()
     }
+    this.ws.onclose = e => this.emit('websocket:close', e.reason)
     this.ws.onmessage = e => {
       const view = new DataView(e.data)
       const event = view.getUint8(0)
