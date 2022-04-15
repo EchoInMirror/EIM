@@ -118,7 +118,7 @@ void ServerService::handleSendMidiMessages(WebSocketSession*, std::unique_ptr<EI
 	auto& uuid = data->uuid();
 	if (!tracks.contains(uuid)) return;
 	auto& ctrl = ((Track*)tracks[uuid]->getProcessor())->messageCollector;
-	for (auto it : data->data()) ctrl.addMessageToQueue(juce::MidiMessage(it & 0xff, (it >> 8) & 0xff, (it >> 16) & 0xff, juce::Time::getMillisecondCounterHiRes() * 0.001));
+	for (auto it : data->data()) ctrl.addMessageToQueue(decodeMidiMessage(it, juce::Time::getMillisecondCounterHiRes() * 0.001));
 }
 
 /*

@@ -69,24 +69,28 @@ export default class Client extends ClientService {
     }).on(ClientboundPacket.AddMidiMessages, data => {
       const track = $globalData.tracks[data.uuid!]
       if (!track) return
-      track.midi = track.midi!.concat(data.midi!).sort((a, b) => a.time! - b.time!)
+      data.midi!.forEach((it: any, i) => (it._oldIndex = i + track.midi!.length))
+      track.midi = track.midi!.concat(data.midi!).sort((a, b) => (a.time || 0) - (b.time || 0))
       $dispatch({ })
     }).on(ClientboundPacket.DeleteMidiMessages, data => {
       const track = $globalData.tracks[data.uuid!]
       if (!track) return
       let index = 0
       track.midi = track.midi!.filter((it, i) => {
-        if (data.data![index] !== i) return it
+        if (data.data![index] !== i) {
+          (it as any)._oldIndex = i
+          return it
+        }
         index++
       })
       $dispatch({ })
     }).on(ClientboundPacket.EditMidiMessages, data => {
       const track = $globalData.tracks[data.uuid!]
       if (!track) return
-      console.log(data.data)
       track.midi = [...track.midi!]
       data.data!.forEach((index, i) => (track.midi![index] = data.midi![i]))
-      track.midi!.sort((a, b) => a.time! - b.time!)
+      track.midi!.forEach((it: any, i) => (it._oldIndex = i))
+      track.midi!.sort((a, b) => (a.time || 0) - (b.time || 0))
       $dispatch({ })
     })
   }

@@ -5,7 +5,7 @@ import Settings from './Settings'
 import { AppBar as MuiAppBar, Toolbar, IconButton, TextField, Menu, MenuItem, Slider, ListItemIcon, ListItemText, Divider } from '@mui/material'
 import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { useSnackbar } from 'notistack'
-// import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
+import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
 import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 import { ClientboundPacket, HandlerTypes } from '../../packets'
 
@@ -132,13 +132,12 @@ const CenterSection: React.FC = () => {
       barsNode.innerText = (1 + beats / $globalData.timeSigNumerator | 0).toString().padStart(2, '0')
       beatsNode.innerText = (1 + (beats | 0) % $globalData.timeSigNumerator).toString().padStart(2, '0')
       stepsNode.innerText = (1 + (beats - (beats | 0)) * (16 / $globalData.timeSigDenominator) | 0).toString()
-      // if (bottomBarPlayHeadRef.current) bottomBarPlayHeadRef.current.style.transform = `translateX(${bottomBarLength * beats | 0}px)`
+      if (bottomBarPlayHeadRef.current) bottomBarPlayHeadRef.current.style.transform = `translateX(${bottomBarLength * beats | 0}px)`
       if (tracksPlayHeadRef.current) tracksPlayHeadRef.current.style.transform = `translateX(${tracksLength * beats | 0}px)`
     }
     let cnt = 0
     const timer = setInterval(() => {
       if (!timeRef.current || !barRef.current) return
-      // const curTime = state.currentTime + (Date.now() - state.startTime) / 1000
       update()
       if (!moving && ++cnt > 10) {
         setProgress($globalData.position + ($globalData.isPlaying ? (Date.now() - $globalData.startTime) / 1000 / 60 * $globalData.bpm * $globalData.ppq | 0 : 0))
