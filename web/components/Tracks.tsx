@@ -86,7 +86,7 @@ const Track: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data
         data.forEach(({ time, data }, i) => {
           switch (data! & 0xf0) {
             case 0x90: // NoteOn
-              midiOn[data! >> 8 & 0xff] = time!
+              midiOn[data! >> 8 & 0xff] = time || 0
               break
             case 0x80: { // NoteOff
               const key = data! >> 8 & 0xff
