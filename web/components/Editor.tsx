@@ -149,6 +149,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
               selectedIndexes[+(it as HTMLDivElement).dataset.noteOnIndex!] = true
             }
           }
+          $client.emit('editor:selectedNotes', selectedIndexes)
           selectedBoxRef.current.style.display = 'none'
           selectedBoxRef.current.style.width = '0'
           selectedBoxRef.current.style.height = '0'
@@ -179,6 +180,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
     }
     activeIndex = -1
     selectedIndexes = selectedIndexes2
+    $client.emit('editor:selectedNotes', selectedIndexes)
   }, [midi, ref.current])
 
   const notes = useMemo(() => {
@@ -245,6 +247,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
     $client.rpc.deleteMidiMessages({ uuid, data: data.sort((a, b) => a - b) })
     selectedNotes = []
     selectedIndexes = { }
+    $client.emit('editor:selectedNotes', selectedIndexes)
   }
   const addNotes = (data: packets.IMidiMessage[]) => {
     $client.rpc.addMidiMessages({ uuid, midi: data })
@@ -252,9 +255,9 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
     selectedIndexes = { }
     const len = midi.length
     data.forEach((it, i) => {
-      if ((it.data! & 0xf0) !== 0x90) return
-      selectedIndexes[len + i] = true
+      if ((it.data! & 0xf0) === 0x90) selectedIndexes[len + i] = true
     })
+    $client.emit('editor:selectedNotes', selectedIndexes)
     return len
   }
 
@@ -299,7 +302,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
               if (!selectedNotes.includes(elm)) {
                 selectedNotes.forEach(it => (it.className = ''))
                 selectedNotes = [elm]
-                selectedIndexes = { [activeIndex = +elm.dataset.noteIndex!]: true }
+                selectedIndexes = { [activeIndex = +elm.dataset.noteOnIndex!]: true }
                 elm.className = 'selected'
               }
               activeNote = elm
@@ -548,7 +551,7 @@ const Editor: React.FC = () => {
   const [noteWidthLevel, setNoteWidthLevel] = useState(3)
   const [noteHeight] = useState(14)
   const [state] = useGlobalData()
-  const [alignment, setAlignment] = useState(state.ppq)
+  const [alignment, setAlignment] = useState(() => +localStorage.getItem('eim:editor:alignment')! || state.ppq)
   const editorRef = useRef<HTMLElement | null>(null)
   const eventEditorRef = useRef<HTMLDivElement | null>(null)
   const noteWidth = noteWidths[noteWidthLevel]
@@ -618,7 +621,11 @@ const Editor: React.FC = () => {
             labelId='bottom-bar-alignment-label'
             id='bottom-bar-alignment'
             value={alignment}
-            onChange={e => setAlignment(e.target.value as number)}
+            onChange={e => {
+              const val = e.target.value as number
+              localStorage.setItem('eim:editor:alignment', val.toString())
+              setAlignment(val)
+            }}
             label='对齐'
           >
             <MenuItem value={state.ppq * state.timeSigNumerator}><em>小节</em></MenuItem>

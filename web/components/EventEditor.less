@@ -29,8 +29,16 @@
 
     div {
       bottom: 0;
-      width: 2px;
+      width: 4px;
       position: absolute;
+      opacity: 0.8;
+      cursor: n-resize;
+      min-height: 3px;
+
+      &.selected {
+        z-index: 4;
+        filter: brightness(2.2);
+      }
     }
   }
 }

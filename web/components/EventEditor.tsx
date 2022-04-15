@@ -1,6 +1,6 @@
 import './EventEditor.less'
 import packets from '../../packets'
-import React, { useMemo, memo } from 'react'
+import React, { useMemo, memo, useEffect, useRef } from 'react'
 import { Resizable } from 're-resizable'
 import { Paper, Box, useTheme, alpha } from '@mui/material'
 
@@ -29,11 +29,72 @@ const EventEditorGrid = memo(function EventEditorGrid ({ width, timeSigNumerator
   )
 })
 
+let startY = 0
+let wrapperHeight = 0
+let hasSelected = false
+let targetElm: HTMLDivElement | undefined
+let _midi: packets.IMidiMessage[] | null | undefined
 const Velocity = memo(function Velocity ({ midi, color, noteWidth }: {
   midi: packets.IMidiMessage[] | null | undefined
   color: string
   noteWidth: number
 }) {
+  const ref = useRef<HTMLDivElement>()
+  _midi = midi
+
+  useEffect(() => {
+    const fn = (indexes: Record<number, true | undefined>) => {
+      hasSelected = false
+      if (!ref.current) return
+      for (const node of ref.current.children) {
+        const id = +(node as any).dataset.noteIndex!
+        if (node.className) {
+          if (indexes[id]) hasSelected = true
+          else node.className = ''
+        } else if (indexes[id]) {
+          node.className = 'selected'
+          hasSelected = true
+        }
+      }
+    }
+    $client.on('editor:selectedNotes', fn)
+    const handleMouseUp = () => {
+      if (!targetElm || !ref.current || !_midi || !$globalData.activeTrack) return
+      const id = +targetElm.dataset.noteIndex!
+      const data = [id]
+      const midi: packets.IMidiMessage[] = [{ time: _midi[id].time || 0, data: (_midi[id].data! & 0xffff) | (Math.round(parseFloat(targetElm.style.height) * 1.27) << 16) }]
+      for (const node of ref.current.children) {
+        const it = node as HTMLDivElement
+        if (it !== targetElm && node.className) {
+          const id = +it.dataset.noteIndex!
+          data.push(id)
+          midi.push({ time: _midi[id].time || 0, data: (_midi[id].data! & 0xffff) | (Math.round(parseFloat(it.style.height) * 1.27) << 16) })
+        }
+      }
+      targetElm = undefined
+      $client.rpc.editMidiMessages({ uuid: $globalData.activeTrack, data, midi })
+    }
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!targetElm || !ref.current || !_midi) return
+      for (const node of ref.current.children) {
+        const it = node as HTMLDivElement
+        if (it !== targetElm && node.className) {
+          const id = +it.dataset.noteIndex!
+          it.style.height = Math.min(Math.max(((_midi[id].data! >> 16) & 0xff) + Math.round((startY - e.pageY) / wrapperHeight * 127), 0), 127) / 1.27 + '%'
+        }
+      }
+      const id = +targetElm.dataset.noteIndex!
+      targetElm.style.height = Math.min(Math.max(((_midi[id].data! >> 16) & 0xff) + Math.round((startY - e.pageY) / wrapperHeight * 127), 0), 127) / 1.27 + '%'
+    }
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mousemove', handleMouseMove)
+    return () => {
+      $client.off('editor:selectedNotes', fn)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [])
+
   const notes = useMemo(() => {
     if (!midi) return
     const arr: JSX.Element[] = []
@@ -57,7 +118,19 @@ const Velocity = memo(function Velocity ({ midi, color, noteWidth }: {
   if (!midi) return <div />
 
   return (
-    <Box className='velocity' sx={{ '& div': { backgroundColor: color } }}>
+    <Box
+      className='velocity'
+      ref={ref}
+      sx={{ '& div': { backgroundColor: color } }}
+      onMouseDown={e => {
+        if (e.target === e.currentTarget) return
+        e.stopPropagation()
+        if (hasSelected && !(e.target as any).className) return
+        startY = e.pageY
+        targetElm = e.target as any
+        wrapperHeight = e.currentTarget.getBoundingClientRect().height
+      }}
+    >
       {notes}
     </Box>
   )
