@@ -79,12 +79,14 @@ private:
 	float _volume;
 	bool _muted;
 	int _pan;
-	Track *_preTrack = nullptr;
+	Track *preTrack = nullptr;
+	EIMPackets::TrackInfo preTrackInfo;
 
 public:
 	UpdateTrackInfoAction(std::unique_ptr<EIMPackets::TrackInfo> data) : data(std::move(data)) {}
 	bool perform() override
 	{
+		DBG("UpdateTrackInfoAction");
 		auto instance = EIMApplication::getEIMInstance();
 		auto &tracks = instance->mainWindow->masterTrack->tracksMap;
 		auto &uuid = data->uuid();
@@ -92,21 +94,20 @@ public:
 			return false;
 		auto &trackPtr = tracks[uuid];
 		auto track = (Track *)trackPtr->getProcessor();
-		_preTrack = track;
-
-		_name = track->name;
-		_volume = track->chain.get<1>().getGainLinear();
-		_color = track->color;
-		_muted = trackPtr->isBypassed();
-		_pan = track->pan;
+		preTrack = track;
+		preTrackInfo.set_name(track->name);
 		if (data->has_name())
 			track->name = data->name();
+		preTrackInfo.set_color(track->color);
 		if (data->has_color())
 			track->color = data->color();
+		preTrackInfo.set_volume(track->chain.get<1>().getGainLinear());
 		if (data->has_volume())
 			track->chain.get<1>().setGainLinear(data->volume());
+		preTrackInfo.set_muted(trackPtr->isBypassed());
 		if (data->has_muted() && data->muted() != trackPtr->isBypassed())
 			track->setMuted(data->muted());
+		preTrackInfo.set_pan(track->pan);
 		if (data->has_pan() && data->pan() != track->pan)
 			track->chain.get<0>().setPan((track->pan = data->pan()) / 100.0f);
 		if (!data->has_pan() && !data->has_volume())
@@ -120,13 +121,17 @@ public:
 	}
 	bool undo() override
 	{
-		if (!_preTrack)
+		if (!preTrack)
 			return false;
-		_preTrack->name = _name;
-		_preTrack->color = _color;
-		_preTrack->chain.get<1>().setGainLinear(_volume);
-		_preTrack->setMuted(_muted);
-		_preTrack->chain.get<0>().setPan((_preTrack->pan = _pan) / 100.0f);
+		DBG("UpdateTrackInfoAction undo");
+		preTrack->name = preTrackInfo.name();
+		preTrack->color = preTrackInfo.color();
+		preTrack->chain.get<1>().setGainLinear(preTrackInfo.volume());
+		preTrack->setMuted(preTrackInfo.muted());
+		preTrack->chain.get<0>().setPan((preTrack->pan = preTrackInfo.pan()) / 100.0f);
+		EIMPackets::ClientboundTracksInfo info;
+		info.add_tracks()->CopyFrom(preTrackInfo);
+		EIMApplication::getEIMInstance()->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
 		return true;
 	}
 };
@@ -284,5 +289,6 @@ void ServerService::handleEditMidiMessages(WebSocketSession *, std::unique_ptr<E
 
 void ServerService::handleUndo(WebSocketSession *)
 {
+	DBG("undo");
 	EIMApplication::getEIMInstance()->undoManager.undo();
 }
