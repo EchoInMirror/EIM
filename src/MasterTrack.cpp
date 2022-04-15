@@ -14,7 +14,7 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	graphPlayer.setProcessor(this);
 	auto output = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
 
-	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 96000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
+	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
 	prepareToPlay(getSampleRate(), getBlockSize());
 
 	outputNodeID = initTrack(std::make_unique<Track>("", this))->nodeID;
@@ -45,7 +45,6 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, 
 	if (env.isNotEmpty()) {
 		juce::FileInputStream theStream(env);
 		file.readFrom(theStream);
-		file.getTimeFormat();
 		track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
 		auto newEndTime = (int)std::ceil(juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator)) * ppq;
 		if (endTime != newEndTime) {

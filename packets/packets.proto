@@ -114,6 +114,7 @@ service ServerService { // Server bound
   rpc addMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc deleteMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);
+  rpc undo (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound
