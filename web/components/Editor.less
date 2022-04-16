@@ -3,6 +3,17 @@
 .bottom-bar .editor {
   height: 100%;
   display: flex;
+  user-select: none;
+
+  --keyboard-width: 60px;
+
+  .right-wrapper {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
 
   .actions {
     width: 200px;
@@ -25,12 +36,16 @@
     display: block;
   }
 
-  .bar-numbers {
-    padding-left: 64px;
-  }
+  .play-ruler {
+    width: 100%;
 
-  .play-head {
-    margin-left: 53px;
+    .bar-numbers {
+      padding-left: 64px;
+    }
+
+    .play-head {
+      margin-left: 53px;
+    }
   }
 
   .scrollable {
@@ -98,7 +113,8 @@
     flex-direction: column-reverse;
 
     button {
-      width: 60px;
+      width: var(--keyboard-width);
+      min-width: unset;
       border-radius: 0;
       background-color: var(--keyboard-white-key-color);
       font-size: 12px;
