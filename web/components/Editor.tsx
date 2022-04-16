@@ -616,7 +616,6 @@ const Editor: React.FC = () => {
         />
         当前轨道: {track ? track.name : '未选中'}
         <br />
-        试听音符 <Checkbox />
         <br />
         <FormControl variant='standard'>
           <InputLabel id='bottom-bar-alignment-label'>对齐</InputLabel>
@@ -648,8 +647,26 @@ const Editor: React.FC = () => {
             <MenuItem value={1}><em>无</em></MenuItem>
           </Select>
         </FormControl>
-        <br />
-        默认力度<Input type='number' defaultValue='100' />
+        &nbsp;
+        <TextField
+          id='standard-number'
+          label='默认力度'
+          type='number'
+          defaultValue={100}
+          InputLabelProps={{
+            shrink: true
+          }}
+          variant='standard'
+        />
+
+        <FormControlLabel
+          id='checkbox'
+          value='top'
+          control={<Checkbox defaultChecked />}
+          label='试听音符'
+          labelPlacement='start'
+        />
+
       </Box>
       <Paper square className='right-wrapper' elevation={3}>
         <div
