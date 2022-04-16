@@ -4,11 +4,12 @@ import packets from '../../packets'
 import useGlobalData from '../reducer'
 import EventEditor from './EventEditor'
 import PlayRuler, { moveScrollbar } from './PlayRuler'
-import { Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon, ListItemText, Typography } from '@mui/material'
+import { Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon, ListItemText, Typography, Checkbox, TextField, Input, FormControlLabel } from '@mui/material'
 
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import ContentCut from '@mui/icons-material/ContentCut'
 import ContentPaste from '@mui/icons-material/ContentPaste'
+import { display } from '@mui/system'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
@@ -80,7 +81,7 @@ let resizeDirection = 0
 let mouseState = 0
 let boxHeight = 0
 let boxWidth = 0
-let selectedIndexes: Record<number, true | undefined> = { }
+let selectedIndexes: Record<number, true | undefined> = {}
 let selectedNotes: HTMLDivElement[] = []
 let pressedKeys: number[] = []
 let activeNote: HTMLDivElement | undefined
@@ -142,7 +143,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
         }
         case MouseState.Selecting: if (selectedBoxRef.current) {
           selectedNotes = []
-          selectedIndexes = { }
+          selectedIndexes = {}
           for (const it of ref.current.children) {
             if (it.className) {
               selectedNotes.push(it as HTMLDivElement)
@@ -165,7 +166,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
   useEffect(() => {
     if (!ref.current || !midi) return
     selectedNotes = []
-    const selectedIndexes2: typeof selectedIndexes = { }
+    const selectedIndexes2: typeof selectedIndexes = {}
     for (const elm of ref.current!.children) {
       const it = elm as HTMLDivElement
       if (!it.dataset.noteOnIndex) continue
@@ -186,7 +187,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
   const notes = useMemo(() => {
     if (!midi) return
     const arr: JSX.Element[] = []
-    const midiOn: Record<number, number | number[] | undefined> = { }
+    const midiOn: Record<number, number | number[] | undefined> = {}
     midi.forEach(({ time, data }, i) => {
       const key = data! >> 8 & 0xff
       switch (data! & 0xf0) {
@@ -246,13 +247,13 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
     selectedNotes.forEach(({ dataset: { noteOnIndex, noteIndex } }) => data.push(+noteOnIndex!, +noteIndex!))
     $client.rpc.deleteMidiMessages({ uuid, data: data.sort((a, b) => a - b) })
     selectedNotes = []
-    selectedIndexes = { }
+    selectedIndexes = {}
     $client.emit('editor:selectedNotes', selectedIndexes)
   }
   const addNotes = (data: packets.IMidiMessage[]) => {
     $client.rpc.addMidiMessages({ uuid, midi: data })
     selectedNotes = []
-    selectedIndexes = { }
+    selectedIndexes = {}
     const len = midi.length
     data.forEach((it, i) => {
       if ((it.data! & 0xf0) === 0x90) selectedIndexes[len + i] = true
@@ -615,6 +616,7 @@ const Editor: React.FC = () => {
         />
         当前轨道: {track ? track.name : '未选中'}
         <br />
+        <br />
         <FormControl variant='standard'>
           <InputLabel id='bottom-bar-alignment-label'>对齐</InputLabel>
           <Select
@@ -645,6 +647,26 @@ const Editor: React.FC = () => {
             <MenuItem value={1}><em>无</em></MenuItem>
           </Select>
         </FormControl>
+        &nbsp;
+        <TextField
+          id='standard-number'
+          label='默认力度'
+          type='number'
+          defaultValue={100}
+          InputLabelProps={{
+            shrink: true
+          }}
+          variant='standard'
+        />
+
+        <FormControlLabel
+          id='checkbox'
+          value='top'
+          control={<Checkbox defaultChecked />}
+          label='试听音符'
+          labelPlacement='start'
+        />
+
       </Box>
       <Paper square className='right-wrapper' elevation={3}>
         <div

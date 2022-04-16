@@ -45,7 +45,6 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, 
 	if (env.isNotEmpty()) {
 		juce::FileInputStream theStream(env);
 		file.readFrom(theStream);
-		file.getTimeFormat();
 		track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
 		auto newEndTime = (int)std::ceil(juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(), (double)currentPositionInfo.timeSigNumerator)) * ppq;
 		if (endTime != newEndTime) {
