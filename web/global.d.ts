@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { TypeBackground } from '@mui/material/styles/createPalette'
-import { initialState, StateType } from './reducer'
+import { StateType } from './reducer'
 import Client from './Client'
 
 declare type EIMDragObject = Record<string | number, any> & { type: string }

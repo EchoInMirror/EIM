@@ -4,12 +4,14 @@ import packets from '../../packets'
 import useGlobalData from '../reducer'
 import EventEditor from './EventEditor'
 import PlayRuler, { moveScrollbar } from './PlayRuler'
-import { Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon, ListItemText, Typography, Checkbox, TextField, Input, FormControlLabel } from '@mui/material'
+import {
+  Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon,
+  ListItemText, Typography, Checkbox, TextField, FormControlLabel
+} from '@mui/material'
 
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import ContentCut from '@mui/icons-material/ContentCut'
 import ContentPaste from '@mui/icons-material/ContentPaste'
-import { display } from '@mui/system'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
@@ -614,60 +616,65 @@ const Editor: React.FC = () => {
           className='scale-slider'
           onChange={(_, val) => setNoteWidthLevel(val as number)}
         />
-        当前轨道: {track ? track.name : '未选中'}
-        <br />
-        <br />
-        <FormControl variant='standard'>
-          <InputLabel id='bottom-bar-alignment-label'>对齐</InputLabel>
-          <Select
-            labelId='bottom-bar-alignment-label'
-            id='bottom-bar-alignment'
-            value={alignment}
-            onChange={e => {
-              const val = e.target.value as number
-              localStorage.setItem('eim:editor:alignment', val.toString())
-              setAlignment(val)
-            }}
-            label='对齐'
-          >
-            <MenuItem value={state.ppq * state.timeSigNumerator}><em>小节</em></MenuItem>
-            <Divider />
-            <MenuItem value={state.ppq}><em>节拍</em></MenuItem>
-            <MenuItem value={state.ppq / 2}>1/2 拍</MenuItem>
-            <MenuItem value={state.ppq / 3 | 0}>1/3 拍</MenuItem>
-            <MenuItem value={state.ppq / 4}>1/4 拍</MenuItem>
-            <MenuItem value={state.ppq / 6 | 0}>1/6 拍</MenuItem>
-            <Divider />
-            <MenuItem value={steps}><em>步进</em></MenuItem>
-            <MenuItem value={steps / 2}>1/2 步</MenuItem>
-            <MenuItem value={steps / 3 | 0}>1/3 步</MenuItem>
-            <MenuItem value={steps / 4}>1/4 步</MenuItem>
-            <MenuItem value={steps / 6 | 0}>1/6 步</MenuItem>
-            <Divider />
-            <MenuItem value={1}><em>无</em></MenuItem>
-          </Select>
-        </FormControl>
-        &nbsp;
-        <TextField
-          id='standard-number'
-          label='默认力度'
-          type='number'
-          defaultValue={100}
-          InputLabelProps={{
-            shrink: true
-          }}
-          variant='standard'
-        />
+        <div className='left-wrapper'>
+          当前轨道: {track ? track.name : '未选中'}
+          <br />
+          <br />
+          <Box display='flex'>
+            <FormControl variant='standard' style={{ flex: 1 }}>
+              <InputLabel id='bottom-bar-alignment-label'>对齐</InputLabel>
+              <Select
+                labelId='bottom-bar-alignment-label'
+                id='bottom-bar-alignment'
+                value={alignment}
+                onChange={e => {
+                  const val = e.target.value as number
+                  localStorage.setItem('eim:editor:alignment', val.toString())
+                  setAlignment(val)
+                }}
+                label='对齐'
+              >
+                <MenuItem value={state.ppq * state.timeSigNumerator}><em>小节</em></MenuItem>
+                <Divider />
+                <MenuItem value={state.ppq}><em>节拍</em></MenuItem>
+                <MenuItem value={state.ppq / 2}>1/2 拍</MenuItem>
+                <MenuItem value={state.ppq / 3 | 0}>1/3 拍</MenuItem>
+                <MenuItem value={state.ppq / 4}>1/4 拍</MenuItem>
+                <MenuItem value={state.ppq / 6 | 0}>1/6 拍</MenuItem>
+                <Divider />
+                <MenuItem value={steps}><em>步进</em></MenuItem>
+                <MenuItem value={steps / 2}>1/2 步</MenuItem>
+                <MenuItem value={steps / 3 | 0}>1/3 步</MenuItem>
+                <MenuItem value={steps / 4}>1/4 步</MenuItem>
+                <MenuItem value={steps / 6 | 0}>1/6 步</MenuItem>
+                <Divider />
+                <MenuItem value={1}><em>无</em></MenuItem>
+              </Select>
+            </FormControl>
+            &nbsp;
+            <TextField
+              id='standard-number'
+              label='默认力度'
+              type='number'
+              defaultValue={100}
+              style={{ width: 60 }}
+              InputLabelProps={{
+                shrink: true
+              }}
+              variant='standard'
+            />
+          </Box>
 
-        <FormControlLabel
-          id='checkbox'
-          value='top'
-          control={<Checkbox defaultChecked />}
-          label='试听音符'
-          labelPlacement='start'
-        />
-
+          <FormControlLabel
+            id='checkbox'
+            value='top'
+            control={<Checkbox defaultChecked />}
+            label='试听音符'
+            labelPlacement='start'
+          />
+        </div>
       </Box>
+
       <Paper square className='right-wrapper' elevation={3}>
         <div
           className='scrollable'
