@@ -4,6 +4,7 @@ import { Resizable } from 're-resizable'
 import { Paper, Box } from '@mui/material'
 import LinkIcon from '@mui/icons-material/Link'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
+import { MemoryOutlined, SdCardOutlined, AccessTimeOutlined } from '@mui/icons-material'
 
 import Mixer from './Mixer'
 import Editor from './Editor'
@@ -36,6 +37,13 @@ const StatusBar = memo(function StatusBar () {
   return (
     <Paper square component='footer' elevation={3}>
       <span />
+      <MemoryOutlined scale={100} fontSize='small' />
+      {/* 40.3%
+      <SdCardOutlined />40.2%
+      <AccessTimeOutlined />10ms */}
+      <span>40%</span>
+      <span>1.3G</span>
+      <span>23ms</span>
       <span><ConnectStatus /></span>
     </Paper>
   )
