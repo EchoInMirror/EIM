@@ -6,7 +6,10 @@ import TreeItem from '@mui/lab/TreeItem'
 import { Resizable } from 're-resizable'
 import { setIsMixer } from './BottomBar'
 import { Paper, Box, alpha, Toolbar, Button, colors } from '@mui/material'
-import { FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, Piano, Tune, GraphicEq } from '@mui/icons-material'
+import {
+  FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, Piano,
+  Tune, GraphicEq, PlaylistAddOutlined, TopicOutlined, StraightenOutlined, CloudOutlined, GraphicEqOutlined
+} from '@mui/icons-material'
 
 import type { TreeItemProps } from '@mui/lab/TreeItem'
 import type { ButtonProps } from '@mui/material/Button'
@@ -62,20 +65,45 @@ const items: ItemType[] = [
       const bv = (b.key as string).includes(' (VST)#')
       return av === bv ? (a.key as string).localeCompare(b.key as string) : av ? 1 : -1
     }
+  },
+  {
+    title: '乐器',
+    icon: <StraightenOutlined />,
+    type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
+  },
+  {
+    title: '文件',
+    icon: <TopicOutlined />,
+    type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
+  },
+  {
+    title: '乐器',
+    icon: <PlaylistAddOutlined />,
+    type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
+  },
+  {
+    title: '远程云',
+    icon: <CloudOutlined />,
+    type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
+  },
+  {
+    title: '素材',
+    icon: <GraphicEqOutlined />,
+    type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
   }
 ]
 
 const mapPluginsResult = (data: packets.ClientboundExplorerData) => {
-  const result: Record<string, boolean> = { }
+  const result: Record<string, boolean> = {}
   data.folders.sort().forEach(it => (result[it] = true))
   data.files.sort().forEach(it => (result[it] = false))
   return result
 }
 
-let callbackMap: Record<string, (() => void) | null> = { }
+let callbackMap: Record<string, (() => void) | null> = {}
 const Item: React.FC<{ tree: TreeNode, parent: string, type: ItemType }> = ({ type, tree, parent }) => {
   const nodes = []
-  const subTrees = useMemo<Record<string, TreeNode>>(() => ({ }), [])
+  const subTrees = useMemo<Record<string, TreeNode>>(() => ({}), [])
   const [, update] = useState(0)
   for (const name in tree) {
     const cur = parent + '/' + name
@@ -106,7 +134,7 @@ const Explorer: React.FC<{ type: ItemType }> = ({ type }) => {
   const [tree, setTree] = useState<TreeNode>({})
   const [expanded, setExpanded] = React.useState<string[]>([])
   useEffect(() => {
-    callbackMap = { }
+    callbackMap = {}
     $client.rpc.getExplorerData({ type: type.type, path: '' }).then(mapPluginsResult).then(setTree)
   }, [])
   return (

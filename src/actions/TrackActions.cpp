@@ -190,19 +190,18 @@ class AddMidiMessagesAction : public juce::UndoableAction
 {
   private:
     std::unique_ptr<EIMPackets::MidiMessages> data;
-	juce::MidiMessageSequence* preSeq = nullptr;
+	juce::MidiMessageSequence seq;
 	Track* preTrack = nullptr;
   public:
     AddMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) {
     }
     bool perform() override {
+		DBG("AddMidiMessagesAction");
         auto instance = EIMApplication::getEIMInstance();
         auto &tracks = instance->mainWindow->masterTrack->tracksMap;
         auto &uuid = data->uuid();
         if (!tracks.contains(uuid)) return false;
         auto track = (Track *)tracks[uuid]->getProcessor();
-        juce::MidiMessageSequence seq;
-		preSeq = &seq;
 		preTrack = track;
         for (auto &it : data->midi())
             seq.addEvent(decodeMidiMessage(it.data(), it.time()));
@@ -213,24 +212,25 @@ class AddMidiMessagesAction : public juce::UndoableAction
     }
     bool undo() override {
         // TODO
-		if(!preTrack || !preSeq)
-			return false;
-		auto seq = *preSeq;
+		DBG("undo AddMidiMessagesAction");
+		if(!preTrack) return false;
 		for(auto &it:seq){
-			preTrack->midiSequence.deleteEvent(preTrack->midiSequence.getIndexOf(it),true);
+			preTrack->midiSequence.deleteEvent(preTrack->midiSequence.getIndexOf(it),false);
 		}
         return true;
     }
 };
 
 void ServerService::handleAddMidiMessages(WebSocketSession *, std::unique_ptr<EIMPackets::MidiMessages> data) {
-    EIMApplication::getEIMInstance()->undoManager.perform(new AddMidiMessagesAction(std::move(data)));
+    EIMApplication::getEIMInstance()->undoManager.perform(new AddMidiMessagesAction(std::move(data)), "AAAAAA");
 }
 
 class DeleteMidiMessagesAction : public juce::UndoableAction
 {
   private:
     std::unique_ptr<EIMPackets::MidiMessages> data;
+	juce::MidiMessageSequence preSeq;
+	Track* preTrack;
 
   public:
     DeleteMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) {
@@ -241,16 +241,25 @@ class DeleteMidiMessagesAction : public juce::UndoableAction
         auto &uuid = data->uuid();
         if (!tracks.contains(uuid)) return false;
         auto track = (Track *)tracks[uuid]->getProcessor();
+		preSeq.clear();
+		preTrack = track;
         int times = 0;
-        for (auto it : data->data())
-            track->midiSequence.deleteEvent(it - times++, false);
+		int idx = 0;
+        for (auto it : data->data()){
+			idx = it - times++;
+			preSeq.addEvent(juce::MidiMessage(track->midiSequence.getEventPointer(idx)->message));
+            track->midiSequence.deleteEvent(idx, false);
+		}
         EIMApplication::getEIMInstance()->listener->boardcast(
             std::move(EIMMakePackets::makeDeleteMidiMessagesPacket(*data)));
         return true;
     }
     bool undo() override {
-        // TODO
-        return false;
+		DBG("undo DeleteMidiMessagesAction");
+        if(!preTrack)
+        	return false;
+		preTrack->midiSequence.addSequence(preSeq,0);
+		return true;
     }
 };
 
@@ -293,5 +302,6 @@ void ServerService::handleEditMidiMessages(WebSocketSession *, std::unique_ptr<E
 
 void ServerService::handleUndo(WebSocketSession *) {
     DBG("undo");
+	DBG(EIMApplication::getEIMInstance()->undoManager.getUndoDescription());
     EIMApplication::getEIMInstance()->undoManager.undo();
 }
