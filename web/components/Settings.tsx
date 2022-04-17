@@ -4,7 +4,9 @@ import { useSnackbar, SnackbarKey } from 'notistack'
 import { Config } from '../Client'
 import {
   Dialog, DialogTitle, Tabs, Tab, CircularProgress, IconButton, colors, List, ListItem, ListItemText,
-  ListSubheader, ListItemSecondaryAction, DialogActions, Button, Divider
+  ListSubheader, ListItemSecondaryAction, DialogActions, Button, Divider, FormControl, InputLabel,
+  Select, MenuItem, Switch, FormControlLabel, Typography, ListItemButton, ListItemIcon, Checkbox,
+  TextField
 } from '@mui/material'
 
 import Close from '@mui/icons-material/Close'
@@ -59,6 +61,67 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
                 <Tab label='音频' />
                 <Tab label='插件' />
               </Tabs>
+              {tab === 0 && (
+                <div>
+                  <FormControl variant='standard' sx={{ m: 1, flex: 1 }}>
+                    <InputLabel id='eim-settings-language-label'>语言</InputLabel>
+                    <Select
+                      labelId='eim-settings-language-label'
+                      value={1}
+                      label='语言'
+                    >
+                      <MenuItem value={0}>English</MenuItem>
+                      <MenuItem value={1}>简体中文</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label='自动保存时间间隔 (分钟)'
+                    type='number'
+                    value={10}
+                    sx={{ m: 1 }}
+                    InputLabelProps={{ shrink: true }}
+                    variant='standard'
+                  />
+                  <Divider />
+                  <List dense subheader={<ListSubheader component='div'>MIDI 输入设备</ListSubheader>}>
+                    <ListItem>
+                      <ListItemButton role={undefined} dense>
+                        <ListItemIcon>
+                          <Checkbox
+                            edge='start'
+                            tabIndex={-1}
+                            disableRipple
+                          />
+                        </ListItemIcon>
+                        <ListItemText primary='My First MIDI Keyboard' />
+                      </ListItemButton>
+                    </ListItem>
+                  </List>
+                </div>
+              )}
+              {tab === 1 && (
+                <div>
+                  <div style={{ display: 'flex' }}>
+                    <FormControl variant='standard' sx={{ m: 1, flex: 1 }}>
+                      <InputLabel id='eim-settings-audio-device-label'>输入/输出设备</InputLabel>
+                      <Select
+                        labelId='eim-settings-audio-device-label'
+                        value={0}
+                        label='输入/输出设备'
+                      >
+                        <ListSubheader>DirectSound 设备</ListSubheader>
+                        <MenuItem value={0}>主声音驱动程序</MenuItem>
+                        <ListSubheader>ASIO 设备</ListSubheader>
+                        <MenuItem value={1}>ASIO4ALL</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControlLabel control={<Switch />} label='自动关闭' />
+                  </div>
+                  <Typography variant='caption' sx={{ m: 2, whiteSpace: 'nowrap' }}>
+                    采样率: 44100 Hz, 缓冲区大小: 1024, 输出: 2 个通道, 输入: 2 个通道, 延迟: 6458 个采样
+                  </Typography>
+                </div>
+              )}
               {tab === 2 && (
                 <List dense>
                   {Object.entries(config.vstSearchPaths).map(([key, val], i) => (
@@ -78,6 +141,16 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
                 </List>
               )}
             </div>
+            {tab === 0 && (
+              <DialogActions>
+                <Button color='primary'>重新扫描 MIDI 设备</Button>
+              </DialogActions>
+            )}
+            {tab === 1 && (
+              <DialogActions>
+                <Button color='primary'>打开 ASIO 面板</Button>
+              </DialogActions>
+            )}
             {tab === 2 && (
               <DialogActions>
                 <Button onClick={() => $client.rpc.openPluginManager({ })} color='primary'>打开插件管理器</Button>

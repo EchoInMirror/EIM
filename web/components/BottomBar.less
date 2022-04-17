@@ -15,20 +15,28 @@
 footer {
   position: relative;
   z-index: 2;
-  height: 24px;
+  height: 26px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  padding-left: 6px;
 
   span {
-    // padding: 0 4px;
     height: inherit;
     display: flex;
     align-items: center;
     font-size: 4px;
   }
 
-  .system-status span {
+  & > span > span + span {
     margin: 0 4px;
+  }
+
+  .auto-space span {
+    margin: 0 4px;
+  }
+
+  .smaller {
+    font-size: 1.1rem;
   }
 }

@@ -4,7 +4,12 @@ import { Resizable } from 're-resizable'
 import { Paper, Box } from '@mui/material'
 import LinkIcon from '@mui/icons-material/Link'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
-import { MemoryOutlined } from '@mui/icons-material'
+import MusicNote from '@mui/icons-material/MusicNote'
+import MemoryOutlined from '@mui/icons-material/MemoryOutlined'
+import Refresh from '@mui/icons-material/Refresh'
+import WarningAmber from '@mui/icons-material/WarningAmber'
+import SourceBranch from 'mdi-material-ui/SourceBranch'
+import SettingsInputSvideo from '@mui/icons-material/SettingsInputSvideo'
 
 import Mixer from './Mixer'
 import Editor from './Editor'
@@ -26,7 +31,7 @@ const ConnectStatus = memo(function ConnectStatus () {
   return (
     <Box
       component='span'
-      sx={{ backgroundColor: theme => theme.palette.primary.main, color: theme => theme.palette.primary.contrastText, padding: '0 4px' }}
+      sx={{ backgroundColor: theme => theme.palette.primary.main, color: theme => theme.palette.primary.contrastText, padding: '0 4px', marginRight: 0 }}
     >
       {connected ? <LinkIcon fontSize='small' /> : <LinkOffIcon fontSize='small' />}
     </Box>
@@ -35,8 +40,10 @@ const ConnectStatus = memo(function ConnectStatus () {
 
 const SystemStatus = memo(function SystemStatus () {
   return (
-    <span className='system-status'>
-      <MemoryOutlined scale={100} fontSize='small' />
+    <span className='auto-space'>
+      <MusicNote fontSize='small' />
+      <span style={{ margin: '0 6px 0 0' }}>23</span>
+      <MemoryOutlined fontSize='small' />
       <span>40%</span>
       <span>1.3G</span>
       <span>23ms</span>
@@ -44,11 +51,31 @@ const SystemStatus = memo(function SystemStatus () {
   )
 })
 
+const Git = memo(function Git () {
+  return (
+    <span className='auto-space'>
+      <SourceBranch className='smaller' />
+      <span>master</span>
+      <Refresh className='smaller' />
+    </span>
+  )
+})
+
 const StatusBar = memo(function StatusBar () {
   return (
     <Paper square component='footer' elevation={3}>
-      <span />
       <span>
+        <Git />
+        <span className='auto-space'>
+          <WarningAmber className='smaller' />
+          <span>0</span>
+        </span>
+      </span>
+      <span>
+        <span className='auto-space'>
+          <SettingsInputSvideo className='smaller' />
+          <span>ASIO4ALL</span>
+        </span>
         <SystemStatus />
         <ConnectStatus />
       </span>

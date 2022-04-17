@@ -7,14 +7,14 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 
 	endTime = currentPositionInfo.timeSigNumerator * ppq;
 
-	setup = deviceManager.getAudioDeviceSetup();
 	deviceManager.initialiseWithDefaultDevices(0, 2);
+	setup = deviceManager.getAudioDeviceSetup();
 
 	deviceManager.addAudioCallback(&graphPlayer);
 	graphPlayer.setProcessor(this);
 	auto output = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))->nodeID;
 
-	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 96000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
+	setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate, setup.bufferSize == 0 ? 1024 : setup.bufferSize);
 	prepareToPlay(getSampleRate(), getBlockSize());
 
 	outputNodeID = initTrack(std::make_unique<Track>("", this))->nodeID;

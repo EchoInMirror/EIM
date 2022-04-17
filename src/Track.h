@@ -5,7 +5,6 @@
 #include "utils/utils.h"
 
 class MasterTrack;
-class ByteBuffer;
 
 class Track: public juce::AudioProcessorGraph {
 public:
