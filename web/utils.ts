@@ -8,3 +8,5 @@ export const merge = <T> (source: any, target: T) => {
   for (const key in source) if (source[key] != null) (target as any)[key] = source[key]
   return target
 }
+
+export const keyNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']

@@ -8,6 +8,7 @@ import { useSnackbar } from 'notistack'
 import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
 import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 import { ClientboundPacket, HandlerTypes } from '../../packets'
+import { keyNames } from '../utils'
 
 import NoteAdd from '@mui/icons-material/NoteAdd'
 import FileOpen from '@mui/icons-material/FileOpen'
@@ -187,6 +188,8 @@ const AppBar: React.FC = () => {
   const [bpmDecimal, setBPMDecimal] = useState('00')
   const [beatsAnchor, setBeatsAnchor] = useState<HTMLElement | undefined>()
   const [beatsAnchor2, setBeatsAnchor2] = useState<HTMLElement | undefined>()
+  const [, setScaleAnchor] = useState<HTMLElement | undefined>()
+  const [rootNoteAnchor, setRootNoteAnchor] = useState<HTMLElement | undefined>()
   const { enqueueSnackbar } = useSnackbar()
 
   const updateBPM = (e: any) => {
@@ -196,6 +199,18 @@ const AppBar: React.FC = () => {
     $client.rpc.setProjectStatus({ isPlaying: false, bpm })
     enqueueSnackbar('操作成功!', { variant: 'success' })
   }
+
+  const rootNotes = useMemo(() => keyNames.map((it, i) => (
+    <MenuItem
+      key={i}
+      onClick={() => {
+        setRootNoteAnchor(undefined)
+        enqueueSnackbar('操作成功!', { variant: 'success' })
+      }}
+    >
+      {it}
+    </MenuItem>
+  )), [])
 
   const beats = useMemo(() => {
     const arr: JSX.Element[] = []
@@ -251,6 +266,16 @@ const AppBar: React.FC = () => {
         <LeftSection />
         <CenterSection />
         <section className='right-section'>
+          <div className='info-block scale'>
+            <span onClick={(e: any) => setRootNoteAnchor(e.target)}>C</span>
+            <sub>根音</sub>
+            <Menu anchorEl={rootNoteAnchor} open={!!rootNoteAnchor} onClose={() => setBeatsAnchor(undefined)}>{rootNotes}</Menu>
+          </div>
+          <div className='info-block scale'>
+            <span onClick={(e: any) => setScaleAnchor(e.target)}>自然大调</span>
+            <sub>调式</sub>
+            {/* <Menu anchorEl={scaleAnchor} open={!!scaleAnchor} onClose={() => setBeatsAnchor(undefined)}>{rootNotes}</Menu> */}
+          </div>
           <div className='info-block'>
             <div className='beats'>
               <span onClick={(e: any) => setBeatsAnchor(e.target)}>{state.timeSigNumerator}</span>/

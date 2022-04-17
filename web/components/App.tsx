@@ -19,29 +19,29 @@ import { GlobalDataContext, reducer, initialState } from '../reducer'
 import packets, { ClientboundPacket } from '../../packets'
 
 const palette: PaletteOptions = {
-  // background: {
-  //   default: 'hsl(210deg 79% 98%)',
-  //   paper: 'hsl(210deg 79% 98%)',
-  //   bright: 'hsl(210deg 79% 96%)',
-  //   brighter: 'hsl(210deg 79% 92%)',
-  //   brightest: 'hsl(210deg 79% 70%)',
-  //   keyboardBlackKey: '#21222c',
-  //   keyboardWhiteKey: '#eee'
-  // }
-  mode: 'dark',
-  primary: { main: '#8be9fd' },
-  secondary: { main: '#bd93f9' },
-  success: { main: '#50fa7b' },
-  error: { main: '#ff5555' },
   background: {
-    default: '#21222c',
-    paper: '#21222c',
-    bright: '#282a36',
-    brighter: '#343746',
-    brightest: '#6272a4',
+    default: 'hsl(210deg 79% 98%)',
+    paper: 'hsl(210deg 79% 98%)',
+    bright: 'hsl(210deg 79% 96%)',
+    brighter: 'hsl(210deg 79% 92%)',
+    brightest: 'hsl(210deg 79% 70%)',
     keyboardBlackKey: '#21222c',
     keyboardWhiteKey: '#eee'
   }
+  // mode: 'dark',
+  // primary: { main: '#8be9fd' },
+  // secondary: { main: '#bd93f9' },
+  // success: { main: '#50fa7b' },
+  // error: { main: '#ff5555' },
+  // background: {
+  //   default: '#21222c',
+  //   paper: '#21222c',
+  //   bright: '#282a36',
+  //   brighter: '#343746',
+  //   brightest: '#6272a4',
+  //   keyboardBlackKey: '#21222c',
+  //   keyboardWhiteKey: '#eee'
+  // }
 }
 
 const App: React.FC = () => {

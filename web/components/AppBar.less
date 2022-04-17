@@ -67,36 +67,42 @@
   }
 
   .right-section {
-    .info-block > div {
-      display: flex;
-      align-items: baseline;
-
-      .MuiTextField-root {
-        color: inherit;
-        width: 3rem;
+    .info-block {
+      &.scale {
+        margin-right: 20px;
       }
 
-      .integer input {
-        font-weight: bold;
-        font-size: 22px;
-        letter-spacing: -0.7px;
-        text-align: right;
-        padding: 0;
-      }
+      & > div {
+        display: flex;
+        align-items: baseline;
 
-      .decimal {
-        width: 1.5rem;
-      }
+        .MuiTextField-root {
+          color: inherit;
+          width: 3rem;
+        }
 
-      .MuiInput-root {
-        color: inherit;
+        .integer input {
+          font-weight: bold;
+          font-size: 22px;
+          letter-spacing: -0.7px;
+          text-align: right;
+          padding: 0;
+        }
 
-        &::before, &::after {
-          display: none;
+        .decimal {
+          width: 1.5rem;
+        }
+
+        .MuiInput-root {
+          color: inherit;
+
+          &::before, &::after {
+            display: none;
+          }
         }
       }
-    }
 
-    .beats span { cursor: pointer; }
+      .beats span { cursor: pointer; }
+    }
   }
 }
