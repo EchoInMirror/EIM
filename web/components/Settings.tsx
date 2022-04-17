@@ -124,20 +124,27 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
               )}
               {tab === 2 && (
                 <List dense>
-                  {Object.entries(config.vstSearchPaths).map(([key, val], i) => (
-                    <React.Fragment key={key}>
-                      {i ? <Divider /> : null}
-                      <ListSubheader>{key}</ListSubheader>
-                      {val.map(it => (
-                        <ListItem key={it}>
-                          <ListItemText primary={it} />
-                          <ListItemSecondaryAction>
-                            <IconButton edge='end'><Delete /></IconButton>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
-                    </React.Fragment>
-                  ))}
+                  <ListSubheader>插件扫描路径</ListSubheader>
+                  <ListItem>
+                    <ListItemText primary='C:\Program Files\Steinberg\VstPlugins' />
+                    <ListItemSecondaryAction>
+                      <IconButton edge='end'><Delete /></IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText primary='C:\Program Files\VstPlugins' />
+                    <ListItemSecondaryAction>
+                      <IconButton edge='end'><Delete /></IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText primary='C:\Program Files\Common Files\VST3' />
+                    <ListItemSecondaryAction>
+                      <IconButton edge='end'><Delete /></IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  <Divider />
+                  <ListSubheader>忽略扫描的文件列表</ListSubheader>
                 </List>
               )}
             </div>
@@ -153,7 +160,7 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
             )}
             {tab === 2 && (
               <DialogActions>
-                <Button onClick={() => $client.rpc.openPluginManager({ })} color='primary'>打开插件管理器</Button>
+                <Button color='primary'>添加扫描路径</Button>
                 <Button onClick={() => $client.rpc.scanVSTs({ })} color='primary' disabled={scanning}>扫描插件</Button>
               </DialogActions>
             )}
