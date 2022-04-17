@@ -2,7 +2,7 @@ import './EventEditor.less'
 import packets from '../../packets'
 import React, { useMemo, memo, useEffect, useRef } from 'react'
 import { Resizable } from 're-resizable'
-import { Paper, Box, useTheme, alpha } from '@mui/material'
+import { Paper, Box, useTheme, alpha, Select, MenuItem, Button } from '@mui/material'
 
 const EventEditorGrid = memo(function EventEditorGrid ({ width, timeSigNumerator, timeSigDenominator }:
   { width: number, timeSigNumerator: number, timeSigDenominator: number }) {
@@ -162,8 +162,10 @@ const EventEditor = memo(function EventEditor ({ midi, color, beatWidth, noteWid
           square
           elevation={6}
           className='event-editor-actions'
+          sx={{ flexDirection: 'column', overflow: 'hidden' }}
         >
-          力度
+          <Select value='velocity' variant='standard' className='editor-selector'><MenuItem value='velocity'>力度</MenuItem></Select>
+          <Button variant='text' size='small'>AI自动化</Button>
         </Paper>
         <Box
           className='content'

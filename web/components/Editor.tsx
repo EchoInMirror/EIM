@@ -665,37 +665,6 @@ const Editor: React.FC = () => {
             />
           </Box>
 
-          <FormControl variant='standard' style={{ flex: 1 }}>
-            <InputLabel id='bottom-bar-alignment-label'>对齐</InputLabel>
-            <Select
-              labelId='bottom-bar-alignment-label'
-              id='bottom-bar-alignment'
-              value={alignment}
-              onChange={e => {
-                const val = e.target.value as number
-                localStorage.setItem('eim:editor:alignment', val.toString())
-                setAlignment(val)
-              }}
-              label='对齐'
-            >
-              <MenuItem value={state.ppq * state.timeSigNumerator}><em>小节</em></MenuItem>
-              <Divider />
-              <MenuItem value={state.ppq}><em>节拍</em></MenuItem>
-              <MenuItem value={state.ppq / 2}>1/2 拍</MenuItem>
-              <MenuItem value={state.ppq / 3 | 0}>1/3 拍</MenuItem>
-              <MenuItem value={state.ppq / 4}>1/4 拍</MenuItem>
-              <MenuItem value={state.ppq / 6 | 0}>1/6 拍</MenuItem>
-              <Divider />
-              <MenuItem value={steps}><em>步进</em></MenuItem>
-              <MenuItem value={steps / 2}>1/2 步</MenuItem>
-              <MenuItem value={steps / 3 | 0}>1/3 步</MenuItem>
-              <MenuItem value={steps / 4}>1/4 步</MenuItem>
-              <MenuItem value={steps / 6 | 0}>1/6 步</MenuItem>
-              <Divider />
-              <MenuItem value={1}><em>无</em></MenuItem>
-            </Select>
-          </FormControl>
-
           <FormControlLabel
             id='checkbox'
             value='top'
