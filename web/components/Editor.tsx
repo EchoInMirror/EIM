@@ -13,6 +13,7 @@ import {
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import ContentCut from '@mui/icons-material/ContentCut'
 import ContentPaste from '@mui/icons-material/ContentPaste'
+import Lightbulb from '@mui/icons-material/Lightbulb'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
@@ -541,6 +542,10 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
         >
           <ListItemIcon><ContentPaste fontSize='small' /></ListItemIcon>
           <ListItemText>从剪辑版粘贴</ListItemText>
+        </MenuItem>
+        <MenuItem>
+          <ListItemIcon><Lightbulb fontSize='small' /></ListItemIcon>
+          <ListItemText>AI 续写</ListItemText>
         </MenuItem>
       </Menu>
     </div>

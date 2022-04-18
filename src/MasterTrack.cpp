@@ -2,8 +2,10 @@
 #include "Main.h"
 #include "../packets/packets.h"
 
-MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
+MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead(), thumbnailCache(5), thumbnail(512, formatManager, thumbnailCache) {
 	setPlayHead(this);
+	thumbnail.addChangeListener(this);
+	formatManager.registerBasicFormats();
 
 	endTime = currentPositionInfo.timeSigNumerator * ppq;
 
@@ -20,6 +22,17 @@ MasterTrack::MasterTrack(): AudioProcessorGraph(), juce::AudioPlayHead() {
 	outputNodeID = initTrack(std::make_unique<Track>("", this))->nodeID;
 	addConnection({ { outputNodeID, 0 }, { output, 0 } });
 	addConnection({ { outputNodeID, 1 }, { output, 1 } });
+
+	/*
+	chooser = std::make_unique<juce::FileChooser>("Select a Wave file to play...", juce::File{}, "*");
+	auto chooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+
+	chooser->launchAsync(chooserFlags, [this](const juce::FileChooser& fc) {
+		auto file = fc.getResult();
+		if (file == juce::File{}) return;
+		auto* reader = formatManager.createReaderFor(file);
+		if (reader != nullptr) thumbnail.setReader(reader, 0);
+	});*/
 }
 
 void MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback) {
@@ -125,4 +138,22 @@ void MasterTrack::stopAllNotes() {
 	auto msg = juce::MidiMessage::allNotesOff(1);
 	msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
 	for (auto& it : tracks) ((Track*)it->getProcessor())->messageCollector.addMessageToQueue(msg);
+}
+
+void MasterTrack::changeListenerCallback(juce::ChangeBroadcaster* source) {
+	if (source == &thumbnail && thumbnail.isFullyLoaded()) {
+		auto length = thumbnail.getTotalLength();
+		int width = juce::roundToInt(length / 60.0 * currentPositionInfo.bpm * 96 * 6);
+		juce::Rectangle<int> thumbnailBounds(0, 0, width, 70);
+		auto img = juce::Image(juce::Image::ARGB, width, 70, true);
+		juce::Graphics g(img);
+		g.setColour(juce::Colours::white);
+		thumbnail.drawChannels(g, thumbnailBounds, 0.0, length, 1.0f);
+		juce::PNGImageFormat format;
+		auto file = juce::File::getCurrentWorkingDirectory().getChildFile("test.png");
+		file.deleteFile();
+		juce::FileOutputStream stream(file);
+		format.writeImageToStream(img, stream);
+		DBG("FINISHED");
+	}
 }

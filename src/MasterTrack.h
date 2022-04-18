@@ -6,7 +6,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 
-class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead {
+class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead, public juce::ChangeListener {
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
@@ -21,6 +21,7 @@ public:
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void createPluginWindow(juce::AudioPluginInstance* instance);
     void writeProjectStatus(EIMPackets::ProjectStatus&);
 
@@ -35,6 +36,11 @@ private:
     juce::AudioDeviceManager deviceManager;
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     juce::AudioProcessorPlayer graphPlayer;
+	juce::AudioFormatManager formatManager;
+	juce::AudioThumbnailCache thumbnailCache;
+	juce::AudioThumbnail thumbnail;
+	std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
+	std::unique_ptr<juce::FileChooser> chooser;
     std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
 
     void calcPositionInfo();

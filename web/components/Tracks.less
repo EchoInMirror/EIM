@@ -110,11 +110,23 @@
       min-width: 100%;
     }
 
-    .notes {
+    .content {
       position: relative;
 
-      div {
+      .notes div {
         position: absolute;
+      }
+    }
+
+    .audio-clips {
+      position: absolute;
+      height: inherit;
+      & > div {
+        height: inherit;
+        width: fit-content;
+        image-rendering: pixelated;
+        position: absolute;
+        transform-origin: left;
       }
     }
   }

@@ -77,7 +77,7 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
   )
 }
 
-const Track: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data, width }) => {
+const TrackNotes: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data, width }) => {
   return (
     <div className='notes'>
       {useMemo(() => {
@@ -150,7 +150,24 @@ const Tracks: React.FC = () => {
     actions.push(<React.Fragment key={id}><TrackActions info={it} /><Divider variant='middle' /></React.Fragment>)
     midis.push((
       <Box key={id} sx={{ backgroundColor: alpha(it.color!, 0.1), '& .notes div': { backgroundColor: it.color! } }}>
-        <Track data={it.midi!} width={noteWidth} />
+        <div className='content'>
+          <TrackNotes data={it.midi!} width={noteWidth} />
+          {/* <div className='audio-clips'>
+            {Array.from({ length: 32 }, (_, i) => (
+              <div
+                key={i}
+                style={{
+                  background: it.color!,
+                  WebkitMaskBoxImage: 'url(http://127.0.0.1:8088/test.png)',
+                  transform: `scaleX(${state.ppq / 96 / 6 * noteWidth})`,
+                  left: barLength * i
+                }}
+              >
+                <img src='http://127.0.0.1:8088/test.png' style={{ opacity: 0 }} />
+              </div>
+            ))}
+          </div> */}
+        </div>
         <Divider />
       </Box>
     ))
@@ -193,7 +210,7 @@ const Tracks: React.FC = () => {
             新增轨道
           </LoadingButton>
         </Paper>
-        <Box className='playlist' sx={{ '& .notes': { height }, '& .notes div': { height: height / 132 + 'px' } }} ref={playListRef}>
+        <Box className='playlist' sx={{ '& .content': { height }, '& .notes div': { height: height / 132 + 'px' } }} ref={playListRef}>
           <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth }}>
             <Grid timeSigNumerator={state.timeSigNumerator} width={beatWidth} />
             <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
