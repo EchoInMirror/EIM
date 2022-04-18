@@ -33,6 +33,7 @@ class CreateTrackAction : public juce::UndoableAction
   private:
     std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data;
     std::function<void()> callback;
+    std::string uuid;
 
   public:
     CreateTrackAction(std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data)
@@ -48,6 +49,7 @@ class CreateTrackAction : public juce::UndoableAction
         auto track = (Track *)EIMApplication::getEIMInstance()
                          ->mainWindow->masterTrack->createTrack(data->name(), data->color())
                          ->getProcessor();
+        uuid = track->uuid;
         if (data->has_identifier())
         {
             loadPluginAndAdd(data->identifier(), true, track, [this, track]() {
@@ -74,7 +76,8 @@ class CreateTrackAction : public juce::UndoableAction
     bool undo() override
     {
         // TODO
-        return false;
+        EIMApplication::getEIMInstance()->mainWindow->masterTrack->removeTrack(uuid);
+        return true;
     }
 };
 
