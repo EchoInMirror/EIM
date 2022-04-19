@@ -1,13 +1,13 @@
 #pragma once
 
-#include <juce_dsp/juce_dsp.h>
-#include <juce_audio_utils/juce_audio_utils.h>
 #include "utils/utils.h"
+#include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_dsp/juce_dsp.h>
 
 class MasterTrack;
 
-class Track: public juce::AudioProcessorGraph {
-public:
+class Track : public juce::AudioProcessorGraph {
+  public:
     Track(std::string uuid, MasterTrack* masterTrack);
     Track(std::string name, std::string color, MasterTrack* masterTrack);
     std::string uuid;
@@ -28,13 +28,15 @@ public:
     virtual void setProcessingPrecision(ProcessingPrecision newPrecision);
     virtual void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize);
 
-    void addEffectPlugin(std::unique_ptr<juce::AudioPluginInstance>);
+    juce::AudioProcessorGraph::NodeID addEffectPlugin(std::unique_ptr<juce::AudioPluginInstance>);
+    void removeEffectPlugin(juce::AudioPluginInstance*);
     void setInstrument(std::unique_ptr<juce::AudioPluginInstance>);
     juce::AudioPluginInstance* getInstrumentInstance();
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
     void writeTrackInfo(EIMPackets::TrackInfo* data);
     void setMuted(bool val);
-private:
+
+  private:
     MasterTrack* masterTrack;
     juce::CriticalSection processLock;
     int samplesPlayed = 0;
