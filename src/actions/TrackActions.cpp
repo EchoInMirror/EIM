@@ -12,7 +12,7 @@ void loadPluginAndAdd(std::string identifier, bool setName, Track* track,
     else
         instance->mainWindow->masterTrack->loadPlugin(
             std::move(type),
-            [callback, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
+            [&callback, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
                 if (err.isEmpty()) {
                     EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(instance.get());
                     auto inst = instance.get();
@@ -210,7 +210,6 @@ class AddMidiMessagesAction : public juce::UndoableAction {
   private:
     std::unique_ptr<EIMPackets::MidiMessages> data;
     juce::MidiMessageSequence seq;
-    Track* preTrack = nullptr;
 
   public:
     AddMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) {
@@ -222,21 +221,21 @@ class AddMidiMessagesAction : public juce::UndoableAction {
         auto& uuid = data->uuid();
         if (!tracks.contains(uuid)) return false;
         auto track = (Track*)tracks[uuid]->getProcessor();
-        preTrack = track;
         for (auto& it : data->midi())
             seq.addEvent(decodeMidiMessage(it.data(), it.time()));
         track->midiSequence.addSequence(seq, 0);
-        EIMApplication::getEIMInstance()->listener->boardcast(
-            std::move(EIMMakePackets::makeAddMidiMessagesPacket(*data)));
+		instance->listener->boardcast(std::move(EIMMakePackets::makeAddMidiMessagesPacket(*data)));
         return true;
     }
     bool undo() override {
         // TODO
         DBG("undo AddMidiMessagesAction");
-        if (!preTrack) return false;
-        for (auto& it : seq) {
-            preTrack->midiSequence.deleteEvent(preTrack->midiSequence.getIndexOf(it), false);
-        }
+		auto instance = EIMApplication::getEIMInstance();
+		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		auto track = (Track*)tracks[uuid]->getProcessor();
+        for (auto& it : seq) track->midiSequence.deleteEvent(track->midiSequence.getIndexOf(it), false);
         return true;
     }
 };
@@ -249,11 +248,9 @@ class DeleteMidiMessagesAction : public juce::UndoableAction {
   private:
     std::unique_ptr<EIMPackets::MidiMessages> data;
     juce::MidiMessageSequence preSeq;
-    Track* preTrack;
 
   public:
-    DeleteMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) {
-    }
+    DeleteMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) { }
     bool perform() override {
         auto instance = EIMApplication::getEIMInstance();
         auto& tracks = instance->mainWindow->masterTrack->tracksMap;
@@ -261,7 +258,6 @@ class DeleteMidiMessagesAction : public juce::UndoableAction {
         if (!tracks.contains(uuid)) return false;
         auto track = (Track*)tracks[uuid]->getProcessor();
         preSeq.clear();
-        preTrack = track;
         int times = 0;
         int idx = 0;
         for (auto it : data->data()) {
@@ -275,8 +271,11 @@ class DeleteMidiMessagesAction : public juce::UndoableAction {
     }
     bool undo() override {
         DBG("undo DeleteMidiMessagesAction");
-        if (!preTrack) return false;
-        preTrack->midiSequence.addSequence(preSeq, 0);
+		auto instance = EIMApplication::getEIMInstance();
+		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		((Track*)tracks[uuid]->getProcessor())->midiSequence.addSequence(preSeq, 0);
         return true;
     }
 };
@@ -302,7 +301,7 @@ class EditMidiMessagesAction : public juce::UndoableAction {
         int index = 0;
         auto& ids = data->data();
         for (auto& it : data->midi()) {
-            auto tarmessage = track->midiSequence.getEventPointer(ids[index++])->message;
+            auto& tarmessage = track->midiSequence.getEventPointer(ids[index++])->message;
             auto copymessage = juce::MidiMessage(tarmessage);
             messages.push_back(copymessage);
             tarmessage = decodeMidiMessage(it.data(), it.time());
@@ -314,11 +313,11 @@ class EditMidiMessagesAction : public juce::UndoableAction {
     }
     bool undo() override {
         DBG("undo EditMidiMessagesAction");
-        auto tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracksMap;
-        auto uuid = data->uuid();
+        auto& tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracksMap;
+        auto& uuid = data->uuid();
         if (!tracks.contains(uuid)) return false;
         auto track = (Track*)tracks[uuid]->getProcessor();
-        auto ids = data->data();
+        auto& ids = data->data();
         for (int idx = 0; idx < data->midi().size(); ++idx) {
             track->midiSequence.getEventPointer(ids[idx])->message = messages[idx];
         }
@@ -328,9 +327,4 @@ class EditMidiMessagesAction : public juce::UndoableAction {
 
 void ServerService::handleEditMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::MidiMessages> data) {
     EIMApplication::getEIMInstance()->undoManager.perform(new EditMidiMessagesAction(std::move(data)));
-}
-
-void ServerService::handleUndo(WebSocketSession*) {
-    DBG("undo");
-    EIMApplication::getEIMInstance()->undoManager.undo();
 }

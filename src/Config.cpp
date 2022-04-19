@@ -5,7 +5,10 @@ Config::Config() : rootPath(juce::File::getSpecialLocation(juce::File::SpecialLo
 	rootPath.createDirectory();
 	if (!configPath.exists()) configPath.replaceWithText("{}");
     config = juce::JSON::parse(configPath);
-    auto* obj = config.getDynamicObject();
 }
 
 std::string Config::toString() { return juce::JSON::toString(config).toStdString(); }
+void Config::save() {
+	configPath.replaceWithText(config.toString());
+	changed = false;
+}

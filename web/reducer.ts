@@ -17,11 +17,12 @@ export const initialState = {
 
 export type StateType = typeof initialState
 
-export const reducer = (state: StateType, action: Partial<StateType>): StateType => ({ ...state, ...action })
-
 export type DispatchType = (action: Partial<StateType>) => void
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const GlobalDataContext = createContext([initialState, (_action: Partial<StateType>) => { }] as const)
 
 export default () => useContext(GlobalDataContext)
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const BottomBarContext = createContext(['' as string, (_action: string) => { }] as const)

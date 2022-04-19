@@ -1,14 +1,15 @@
 import './SideBar.less'
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useContext, memo } from 'react'
 import packets from '../../packets'
 import TreeView from '@mui/lab/TreeView'
 import TreeItem from '@mui/lab/TreeItem'
 import { Resizable } from 're-resizable'
-import { setIsMixer } from './BottomBar'
-import { Paper, Box, alpha, Toolbar, Button, colors } from '@mui/material'
+import { actions } from './BottomBar'
+import { BottomBarContext } from '../reducer'
+import { Paper, Box, alpha, Toolbar, Button, Tooltip, colors } from '@mui/material'
 import {
-  FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, Piano,
-  Tune, GraphicEq, PlaylistAddOutlined, TopicOutlined, StraightenOutlined, CloudOutlined, GraphicEqOutlined
+  FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, GraphicEq, Piano,
+  PlaylistAddOutlined, TopicOutlined, StraightenOutlined, CloudOutlined, GraphicEqOutlined
 } from '@mui/icons-material'
 
 import type { TreeItemProps } from '@mui/lab/TreeItem'
@@ -156,29 +157,31 @@ const Explorer: React.FC<{ type: ItemType }> = ({ type }) => {
   )
 }
 
-const SideBarButton: React.FC<{ active?: boolean } & ButtonProps> = ({ active, children, ...props }) => (
-  <Button
-    component='li'
-    sx={theme => ({
-      color: active ? theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main : alpha(theme.palette.primary.main, 0.5),
-      borderRadius: 0,
-      boxShadow: active ? 'inset 2px 0px ' + theme.palette.primary.main : undefined,
-      backgroundColor: active ? alpha(theme.palette.primary.main, 0.2) : undefined,
-      '&:hover': {
-        color: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main,
-        backgroundColor: active ? alpha(theme.palette.primary.main, 0.2) : 'inherit'
-      }
-    })}
-    {...props as any}
-  >
-    {children}
-  </Button>
-)
+const SideBarButton = memo(function SideBarButton ({ active, title, ...props }: { active?: boolean, title: string } & ButtonProps) {
+  return (
+    <Tooltip title={title} placement='right' arrow>
+      <Button
+        component='li'
+        sx={theme => ({
+          color: active ? theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main : alpha(theme.palette.primary.main, 0.5),
+          borderRadius: 0,
+          boxShadow: active ? 'inset 2px 0px ' + theme.palette.primary.main : undefined,
+          backgroundColor: active ? alpha(theme.palette.primary.main, 0.2) : undefined,
+          '&:hover': {
+            color: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.primary.main,
+            backgroundColor: active ? alpha(theme.palette.primary.main, 0.2) : 'inherit'
+          }
+        })}
+        {...props as any}
+      />
+    </Tooltip>
+  )
+})
 
 const SideBar = memo(function SideBar () {
   const [width, setWidth] = useState(0)
   const [type, setType] = useState(1)
-  const [isMixer, setIsMixer0] = useState(false)
+  const [bottomBarType, setBottomBarType] = useContext(BottomBarContext)
   return (
     <Box component='nav' className='side-bar' sx={{ zIndex: theme => theme.zIndex.appBar - 1 }}>
       <Paper square elevation={3} sx={{ background: theme => theme.palette.background.bright }}>
@@ -187,6 +190,7 @@ const SideBar = memo(function SideBar () {
           {items.map((it, i) => (
             <SideBarButton
               key={i}
+              title={it.title}
               active={i === type && width as any}
               onClick={() => {
                 setType(i)
@@ -199,29 +203,17 @@ const SideBar = memo(function SideBar () {
             </SideBarButton>
           ))}
           <div className='bottom-buttons'>
-            <SideBarButton
-              active={!isMixer}
-              onClick={() => {
-                setIsMixer(false)
-                setIsMixer0(false)
-              }}
-            >
-              <Piano />
-            </SideBarButton>
-            <SideBarButton
-              active={isMixer}
-              onClick={() => {
-                setIsMixer(true)
-                setIsMixer0(true)
-              }}
-              onDragOver={() => {
-                if (isMixer) return
-                setIsMixer(true)
-                setIsMixer0(true)
-              }}
-            >
-              <Tune sx={{ transform: 'rotate(90deg)' }} />
-            </SideBarButton>
+            {Object.entries(actions).map(([key, it]) => (
+              <SideBarButton
+                key={key}
+                title={it.title}
+                active={key === bottomBarType}
+                onClick={() => setBottomBarType(key === bottomBarType ? '' : key)}
+                onDragOver={() => setBottomBarType(key)}
+              >
+                {it.icon}
+              </SideBarButton>
+            ))}
           </div>
         </ul>
       </Paper>

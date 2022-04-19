@@ -107,7 +107,6 @@ service ServerService { // Server bound
   rpc updateTrackInfo (TrackInfo) returns (google.protobuf.Empty);
   rpc openPluginWindow (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
   rpc config (OptionalString) returns (OptionalString);
-  rpc openPluginManager (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc scanVSTs (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc loadVST (ServerboundLoadVST) returns (Empty);
   rpc sendMidiMessages (MidiMessages) returns (google.protobuf.Empty);
@@ -115,6 +114,7 @@ service ServerService { // Server bound
   rpc deleteMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc undo (google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc redo (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Config.h"
-#include "PluginManagerWindow.h"
+#include "PluginManager.h"
 #include "MasterTrack.h"
 #include "websocket/Listener.h"
 
@@ -22,7 +22,7 @@ public:
     Config config;
     juce::UndoManager undoManager;
     std::unique_ptr<MainWindow> mainWindow;
-    std::unique_ptr<PluginManagerWindow> pluginManager;
+    std::unique_ptr<PluginManager> pluginManager;
     boost::shared_ptr<Listener> listener;
 
     const juce::String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }

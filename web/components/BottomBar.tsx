@@ -1,7 +1,8 @@
 import './BottomBar.less'
-import React, { useState, useEffect, memo } from 'react'
+import React, { useState, useEffect, useContext, memo } from 'react'
 import { Resizable } from 're-resizable'
 import { Paper, Box } from '@mui/material'
+import { BottomBarContext } from '../reducer'
 import LinkIcon from '@mui/icons-material/Link'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
 import MusicNote from '@mui/icons-material/MusicNote'
@@ -9,13 +10,12 @@ import MemoryOutlined from '@mui/icons-material/MemoryOutlined'
 import Refresh from '@mui/icons-material/Refresh'
 import WarningAmber from '@mui/icons-material/WarningAmber'
 import SourceBranch from 'mdi-material-ui/SourceBranch'
+import Piano from 'mdi-material-ui/Piano'
+import Tune from 'mdi-material-ui/Tune'
 import SettingsInputSvideo from '@mui/icons-material/SettingsInputSvideo'
 
 import Mixer from './Mixer'
 import Editor from './Editor'
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-export let setIsMixer = (_val: boolean) => { }
 
 const ConnectStatus = memo(function ConnectStatus () {
   const [connected, setConnected] = useState(true)
@@ -83,21 +83,42 @@ const StatusBar = memo(function StatusBar () {
   )
 })
 
+export const actions: Record<string, { title: string, icon: JSX.Element, component: JSX.Element }> = {
+  'eim:editor': {
+    title: '钢琴窗',
+    icon: <Piano />,
+    component: <Editor />
+  },
+  'eim:mixer': {
+    title: '混音台',
+    icon: <Tune sx={{ transform: 'rotate(90deg)' }} />,
+    component: <Mixer />
+  }
+}
+
 const BottomBar: React.FC = () => {
-  const [isMixer, fn] = useState(false)
-  setIsMixer = fn
+  const [height, setHeight] = useState(() => +localStorage.getItem('eim:bottomBar:height')! || 0)
+  const action = actions[useContext(BottomBarContext)[0]]
   return (
     <>
-      <Resizable enable={{ top: true }} className='bottom-bar' maxHeight='80vh' minHeight={0}>
-        <Paper
-          square
-          id='bottom-bar'
-          elevation={3}
-          sx={{ borderTop: theme => '1px solid ' + theme.palette.primary.main, background: theme => theme.palette.background.bright, zIndex: 2 }}
+      {action && (
+        <Resizable
+          onResizeStop={(_, __, ___, d) => setHeight(height + d.height)}
+          enable={{ top: true }}
+          className='bottom-bar'
+          minHeight={0}
+          size={{ height: height } as any as { width: number, height: number }}
         >
-          {isMixer ? <Mixer /> : <Editor />}
-        </Paper>
-      </Resizable>
+          <Paper
+            square
+            id='bottom-bar'
+            elevation={3}
+            sx={{ borderTop: theme => '1px solid ' + theme.palette.primary.main, background: theme => theme.palette.background.bright, zIndex: 2 }}
+          >
+            {action.component}
+          </Paper>
+        </Resizable>
+      )}
       <StatusBar />
     </>
   )

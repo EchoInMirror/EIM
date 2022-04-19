@@ -4,18 +4,20 @@ import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
 import './App.less'
 
-import React, { useEffect, useReducer } from 'react'
+import React, { useEffect, useReducer, memo } from 'react'
 import { CssBaseline, Paper } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { SnackbarProvider } from 'notistack'
-import type { PaletteOptions } from '@mui/material/styles/createPalette'
 import { zhCN } from '@mui/material/locale'
+import { GlobalHotKeys } from 'react-hotkeys'
+import type { PaletteOptions } from '@mui/material/styles/createPalette'
 
 import AppBar from './AppBar'
 import SideBar from './SideBar'
 import BottomBar from './BottomBar'
 import Tracks from './Tracks'
-import { GlobalDataContext, reducer, initialState } from '../reducer'
+import hotkeys, { defaultHandlers } from '../hotkeys'
+import { GlobalDataContext, initialState, BottomBarContext } from '../reducer'
 import packets, { ClientboundPacket } from '../../packets'
 
 const palette: PaletteOptions = {
@@ -44,6 +46,20 @@ const palette: PaletteOptions = {
   // }
 }
 
+const bottomBarReducer = (_state: string, action: string) => action
+const BottomAndSideBar = memo(function BottomAndSideBar () {
+  return (
+    <BottomBarContext.Provider value={useReducer(bottomBarReducer, '')}>
+      <SideBar />
+      <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
+        <Tracks />
+        <BottomBar />
+      </Paper>
+    </BottomBarContext.Provider>
+  )
+})
+
+const globalDataReducer = (state: any, action: any) => ({ ...state, ...action })
 const App: React.FC = () => {
   const theme = createTheme({ palette }, zhCN)
 
@@ -63,7 +79,7 @@ const App: React.FC = () => {
     theme.palette.background!.keyboardWhiteKey
   ])
 
-  const ctx = useReducer(reducer, initialState) as any
+  const ctx = useReducer(globalDataReducer, initialState) as any
   window.$globalData = ctx[0]
   window.$dispatch = ctx[1]
 
@@ -83,12 +99,10 @@ const App: React.FC = () => {
       <CssBaseline />
       <SnackbarProvider maxSnack={6}>
         <GlobalDataContext.Provider value={ctx}>
-          <AppBar />
-          <SideBar />
-          <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
-            <Tracks />
-            <BottomBar />
-          </Paper>
+          <GlobalHotKeys keyMap={hotkeys} handlers={defaultHandlers}>
+            <AppBar />
+            <BottomAndSideBar />
+          </GlobalHotKeys>
         </GlobalDataContext.Provider>
       </SnackbarProvider>
     </ThemeProvider>
