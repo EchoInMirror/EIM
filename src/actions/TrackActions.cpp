@@ -15,10 +15,11 @@ void loadPluginAndAdd(std::string identifier, bool setName, Track* track,
             [callback, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
                 if (err.isEmpty()) {
                     EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(instance.get());
+                    auto inst = instance.get();
                     if (instance->getPluginDescription().isInstrument) track->setInstrument(std::move(instance));
                     else
                         track->addEffectPlugin(std::move(instance));
-                    callback(instance->getPluginDescription().isInstrument, instance.get());
+                    callback(inst->getPluginDescription().isInstrument, inst);
                 }
                 else {
                     callback(false, nullptr);
@@ -40,6 +41,7 @@ class CreateTrackAction : public juce::UndoableAction {
         : data(std::move(data)), callback(callback) {
     }
     bool perform() override {
+        DBG("CreateTrackAction");
         auto track = (Track*)EIMApplication::getEIMInstance()
                          ->mainWindow->masterTrack->createTrack(data->name(), data->color())
                          ->getProcessor();
@@ -65,7 +67,7 @@ class CreateTrackAction : public juce::UndoableAction {
         return true;
     }
     bool undo() override {
-        // TODO
+        DBG("undo CreateTrackAction");
         EIMApplication::getEIMInstance()->mainWindow->masterTrack->removeTrack(uuid);
         return true;
     }
@@ -155,6 +157,7 @@ class LoadVSTAction : public juce::UndoableAction {
         : data(std::move(data)), callback(callback) {
     }
     bool perform() override {
+        DBG("LoadVSTAction");
         auto instance = EIMApplication::getEIMInstance();
         auto& tracks = instance->mainWindow->masterTrack->tracksMap;
         auto& uuid = data->uuid();
@@ -177,6 +180,7 @@ class LoadVSTAction : public juce::UndoableAction {
         return true;
     }
     bool undo() override {
+        DBG("undo LoadVSTAction");
         if (this->instance == nullptr) return false;
         auto instance = EIMApplication::getEIMInstance();
         auto& tracks = instance->mainWindow->masterTrack->tracksMap;
@@ -309,7 +313,7 @@ class EditMidiMessagesAction : public juce::UndoableAction {
         return true;
     }
     bool undo() override {
-        // TODO
+        DBG("undo EditMidiMessagesAction");
         auto tracks = EIMApplication::getEIMInstance()->mainWindow->masterTrack->tracksMap;
         auto uuid = data->uuid();
         if (!tracks.contains(uuid)) return false;
@@ -328,6 +332,5 @@ void ServerService::handleEditMidiMessages(WebSocketSession*, std::unique_ptr<EI
 
 void ServerService::handleUndo(WebSocketSession*) {
     DBG("undo");
-    DBG(EIMApplication::getEIMInstance()->undoManager.getUndoDescription());
     EIMApplication::getEIMInstance()->undoManager.undo();
 }
