@@ -109,7 +109,7 @@ void ServerService::handleSendMidiMessages(WebSocketSession*, std::unique_ptr<EI
 }
 
 void ServerService::handleUndo(WebSocketSession*) {
-	DBG("undo");
+	DBG("undo: " << EIMApplication::getEIMInstance()->undoManager.getUndoDescription());
 	EIMApplication::getEIMInstance()->undoManager.undo();
 }
 

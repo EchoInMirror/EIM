@@ -9,7 +9,7 @@ class MasterTrack;
 class Track : public juce::AudioProcessorGraph {
   public:
     Track(std::string uuid, MasterTrack* masterTrack);
-    Track(std::string name, std::string color, MasterTrack* masterTrack);
+    Track(std::string name, std::string color, MasterTrack* masterTrack, std::string uuid);
     std::string uuid;
     std::string name;
     std::string color;

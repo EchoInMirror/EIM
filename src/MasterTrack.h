@@ -18,7 +18,7 @@ public:
 
     void removeTrack(std::string id);
     void stopAllNotes();
-    juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color);
+    juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color, std::string uuid = "");
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
 	void changeListenerCallback(juce::ChangeBroadcaster* source) override;

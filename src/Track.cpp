@@ -7,8 +7,8 @@ Track::Track(std::string id, MasterTrack* masterTrack) : uuid(id), AudioProcesso
     init();
 }
 
-Track::Track(std::string name, std::string color, MasterTrack* masterTrack)
-    : uuid(randomUuid()), AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
+Track::Track(std::string name, std::string color, MasterTrack* masterTrack, std::string uuid)
+    : uuid(uuid.empty() ? randomUuid() : uuid), AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
     init();
 }
 
@@ -46,7 +46,6 @@ juce::AudioProcessorGraph::NodeID Track::addEffectPlugin(std::unique_ptr<juce::A
     addAudioConnection(prev, node);
     addAudioConnection(node, end);
     return node;
-    // syncThisTrackMixerInfo();
 }
 
 void Track::removeEffectPlugin(juce::AudioPluginInstance* instance) {
@@ -64,7 +63,6 @@ void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
     addAudioConnection(instrumentNode->nodeID, begin);
     addConnection({{midiIn, juce::AudioProcessorGraph::midiChannelIndex},
                    {instrumentNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
-    // syncThisTrackMixerInfo();
 }
 
 void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
@@ -124,6 +122,7 @@ void Track::writeTrackInfo(EIMPackets::TrackInfo* data) {
     data->set_hasinstrument(instrumentNode != nullptr);
     data->set_volume(chain.get<1>().getGainLinear());
     data->set_pan(pan);
+	data->set_isreplacing(true);
     for (auto& it : plugins) {
         data->add_plugins()->set_name(it->getProcessor()->getName().toStdString());
     }

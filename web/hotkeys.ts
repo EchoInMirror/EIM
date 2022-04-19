@@ -1,7 +1,7 @@
 export default {
   PLAY_OR_PAUSE: 'space',
-  UNDO: 'command+z',
-  REDO: 'command+y'
+  UNDO: 'ctrl+z',
+  REDO: 'ctrl+y'
 }
 
 export const defaultHandlers = {

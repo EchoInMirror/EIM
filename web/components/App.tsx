@@ -46,10 +46,14 @@ const palette: PaletteOptions = {
   // }
 }
 
-const bottomBarReducer = (_state: string, action: string) => action
+const bottomBarReducer = (_state: string, action: string) => {
+  localStorage.setItem('eim:bottomBar:type', action)
+  return action
+}
+const defaultBottomBarType = localStorage.getItem('eim:bottomBar:type') || ''
 const BottomAndSideBar = memo(function BottomAndSideBar () {
   return (
-    <BottomBarContext.Provider value={useReducer(bottomBarReducer, '')}>
+    <BottomBarContext.Provider value={useReducer(bottomBarReducer, defaultBottomBarType)}>
       <SideBar />
       <Paper square elevation={3} className='main-content' sx={{ background: theme => theme.palette.background.bright }}>
         <Tracks />

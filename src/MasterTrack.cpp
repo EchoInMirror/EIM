@@ -57,17 +57,16 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::initTrack(std::unique_ptr<Trac
     return node;
 }
 
-juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, std::string color) {
+juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, std::string color, std::string uuid) {
     juce::MidiFile file;
-    auto track = std::make_unique<Track>(name, color, this);
+    auto track = std::make_unique<Track>(name, color, this, uuid);
     auto env = juce::SystemStats::getEnvironmentVariable("MIDI_IMPORT_PATH", "");
     if (env.isNotEmpty()) {
         juce::FileInputStream theStream(env);
         file.readFrom(theStream);
         track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
         auto newEndTime = (int)std::ceil(juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(),
-                                                    (double)currentPositionInfo.timeSigNumerator)) *
-                          ppq;
+                                                    (double)currentPositionInfo.timeSigNumerator)) * ppq;
         if (endTime != newEndTime) {
             endTime = newEndTime;
             EIMPackets::ProjectStatus info;

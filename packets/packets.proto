@@ -75,6 +75,7 @@ message TrackInfo {
   optional int32 pan = 9;
   repeated PluginData plugins = 10;
   repeated MidiMessage midi = 11;
+  optional bool isReplacing = 12;
 }
 
 message ClientboundTracksInfo {
@@ -124,4 +125,5 @@ service ClientService { // Client bound
   rpc addMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc deleteMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);
+  rpc removeTrack (String) returns (google.protobuf.Empty);
 }

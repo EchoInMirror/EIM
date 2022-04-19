@@ -103,7 +103,11 @@ const BottomBar: React.FC = () => {
     <>
       {action && (
         <Resizable
-          onResizeStop={(_, __, ___, d) => setHeight(height + d.height)}
+          onResizeStop={(_, __, ___, d) => {
+            const h = height + d.height
+            setHeight(h)
+            localStorage.setItem('eim:bottomBar:height', h.toString())
+          }}
           enable={{ top: true }}
           className='bottom-bar'
           minHeight={0}
