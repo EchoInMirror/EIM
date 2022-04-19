@@ -569,7 +569,7 @@ const Editor: React.FC = () => {
 
   const track = state.activeTrack ? state.tracks[state.activeTrack] : undefined
 
-  useEffect(() => {
+  useEffect(() => () => {
     clearInterval(timer!)
     timer = undefined
   }, [])

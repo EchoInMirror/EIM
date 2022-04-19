@@ -117,3 +117,13 @@ void ServerService::handleRedo(WebSocketSession*) {
 	DBG("redo");
 	EIMApplication::getEIMInstance()->undoManager.redo();
 }
+
+void* saveState(void*) {
+	EIMApplication::getEIMInstance()->mainWindow->masterTrack->saveState();
+	return nullptr;
+}
+
+void ServerService::handleSave(WebSocketSession*, std::function<void(EIMPackets::Empty&)> reply) {
+	DBG("save");
+	juce::MessageManager::getInstance()->callFunctionOnMessageThread(saveState, nullptr);
+}

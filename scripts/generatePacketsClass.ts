@@ -32,7 +32,7 @@ for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) 
             a->ParseFromArray(boost::asio::buffer_cast<void*>(buf.data()), (int)len - ${noReturn ? 1 : 5});`}
             handle${name}(session${noArg ? '' : ', std::move(a)'}${noReturn
                 ? ''
-                : `${noArg ? '' : ', '}[replyId, session] (EIMPackets::${returnType}& a) {
+                : `${noArg && noReturn ? '' : ', '}[replyId, session] (EIMPackets::${returnType}& a) {
                 auto replyBuf = std::make_unique<boost::beast::flat_buffer>();
                 *(boost::asio::buffer_cast<unsigned char*>(replyBuf->prepare(1))) = 0;
                 replyBuf->commit(1);
@@ -45,7 +45,7 @@ for (const [, method, argType, returnType] of serverService.matchAll(/rpc (\w+) 
             }`});
             break;
         }\n`
-  serverServiceClass += `    void handle${name}(WebSocketSession*${noArg ? '' : `, std::unique_ptr<${argName}>`}${noReturn ? '' : `${noArg ? '' : ', '}std::function<void (EIMPackets::${returnType}&)>`});\n`
+  serverServiceClass += `    void handle${name}(WebSocketSession*${noArg ? '' : `, std::unique_ptr<${argName}>`}${noReturn ? '' : `${noArg && noReturn ? '' : ', '}std::function<void (EIMPackets::${returnType}&)>`});\n`
   clientServiceServerPackets += `  ${name},\n`
   if (!noReturn) clientCallbacks += `  ${name}: true,\n`
 }

@@ -116,6 +116,7 @@ service ServerService { // Server bound
   rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc undo (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc redo (google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc save (google.protobuf.Empty) returns (Empty);
 }
 
 service ClientService { // Client bound

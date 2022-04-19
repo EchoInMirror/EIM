@@ -24,6 +24,7 @@ public:
 	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void createPluginWindow(juce::AudioPluginInstance* instance);
     void writeProjectStatus(EIMPackets::ProjectStatus&);
+	void saveState();
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }

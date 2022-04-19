@@ -12,7 +12,7 @@ void loadPluginAndAdd(std::string identifier, bool setName, Track* track,
     else
         instance->mainWindow->masterTrack->loadPlugin(
             std::move(type),
-            [&callback, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
+            [callback, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
                 if (err.isEmpty()) {
                     EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(instance.get());
                     auto inst = instance.get();
@@ -66,7 +66,6 @@ public:
         return true;
     }
     bool undo() override {
-		DBG("undo CreateTrackAction");
 		auto instance = EIMApplication::getEIMInstance();
 		instance->mainWindow->masterTrack->removeTrack(uuid);
 		EIMPackets::String msg;
@@ -252,7 +251,6 @@ class AddMidiMessagesAction : public juce::UndoableAction {
         return true;
     }
     bool undo() override {
-		DBG("undo AddMidiMessagesAction");
 		auto instance = EIMApplication::getEIMInstance();
 		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
 		auto& uuid = data->uuid();
@@ -284,7 +282,6 @@ class DeleteMidiMessagesAction : public juce::UndoableAction {
   public:
     DeleteMidiMessagesAction(std::unique_ptr<EIMPackets::MidiMessages> data) : data(std::move(data)) { }
     bool perform() override {
-		DBG("DeleteMidiMessagesAction");
         auto instance = EIMApplication::getEIMInstance();
         auto& tracks = instance->mainWindow->masterTrack->tracksMap;
         auto& uuid = data->uuid();
@@ -302,7 +299,6 @@ class DeleteMidiMessagesAction : public juce::UndoableAction {
         return true;
     }
     bool undo() override {
-		DBG("undo DeleteMidiMessagesAction");
 		auto instance = EIMApplication::getEIMInstance();
 		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
 		auto& uuid = data->uuid();

@@ -35,6 +35,7 @@ class Track : public juce::AudioProcessorGraph {
     void addMidiEvents(juce::MidiMessageSequence seq, int timeFormat);
     void writeTrackInfo(EIMPackets::TrackInfo* data);
     void setMuted(bool val);
+	void saveState();
 
   private:
     MasterTrack* masterTrack;

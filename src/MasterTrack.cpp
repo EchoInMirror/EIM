@@ -1,5 +1,6 @@
 #include "MasterTrack.h"
 #include "../packets/packets.h"
+#include "utils/Utils.h"
 #include "Main.h"
 
 MasterTrack::MasterTrack()
@@ -167,4 +168,13 @@ void MasterTrack::changeListenerCallback(juce::ChangeBroadcaster* source) {
         format.writeImageToStream(img, stream);
         DBG("FINISHED");
     }
+}
+
+void MasterTrack::saveState() {
+	auto obj = new juce::DynamicObject();
+	obj->setProperty("ppq", ppq);
+	obj->setProperty("endTime", endTime);
+	obj->setProperty("bpm", currentPositionInfo.bpm);
+	EIMApplication::getEIMInstance()->config.projectInfoPath.replaceWithText(juce::JSON::toString(obj));
+	for (auto& it : tracks) ((Track*)it->getProcessor())->saveState();
 }

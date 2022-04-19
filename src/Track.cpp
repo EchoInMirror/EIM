@@ -137,27 +137,6 @@ juce::AudioPluginInstance* Track::getInstrumentInstance() {
     return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor();
 }
 
-// void Track::writeMidiData(ByteBuffer* buf) {
-/*buf->writeUUID(uuid);
-std::vector<std::tuple<juce::uint8, juce::uint8, juce::uint32, juce::uint32>> arr;
-midiSequence.updateMatchedPairs();
-for (auto& it : midiSequence) {
-    if (!it->message.isNoteOn() || !it->noteOffObject) continue;
-    arr.emplace_back(std::make_tuple(it->message.getNoteNumber(), it->message.getVelocity(), (juce::uint32)
-it->message.getTimeStamp(), (juce::uint32)(it->noteOffObject->message.getTimeStamp() - it->message.getTimeStamp())));
-}
-buf->writeUInt16((unsigned char) arr.size());
-juce::uint8 key, vel;
-juce::uint32 on, off;
-for (auto& it : arr) {
-    std::tie(key, vel, on, off) = it;
-    buf->writeUInt8(key);
-    buf->writeUInt8(vel);
-    buf->writeUInt32(on);
-    buf->writeUInt32(off);
-}*/
-// }
-
 void Track::setProcessingPrecision(ProcessingPrecision newPrecision) {
     AudioProcessorGraph::setProcessingPrecision(newPrecision);
     for (auto it : getNodes())
@@ -183,4 +162,57 @@ void Track::setMuted(bool val) {
     msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
     messageCollector.addMessageToQueue(msg);
     currentNode->setBypassed(val);
+}
+
+juce::DynamicObject* savePluginState(juce::MemoryBlock& memory, juce::AudioPluginInstance* instance, juce::String id, juce::File& pluginsDir) {
+	instance->getStateInformation(memory);
+	auto xml = instance->getXmlFromBinary(memory.getData(), (int)memory.getSize());
+	if (xml == nullptr) pluginsDir.getChildFile(id + ".bin").replaceWithData(memory.getData(), memory.getSize());
+	else {
+		auto file = pluginsDir.getChildFile(id + ".xml");
+		file.deleteFile();
+		juce::FileOutputStream out(file);
+		xml.release()->writeToStream(out, "");
+	}
+	auto obj = new juce::DynamicObject();
+	obj->setProperty("id", instance->getPluginDescription().createIdentifierString());
+	return obj;
+}
+
+void Track::saveState() {
+	auto dir = EIMApplication::getEIMInstance()->config.projectTracksPath.getChildFile(uuid);
+	auto pluginsDir = dir.getChildFile("plugins");
+	dir.createDirectory();
+	pluginsDir.createDirectory();
+	auto obj = new juce::DynamicObject();
+	juce::Array<juce::var> plguins;
+	obj->setProperty("name", juce::String(name));
+	obj->setProperty("color", juce::String(color));
+	obj->setProperty("pan", pan);
+	obj->setProperty("volume", chain.get<1>().getGainLinear());
+	obj->setProperty("muted", currentNode->isBypassed());
+	int i = 0;
+	juce::MemoryBlock memory;
+	for (auto& it : plugins) {
+		plguins.add(savePluginState(memory, (juce::AudioPluginInstance*)it->getProcessor(), juce::String(i++), pluginsDir));
+		memory.reset();
+	}
+	if (instrumentNode != nullptr) {
+		obj->setProperty("instrument", savePluginState(memory, (juce::AudioPluginInstance*)instrumentNode->getProcessor(), "instrument", pluginsDir));
+	}
+	obj->setProperty("plugins", plguins);
+	dir.getChildFile("track.json").replaceWithText(juce::JSON::toString(obj));
+
+	if (uuid.empty()) return;
+	auto midiFile = dir.getChildFile("midi.json");
+	midiFile.deleteFile();
+	juce::FileOutputStream midiOut(midiFile);
+	midiOut << "[\n";
+	int num = midiSequence.getNumEvents();
+	for (auto& it : midiSequence) {
+		midiOut << (int)it->message.getTimeStamp() << "," << encodeMidiMessage(it->message);
+		if (--num != 0) midiOut << ',';
+		midiOut << '\n';
+	}
+	midiOut << "]\n";
 }

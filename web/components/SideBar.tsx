@@ -68,27 +68,27 @@ const items: ItemType[] = [
     }
   },
   {
-    title: '乐器',
+    title: 'MIDI 序列',
     icon: <StraightenOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
   },
   {
-    title: '文件',
+    title: '工程',
     icon: <TopicOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
   },
   {
-    title: '乐器',
+    title: '预制',
     icon: <PlaylistAddOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
   },
   {
-    title: '远程云',
+    title: '云资源',
     icon: <CloudOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
   },
   {
-    title: '素材',
+    title: '采样',
     icon: <GraphicEqOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
   }
