@@ -180,18 +180,6 @@ void MasterTrack::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffe
     if (currentPositionInfo.isPlaying) currentPositionInfo.timeInSamples += buffer.getNumSamples();
 }
 
-void MasterTrack::createPluginWindow(juce::AudioPluginInstance* instance) {
-    if (!instance) return;
-    if (pluginWindows.contains(instance)) {
-        auto& it = pluginWindows.at(instance);
-        it.setAlwaysOnTop(true);
-        it.grabKeyboardFocus();
-        it.setAlwaysOnTop(false);
-    }
-    else
-        pluginWindows.try_emplace(instance, instance, &pluginWindows);
-}
-
 void MasterTrack::writeProjectStatus(EIMPackets::ProjectStatus& it) {
     it.set_bpm((int)currentPositionInfo.bpm);
     it.set_position((int)currentPositionInfo.ppqPosition);

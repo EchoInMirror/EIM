@@ -61,7 +61,7 @@ Track::Track(juce::File dir) : AudioProcessorGraph() {
 }
 
 Track::~Track() {
-	auto& pluginWindows = EIMApplication::getEIMInstance()->mainWindow->masterTrack->pluginWindows;
+	auto& pluginWindows = EIMApplication::getEIMInstance()->pluginManager->pluginWindows;
 	for (auto& it : plugins) {
 		auto processor = (juce::AudioPluginInstance*)it->getProcessor();
 		pluginWindows.erase(processor);

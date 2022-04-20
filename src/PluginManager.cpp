@@ -92,3 +92,15 @@ void PluginManager::stopScanning() {
 	if (!_isScanning) return;
 	_isScanning = false;
 }
+
+void PluginManager::createPluginWindow(juce::AudioPluginInstance* instance) {
+	if (!instance) return;
+	if (pluginWindows.contains(instance)) {
+		auto& it = pluginWindows.at(instance);
+		it.setAlwaysOnTop(true);
+		it.grabKeyboardFocus();
+		it.setAlwaysOnTop(false);
+	}
+	else
+		pluginWindows.try_emplace(instance, instance, &pluginWindows);
+}

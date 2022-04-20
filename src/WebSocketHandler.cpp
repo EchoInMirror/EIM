@@ -81,7 +81,7 @@ void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EI
 	auto plugin = data->has_index()
 		? track->plugins.size() > data->index() ? (juce::AudioPluginInstance*)track->plugins[data->index()]->getProcessor() : nullptr
 		: track->getInstrumentInstance();
-	if (plugin) juce::MessageManager::callAsync([plugin] { EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(plugin); });
+	if (plugin) juce::MessageManager::callAsync([plugin] { EIMApplication::getEIMInstance()->pluginManager->createPluginWindow(plugin); });
 }
 
 void ServerService::handleConfig(WebSocketSession*, std::unique_ptr<EIMPackets::OptionalString> data, std::function<void(EIMPackets::OptionalString&)> reply) {
