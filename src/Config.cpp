@@ -19,7 +19,7 @@ Config::Config() : rootPath(juce::File::getSpecialLocation(juce::File::SpecialLo
 
 std::string Config::toString() { return juce::JSON::toString(config).toStdString(); }
 void Config::save() {
-	configPath.replaceWithText(config.toString());
+	configPath.replaceWithText(juce::JSON::toString(config));
 	changed = false;
 }
 
