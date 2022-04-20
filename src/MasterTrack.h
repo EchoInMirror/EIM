@@ -10,6 +10,7 @@ class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead,
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
+	std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     short ppq = 96;
 
@@ -20,11 +21,13 @@ public:
     void stopAllNotes();
     juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color, std::string uuid = "");
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);
+	void loadPluginFromFile(juce::var& json, juce::File data, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
 	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void createPluginWindow(juce::AudioPluginInstance* instance);
     void writeProjectStatus(EIMPackets::ProjectStatus&);
 	void saveState();
+	void loadProject(juce::File);
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }
@@ -42,9 +45,11 @@ private:
 	juce::AudioThumbnail thumbnail;
 	std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
 	std::unique_ptr<juce::FileChooser> chooser;
-    std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
+	std::vector<std::string> deletedTracks;
 
     void calcPositionInfo();
+	void init();
+	void initEmptyMasterTrack();
     juce::AudioProcessorGraph::Node::Ptr initTrack(std::unique_ptr<Track> track);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrack)

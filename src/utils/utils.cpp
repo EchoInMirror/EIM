@@ -39,3 +39,19 @@ juce::MidiMessage decodeMidiMessage(int data, double time) {
     default: return juce::MidiMessage(b1, b2, (data >> 16) & 0xff, time);
     }
 }
+
+juce::DynamicObject* savePluginState(juce::AudioPluginInstance* instance, juce::String id, juce::File& pluginsDir) {
+	juce::MemoryBlock memory;
+	instance->getStateInformation(memory);
+	auto xml = juce::AudioProcessor::getXmlFromBinary(memory.getData(), (int)memory.getSize());
+	if (xml == nullptr) pluginsDir.getChildFile(id += ".bin").replaceWithData(memory.getData(), memory.getSize());
+	else {
+		auto file = pluginsDir.getChildFile(id += ".xml");
+		file.deleteFile();
+		xml.release()->writeTo(file);
+	}
+	auto obj = new juce::DynamicObject();
+	obj->setProperty("identifier", instance->getPluginDescription().createIdentifierString());
+	obj->setProperty("stateFile", id);
+	return obj;
+}

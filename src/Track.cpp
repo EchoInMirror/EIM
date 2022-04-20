@@ -3,13 +3,67 @@
 #include "MasterTrack.h"
 #include "ProcessorBase.h"
 
-Track::Track(std::string id, MasterTrack* masterTrack) : uuid(id), AudioProcessorGraph(), masterTrack(masterTrack) {
+Track::Track(std::string id) : uuid(id), AudioProcessorGraph() {
     init();
 }
 
-Track::Track(std::string name, std::string color, MasterTrack* masterTrack, std::string uuid)
-    : uuid(uuid.empty() ? randomUuid() : uuid), AudioProcessorGraph(), name(name), color(color), masterTrack(masterTrack) {
+Track::Track(std::string name, std::string color, std::string uuid)
+    : uuid(uuid.empty() ? randomUuid() : uuid), AudioProcessorGraph(), name(name), color(color) {
     init();
+}
+
+Track::Track(juce::File dir) : AudioProcessorGraph() {
+	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+	auto info = juce::JSON::parse(dir.getChildFile("track.json").loadFileAsString());
+	auto pluginsDir = dir.getChildFile("plugins");
+	auto midiFile = dir.getChildFile("midi.json");
+
+	name = info.getProperty("name", "Unknown Track").toString().toStdString();
+	color = info.getProperty("color", "#f44336").toString().toStdString();
+	uuid = info.getProperty("uuid", juce::String(randomUuid())).toString().toStdString();
+	chain.get<1>().setGainLinear((float)info.getProperty("pan", 1));
+	chain.get<0>().setPan((pan = (int)info.getProperty("pan", 0)) / 100.0f);
+	if ((bool)info.getProperty("muted", 1)) currentNode->setBypassed(true);
+
+	if (midiFile.existsAsFile()) {
+		auto midi = juce::JSON::parse(midiFile.loadFileAsString());
+		auto& arr = *midi.getArray();
+		for (int i = 0, size = arr.size() / 2; i < size; i++)
+			midiSequence.addEvent(decodeMidiMessage(arr[i + 1], arr[i]));
+	}
+
+	if (info.hasProperty("instrument")) {
+		auto it = info.getProperty("instrument", new juce::DynamicObject());
+		masterTrack->loadPluginFromFile(it, pluginsDir,
+			[this](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
+				if (plugin == nullptr) {
+					DBG(error);
+					return;
+				}
+				setInstrument(std::move(plugin));
+			});
+	}
+
+	auto pluginsArr = info.getProperty("plugins", juce::Array<juce::var>());
+	for (auto& it : *pluginsArr.getArray()) {
+		if (!it.isObject()) continue;
+		masterTrack->loadPluginFromFile(it, pluginsDir,
+			[this](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
+				if (plugin == nullptr) {
+					DBG(error);
+					return;
+				}
+				addEffectPlugin(std::move(plugin));
+			});
+	}
+}
+
+Track::~Track() {
+	auto& pluginWindows = EIMApplication::getEIMInstance()->mainWindow->masterTrack->pluginWindows;
+	for (auto& it : plugins) {
+		pluginWindows.erase((juce::AudioPluginInstance*)it->getProcessor());
+	}
+	AudioProcessorGraph::~AudioProcessorGraph();
 }
 
 void Track::init() {
@@ -78,6 +132,7 @@ void Track::addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::Audi
 }
 
 void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages) {
+	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
     auto& info = masterTrack->currentPositionInfo;
     if (info.isPlaying) {
         auto startTime = info.ppqPosition;
@@ -105,6 +160,7 @@ void Track::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& mi
 }
 
 void Track::addMidiEvents(juce::MidiMessageSequence seq, int timeFormat) {
+	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
     for (auto node : seq) {
         if (!node->message.isNoteOnOrOff()) continue;
         juce::MidiMessage msg = node->message;
@@ -164,21 +220,6 @@ void Track::setMuted(bool val) {
     currentNode->setBypassed(val);
 }
 
-juce::DynamicObject* savePluginState(juce::MemoryBlock& memory, juce::AudioPluginInstance* instance, juce::String id, juce::File& pluginsDir) {
-	instance->getStateInformation(memory);
-	auto xml = instance->getXmlFromBinary(memory.getData(), (int)memory.getSize());
-	if (xml == nullptr) pluginsDir.getChildFile(id + ".bin").replaceWithData(memory.getData(), memory.getSize());
-	else {
-		auto file = pluginsDir.getChildFile(id + ".xml");
-		file.deleteFile();
-		juce::FileOutputStream out(file);
-		xml.release()->writeToStream(out, "");
-	}
-	auto obj = new juce::DynamicObject();
-	obj->setProperty("id", instance->getPluginDescription().createIdentifierString());
-	return obj;
-}
-
 void Track::saveState() {
 	auto dir = EIMApplication::getEIMInstance()->config.projectTracksPath.getChildFile(uuid);
 	auto pluginsDir = dir.getChildFile("plugins");
@@ -192,13 +233,11 @@ void Track::saveState() {
 	obj->setProperty("volume", chain.get<1>().getGainLinear());
 	obj->setProperty("muted", currentNode->isBypassed());
 	int i = 0;
-	juce::MemoryBlock memory;
 	for (auto& it : plugins) {
-		plguins.add(savePluginState(memory, (juce::AudioPluginInstance*)it->getProcessor(), juce::String(i++), pluginsDir));
-		memory.reset();
+		plguins.add(savePluginState((juce::AudioPluginInstance*)it->getProcessor(), juce::String(i++), pluginsDir));
 	}
 	if (instrumentNode != nullptr) {
-		obj->setProperty("instrument", savePluginState(memory, (juce::AudioPluginInstance*)instrumentNode->getProcessor(), "instrument", pluginsDir));
+		obj->setProperty("instrument", savePluginState((juce::AudioPluginInstance*)instrumentNode->getProcessor(), "instrument", pluginsDir));
 	}
 	obj->setProperty("plugins", plguins);
 	dir.getChildFile("track.json").replaceWithText(juce::JSON::toString(obj));
@@ -214,5 +253,5 @@ void Track::saveState() {
 		if (--num != 0) midiOut << ',';
 		midiOut << '\n';
 	}
-	midiOut << "]\n";
+	midiOut << "]";
 }

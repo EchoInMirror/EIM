@@ -8,8 +8,10 @@ class MasterTrack;
 
 class Track : public juce::AudioProcessorGraph {
   public:
-    Track(std::string uuid, MasterTrack* masterTrack);
-    Track(std::string name, std::string color, MasterTrack* masterTrack, std::string uuid);
+    Track(std::string uuid);
+    Track(std::string name, std::string color, std::string uuid);
+	Track(juce::File trackRoot);
+	~Track();
     std::string uuid;
     std::string name;
     std::string color;
@@ -38,7 +40,6 @@ class Track : public juce::AudioProcessorGraph {
 	void saveState();
 
   private:
-    MasterTrack* masterTrack;
     juce::CriticalSection processLock;
     int samplesPlayed = 0;
     double nextStartTime = 0;
