@@ -34,6 +34,7 @@ MainWindow::MainWindow(): juce::DocumentWindow("Echo In Mirror", juce::Colours::
     centreWithSize(getWidth(), getHeight());
     setVisible(true);
     masterTrack.reset(new MasterTrack());
+	masterTrack->init();
 }
 void MainWindow::closeButtonPressed() { juce::JUCEApplication::getInstance()->systemRequestedQuit(); }
 

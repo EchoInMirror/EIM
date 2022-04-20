@@ -20,7 +20,6 @@ MasterTrack::MasterTrack()
     setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate,
                          setup.bufferSize == 0 ? 1024 : setup.bufferSize);
     prepareToPlay(getSampleRate(), getBlockSize());
-	init();
     /*
     chooser = std::make_unique<juce::FileChooser>("Select a Wave file to play...", juce::File{}, "*");
     auto chooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
@@ -33,13 +32,19 @@ MasterTrack::MasterTrack()
     });*/
 }
 
-void MasterTrack::initEmptyMasterTrack() {
-}
-
 void MasterTrack::init() {
 	auto instance = EIMApplication::getEIMInstance();
 	auto& projectInfoPath = instance->config.projectInfoPath;
-	if (!projectInfoPath.existsAsFile()) return;
+
+	auto output = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+		juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))
+		->nodeID;
+	if (!projectInfoPath.existsAsFile()) {
+		outputNodeID = initTrack(std::make_unique<Track>(""))->nodeID;
+		addConnection({ {outputNodeID, 0}, {output, 0} });
+		addConnection({ {outputNodeID, 1}, {output, 1} });
+		return;
+	}
 	auto json = juce::JSON::parse(projectInfoPath.loadFileAsString());
 
 	ppq = (short)(int)json.getProperty("ppq", 96);
@@ -47,11 +52,7 @@ void MasterTrack::init() {
 	currentPositionInfo.timeSigNumerator = (int)json.getProperty("timeSigNumerator", 4);
 	currentPositionInfo.timeSigDenominator = (int)json.getProperty("timeSigDenominator", 4);
 	endTime = (int)json.getProperty("endTime", currentPositionInfo.timeSigNumerator * ppq);
-
-	auto output = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
-		juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))
-		->nodeID;
-	auto tracksDir = projectInfoPath.getChildFile("tracks");
+	auto& tracksDir = instance->config.projectTracksPath;
 	auto masterTrackInfo = tracksDir.getChildFile("track.json");
 	auto masterTrack = masterTrackInfo.existsAsFile() ? std::make_unique<Track>(tracksDir) : std::make_unique<Track>("");
 	masterTrack->uuid = "";
@@ -64,7 +65,7 @@ void MasterTrack::init() {
 	auto arr = json.getProperty("tracks", juce::StringArray());
 	for (juce::String it : *arr.getArray()) {
 		auto trackDir = tracksDir.getChildFile(it);
-		if (trackDir.getChildFile("tracks.json").existsAsFile()) initTrack(std::make_unique<Track>(trackDir));
+		if (trackDir.getChildFile("track.json").existsAsFile()) initTrack(std::make_unique<Track>(trackDir));
 	}
 }
 
@@ -238,7 +239,7 @@ void MasterTrack::saveState() {
 	for (auto& it : tracks) {
 		auto track = (Track*)it->getProcessor();
 		track->saveState();
-		trackUUIDs.add(track->uuid);
+		if (!track->uuid.empty()) trackUUIDs.add(track->uuid);
 	}
 	for (auto& it : deletedTracks) if (!tracksMap.contains(it)) {
 		auto trackDir = cfg.projectTracksPath.getChildFile(it);
@@ -253,10 +254,10 @@ void MasterTrack::loadProject(juce::File newRoot) {
 	auto instance = EIMApplication::getEIMInstance();
 	if (newRoot == instance->config.projectRoot) return;
 
-	instance->config.setProjectRoot(newRoot);
-
 	clear();
 	tracks.clear();
 	tracksMap.clear();
+	instance->undoManager.clearUndoHistory();
+	instance->config.setProjectRoot(newRoot);
 	init();
 }

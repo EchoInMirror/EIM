@@ -26,6 +26,7 @@ public:
 	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void createPluginWindow(juce::AudioPluginInstance* instance);
     void writeProjectStatus(EIMPackets::ProjectStatus&);
+	void init();
 	void saveState();
 	void loadProject(juce::File);
 
@@ -48,8 +49,6 @@ private:
 	std::vector<std::string> deletedTracks;
 
     void calcPositionInfo();
-	void init();
-	void initEmptyMasterTrack();
     juce::AudioProcessorGraph::Node::Ptr initTrack(std::unique_ptr<Track> track);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrack)
