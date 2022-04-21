@@ -43,18 +43,38 @@ void PluginManager::timerCallback() {
             continue;
         }
         if (inited) {
-            char arr[10240] = {};
-            juce::String str(arr, cur.readProcessOutput(arr, 10240));
-            auto xml = juce::XmlDocument::parse(str);
-            if (xml != nullptr) {
-                juce::PluginDescription desc;
-                desc.loadFromXml(*xml.release());
-                knownPluginList.addType(desc);
-            }
-            else {
-                auto& cfg =
-                    EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty("pluginManager");
-                cfg.getProperty("skipFiles", juce::StringArray()).getArray()->add(this->processScanFile[i]);
+            // char arr[10240] = {};
+            auto getLines = [&cur]() -> juce::StringArray {
+                char buf[2] = {};
+                juce::StringArray res;
+                juce::String tmp;
+                while (true) {
+                    int numread = cur.readProcessOutput(buf, 1);
+                    if (!numread) {
+                        break;
+                    }
+                    if (buf[0] == '\n') {
+                        res.add(tmp);
+                        tmp.clear();
+                        continue;
+                    }
+                    tmp.append(juce::String(buf, 1), 1);
+                }
+                return res;
+            };
+            // juce::String str(arr, cur.readProcessOutput(arr, 10240));
+            for (auto& str : getLines()) {
+                auto xml = juce::XmlDocument::parse(str);
+                if (xml != nullptr) {
+                    juce::PluginDescription desc;
+                    desc.loadFromXml(*xml.release());
+                    knownPluginList.addType(desc);
+                }
+                else {
+                    auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty(
+                        "pluginManager");
+                    cfg.getProperty("skipFiles", juce::StringArray()).getArray()->add(this->processScanFile[i]);
+                }
             }
         }
         if (scainngFiles.empty()) {
@@ -103,6 +123,7 @@ void PluginManager::scanPlugins() {
 
 void PluginManager::stopScanning() {
     if (!_isScanning) return;
+    DBG("Stop scan");
     auto& cfg = EIMApplication::getEIMInstance()->config;
     cfg.save();
     stopTimer();
