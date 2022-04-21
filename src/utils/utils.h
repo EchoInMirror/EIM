@@ -6,8 +6,16 @@
 const std::string randomUuid();
 int encodeMidiMessage(juce::MidiMessage& data);
 juce::MidiMessage decodeMidiMessage(int data, double time);
-juce::DynamicObject* savePluginState(juce::AudioPluginInstance* instance, juce::String id, juce::File& pluginsDir);
 void runOnMainThread(std::function<void()> fn);
+
+struct PluginState {
+	juce::String identifier;
+	juce::String name;
+	juce::MemoryBlock state;
+};
+
+void getPluginState(juce::AudioPluginInstance* instance, PluginState& state);
+juce::DynamicObject* savePluginState(juce::AudioPluginInstance* instance, juce::String id, juce::File& pluginsDir);
 
 /**
  * Returns the current resident set size (physical memory use) measured

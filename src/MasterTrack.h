@@ -13,6 +13,7 @@ public:
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     short ppq = 96;
 	int events = 0;
+	int projectTime = 0;
 	EIMPackets::ClientboundPong systemInfo;
 
     MasterTrack();
@@ -20,7 +21,8 @@ public:
 
     void removeTrack(std::string id);
     void stopAllNotes();
-    juce::AudioProcessorGraph::Node::Ptr createTrack(std::string name, std::string color, std::string uuid = "");
+	juce::AudioProcessorGraph::Node::Ptr addTrack(std::unique_ptr<Track> track);
+	void loadPlugin(PluginState& state, juce::AudioPluginFormat::PluginCreationCallback callback);
     void loadPlugin(std::unique_ptr<juce::PluginDescription> desc, juce::AudioPluginFormat::PluginCreationCallback callback);
 	void loadPluginFromFile(juce::var& json, juce::File data, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
@@ -29,6 +31,8 @@ public:
 	void init();
 	void saveState();
 	void loadProject(juce::File);
+	void checkEndTime();
+	void checkEndTime(int endTime);
 
     virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
     virtual bool canControlTransport() override { return true; }
@@ -50,7 +54,6 @@ private:
 
     void calcPositionInfo();
 	void timerCallback() override;
-    juce::AudioProcessorGraph::Node::Ptr initTrack(std::unique_ptr<Track> track);
 
 	class SystemInfoTimer : public juce::Timer {
 	public:

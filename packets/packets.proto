@@ -5,14 +5,13 @@ import "google/protobuf/empty.proto";
 
 message Empty { }
 
-message UUID {
-  bytes data = 1;
-}
-
 message Boolean {
   bool value = 1;
 }
 
+message Int32 {
+  int32 value = 1;
+}
 message String {
   string value = 1;
 }
@@ -32,6 +31,8 @@ message ProjectStatus {
   optional uint32 maxNoteTime = 8;
   optional bool isLoading = 9;
   optional bool modified = 10;
+  optional string projectRoot = 11;
+  optional int32 projectTime = 12;
 }
 
 message ServerboundExplorerData {
@@ -115,6 +116,14 @@ message ClientboundPong {
   int32 memory = 3;
 }
 
+message ClientboundScanningVST {
+  string file = 1;
+  bool isFinished = 2;
+  optional int32 count = 3;
+  optional int32 current = 4;
+  optional int32 thread = 5;
+}
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
@@ -125,6 +134,7 @@ service ServerService { // Server bound
   rpc config (OptionalString) returns (OptionalString);
   rpc scanVSTs (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc loadVST (ServerboundLoadVST) returns (Empty);
+  rpc skipScanning (Int32) returns (google.protobuf.Empty);
   rpc sendMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc addMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc deleteMidiMessages (MidiMessages) returns (google.protobuf.Empty);
@@ -132,6 +142,7 @@ service ServerService { // Server bound
   rpc undo (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc redo (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc save (google.protobuf.Empty) returns (Empty);
+  rpc saveAs (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc openProject (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc ping (google.protobuf.Empty) returns (ClientboundPong);
   rpc removeTrack (String) returns (google.protobuf.Empty);
@@ -140,7 +151,7 @@ service ServerService { // Server bound
 service ClientService { // Client bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc syncTracksInfo (ClientboundTracksInfo) returns (google.protobuf.Empty);
-  rpc setIsScanningVSTs (Boolean) returns (google.protobuf.Empty);
+  rpc setScanningVST (ClientboundScanningVST) returns (google.protobuf.Empty);
   rpc addMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc deleteMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);

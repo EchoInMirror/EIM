@@ -42,7 +42,7 @@ void MasterTrack::init() {
 		juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))
 		->nodeID;
 	if (!projectInfoPath.existsAsFile()) {
-		outputNodeID = initTrack(std::make_unique<Track>(""))->nodeID;
+		outputNodeID = addTrack(std::make_unique<Track>(""))->nodeID;
 		addConnection({ {outputNodeID, 0}, {output, 0} });
 		addConnection({ {outputNodeID, 1}, {output, 1} });
 		return;
@@ -60,15 +60,33 @@ void MasterTrack::init() {
 	masterTrack->uuid = "";
 	masterTrack->color = "";
 	masterTrack->name = "";
-	outputNodeID = initTrack(std::move(masterTrack))->nodeID;
+	outputNodeID = addTrack(std::move(masterTrack))->nodeID;
 	addConnection({ {outputNodeID, 0}, {output, 0} });
 	addConnection({ {outputNodeID, 1}, {output, 1} });
 
 	auto arr = json.getProperty("tracks", juce::StringArray());
 	for (juce::String it : *arr.getArray()) {
 		auto trackDir = tracksDir.getChildFile(it);
-		if (trackDir.getChildFile("track.json").existsAsFile()) initTrack(std::make_unique<Track>(trackDir));
+		if (trackDir.getChildFile("track.json").existsAsFile()) addTrack(std::make_unique<Track>(trackDir));
 	}
+}
+
+void MasterTrack::loadPlugin(PluginState& state, juce::AudioPluginFormat::PluginCreationCallback callback) {
+	auto instance = EIMApplication::getEIMInstance();
+	auto desc = instance->pluginManager->knownPluginList.getTypeForIdentifierString(state.identifier);
+	if (desc == nullptr) {
+		callback(nullptr, "No such plugin");
+		return;
+	}
+	instance->pluginManager->manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(),
+		[callback, &state](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
+			if (plugin == nullptr) {
+				callback(nullptr, error);
+				return;
+			}
+			plugin->setStateInformation(state.state.getData(), (int)state.state.getSize());
+			callback(std::move(plugin), error);
+		});
 }
 
 void MasterTrack::loadPlugin(std::unique_ptr<juce::PluginDescription> desc,
@@ -89,7 +107,7 @@ void MasterTrack::loadPluginFromFile(juce::var& json, juce::File root,
 	instance->pluginManager->manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(),
 		[callback, root, stateFile](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
 			if (plugin == nullptr) {
-				callback(std::move(plugin), error);
+				callback(nullptr, error);
 				return;
 			}
 			auto stateFile0 = root.getChildFile(stateFile);
@@ -104,7 +122,26 @@ void MasterTrack::loadPluginFromFile(juce::var& json, juce::File root,
 		});
 }
 
-juce::AudioProcessorGraph::Node::Ptr MasterTrack::initTrack(std::unique_ptr<Track> track) {
+void MasterTrack::checkEndTime() {
+	int time = 0;
+	for (auto& track : tracks) {
+		auto cur = (int)((Track*)track->getProcessor())->midiSequence.getEndTime();
+		if (cur > time) time = cur;
+	}
+	checkEndTime(time);
+}
+
+void MasterTrack::checkEndTime(int time) {
+	auto newEndTime = (int)std::ceil(juce::jmax(time, endTime, currentPositionInfo.timeSigNumerator * ppq));
+	if (endTime != newEndTime) {
+		endTime = newEndTime;
+		EIMPackets::ProjectStatus info;
+		info.set_maxnotetime(endTime);
+		EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
+	}
+}
+
+juce::AudioProcessorGraph::Node::Ptr MasterTrack::addTrack(std::unique_ptr<Track> track) {
     track->setRateAndBufferSizeDetails(getSampleRate(), getBlockSize());
     track->prepareToPlay(getSampleRate(), getBlockSize());
     auto& obj = *track;
@@ -114,26 +151,6 @@ juce::AudioProcessorGraph::Node::Ptr MasterTrack::initTrack(std::unique_ptr<Trac
     addConnection({{node->nodeID, 0}, {outputNodeID, 0}});
     addConnection({{node->nodeID, 1}, {outputNodeID, 1}});
     return node;
-}
-
-juce::AudioProcessorGraph::Node::Ptr MasterTrack::createTrack(std::string name, std::string color, std::string uuid) {
-    juce::MidiFile file;
-    auto track = std::make_unique<Track>(name, color, uuid);
-    auto env = juce::SystemStats::getEnvironmentVariable("MIDI_IMPORT_PATH", "");
-    if (env.isNotEmpty()) {
-        juce::FileInputStream theStream(env);
-        file.readFrom(theStream);
-        track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
-        auto newEndTime = (int)std::ceil(juce::jmax(file.getTrack(1)->getEndTime() / file.getTimeFormat(),
-                                                    (double)currentPositionInfo.timeSigNumerator)) * ppq;
-        if (endTime != newEndTime) {
-            endTime = newEndTime;
-            EIMPackets::ProjectStatus info;
-            info.set_maxnotetime(endTime);
-            EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
-        }
-    }
-    return initTrack(std::move(track));
 }
 
 void MasterTrack::removeTrack(std::string uuid) {
@@ -189,6 +206,8 @@ void MasterTrack::writeProjectStatus(EIMPackets::ProjectStatus& it) {
     it.set_ppq(ppq);
     it.set_isplaying(currentPositionInfo.isPlaying);
     it.set_maxnotetime(endTime);
+	it.set_projectroot(EIMApplication::getEIMInstance()->config.projectRoot.getFullPathName().toStdString());
+	it.set_projecttime(projectTime);
 }
 
 void MasterTrack::stopAllNotes() {
@@ -266,6 +285,7 @@ void MasterTrack::timerCallback() {
 MasterTrack::SystemInfoTimer::SystemInfoTimer() { startTimer(1000); }
 void MasterTrack::SystemInfoTimer::timerCallback() {
 	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+	masterTrack->projectTime++;
 	masterTrack->systemInfo.set_cpu((int)(masterTrack->deviceManager.getCpuUsage() * 100.0));
 	masterTrack->systemInfo.set_memory((int)getCurrentRSS());
 	masterTrack->systemInfo.set_events(masterTrack->events);

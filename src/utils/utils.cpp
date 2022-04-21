@@ -40,6 +40,13 @@ juce::MidiMessage decodeMidiMessage(int data, double time) {
     }
 }
 
+void getPluginState(juce::AudioPluginInstance* instance, PluginState& state) {
+	state.state.reset();
+	instance->getStateInformation(state.state);
+	state.name = instance->getPluginDescription().name;
+	state.identifier = instance->getPluginDescription().createIdentifierString();
+}
+
 juce::DynamicObject* savePluginState(juce::AudioPluginInstance* instance, juce::String id, juce::File& pluginsDir) {
 	juce::MemoryBlock memory;
 	instance->getStateInformation(memory);

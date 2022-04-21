@@ -6,12 +6,14 @@ public:
 
 	bool changed = false;
     juce::var config;
-    const juce::File rootPath, configPath, projects, samplesPath;
+    const juce::File rootPath, configPath, projects, samplesPath, tempPath;
 	juce::File projectRoot, projectInfoPath, projectTracksPath;
 
     std::string toString();
 	void save();
 	void setProjectRoot(juce::File);
+	bool isTempProject();
+	bool isTempProject(juce::File);
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Config)
 };

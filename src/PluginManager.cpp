@@ -29,6 +29,8 @@ PluginManager::PluginManager(juce::File rootPath)
     }
 }
 
+PluginManager::~PluginManager() { stopScanning(); }
+
 bool PluginManager::isScanning() {
     return _isScanning;
 }
@@ -43,46 +45,52 @@ void PluginManager::timerCallback() {
             continue;
         }
         if (inited) {
-            // char arr[10240] = {};
-            auto getLines = [&cur]() -> juce::StringArray {
-                char buf[2] = {};
-                juce::StringArray res;
-                juce::String tmp;
-                while (true) {
-                    int numread = cur.readProcessOutput(buf, 1);
-                    if (!numread) {
-                        break;
-                    }
-                    if (buf[0] == '\n') {
-                        res.add(tmp);
-                        tmp.clear();
-                        continue;
-                    }
-                    tmp.append(juce::String(buf, 1), 1);
-                }
-                return res;
-            };
-            // juce::String str(arr, cur.readProcessOutput(arr, 10240));
-            for (auto& str : getLines()) {
+			juce::StringArray tokens;
+
+			{
+				std::string tmp;
+				char buf[2048] = {};
+				while (true) {
+					int numread = cur.readProcessOutput(buf, 2048);
+					if (!numread) break;
+					tmp.append(buf, numread);
+				}
+				tokens.addLines(tmp);
+			}
+
+			auto flag = true;
+            for (auto& str : tokens) {
                 auto xml = juce::XmlDocument::parse(str);
                 if (xml != nullptr) {
                     juce::PluginDescription desc;
                     desc.loadFromXml(*xml.release());
                     knownPluginList.addType(desc);
-                }
-                else {
-                    auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty(
-                        "pluginManager");
-                    cfg.getProperty("skipFiles", juce::StringArray()).getArray()->add(this->processScanFile[i]);
+					flag = false;
                 }
             }
+			if (flag) {
+				auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty(
+					"pluginManager");
+				cfg.getProperty("skipFiles", juce::StringArray()).getArray()->add(processScanFile[i]);
+			}
+			EIMPackets::ClientboundScanningVST pkg;
+			pkg.set_file(processScanFile[i].toStdString());
+			pkg.set_isfinished(true);
+			EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetScanningVSTPacket(pkg));
         }
+		auto& path = scainngFiles.front();
+		EIMPackets::ClientboundScanningVST pkg;
+		pkg.set_count(numFiles);
+		pkg.set_current(numFiles - (int)scainngFiles.size());
+		pkg.set_thread(i);
+		pkg.set_file(path.toStdString());
+		pkg.set_isfinished(false);
+		EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetScanningVSTPacket(pkg));
         if (scainngFiles.empty()) {
             continue;
         }
-        auto& path = scainngFiles.front();
         cur.start(juce::StringArray{scannerPath, path});
-        this->processScanFile[i] = path;
+        processScanFile[i] = path;
         scainngFiles.pop();
     }
     inited = true;
@@ -90,35 +98,36 @@ void PluginManager::timerCallback() {
         stopScanning();
         return;
     }
-    // TODO: Check process status and relaunch
-    // and finally stopTimer();
 }
 
 void PluginManager::scanPlugins() {
     if (_isScanning) return;
-    std::thread thread([this]() {
-        auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty("pluginManager");
-        numThreads = (int)cfg.getProperty("thread", 10);
-        auto pathsArr = cfg.getProperty("scanPaths", juce::StringArray());
-        if (pathsArr.getArray()->isEmpty()) return;
-        juce::FileSearchPath paths;
-        for (auto& it : *pathsArr.getArray())
-            paths.add(juce::File(it));
-        paths.removeRedundantPaths();
-        paths.removeNonExistentPaths();
-        std::queue<juce::String> empty;
-        std::swap(scainngFiles, empty);
-        for (auto it : manager.getFormats())
-            for (auto& path : it->searchPathsForPlugins(paths, true, true))
-                scainngFiles.emplace(path);
-        _isScanning = true;
-        inited = false;
-        processes = new juce::ChildProcess[numThreads];
-        processScanFile.clear();
-        processScanFile.resize(numThreads);
-        startTimer(100);
-    });
-    thread.detach();
+	auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty("pluginManager");
+	numThreads = (int)cfg.getProperty("thread", 10);
+	auto pathsArr = cfg.getProperty("scanPaths", juce::StringArray());
+	if (pathsArr.getArray()->isEmpty()) return;
+	juce::FileSearchPath paths;
+	for (auto& it : *pathsArr.getArray())
+		paths.add(juce::File(it));
+	paths.removeRedundantPaths();
+	paths.removeNonExistentPaths();
+	std::queue<juce::String> empty;
+	std::swap(scainngFiles, empty);
+	for (auto it : manager.getFormats())
+		for (auto& path : it->searchPathsForPlugins(paths, true, true))
+			if (knownPluginList.getTypeForFile(path) != nullptr) scainngFiles.emplace(path);
+	_isScanning = true;
+	inited = false;
+	numFiles = (int)scainngFiles.size();
+	processes = new juce::ChildProcess[numThreads];
+	processScanFile.clear();
+	processScanFile.resize(numThreads);
+	startTimer(100);
+}
+
+void PluginManager::skipScanning(int i) {
+	if (!_isScanning || i >= numThreads || !processes[i].isRunning()) return;
+	processes[i].kill();
 }
 
 void PluginManager::stopScanning() {
@@ -129,6 +138,10 @@ void PluginManager::stopScanning() {
     stopTimer();
     _isScanning = false;
     knownPluginList.createXml().release()->writeTo(knownPluginListXMLFile);
+	for (int i = 0; i < numThreads; i++) {
+		auto& cur = processes[i];
+		if (cur.isRunning()) cur.kill();
+	}
     delete[] processes;
 }
 

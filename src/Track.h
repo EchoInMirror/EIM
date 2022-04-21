@@ -9,8 +9,9 @@ class MasterTrack;
 class Track : public juce::AudioProcessorGraph {
   public:
     Track(std::string uuid);
-    Track(std::string name, std::string color, std::string uuid);
+    Track(std::string name, std::string color, std::string uuid = "");
 	Track(juce::File trackRoot);
+	Track(Track&& other);
 	~Track();
     std::string uuid;
     std::string name;
@@ -39,6 +40,7 @@ class Track : public juce::AudioProcessorGraph {
     void writeTrackInfo(EIMPackets::TrackInfo* data);
     void setMuted(bool val);
 	void saveState();
+	void saveState(juce::File);
 
   private:
     juce::CriticalSection processLock;

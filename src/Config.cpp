@@ -3,13 +3,15 @@
 Config::Config() : rootPath(juce::File::getSpecialLocation(juce::File::SpecialLocationType::userApplicationDataDirectory).getChildFile("EchoInMirror")),
     configPath(rootPath.getChildFile("config.json")),
 	projects(rootPath.getChildFile("projects")),
-	samplesPath(rootPath.getChildFile("samples"))
+	samplesPath(rootPath.getChildFile("samples")),
+	tempPath(juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile("EchoInMirror"))
 {
 	rootPath.createDirectory();
 	if (!configPath.exists()) configPath.replaceWithText("{}");
     config = juce::JSON::parse(configPath);
 	projects.createDirectory();
 	samplesPath.createDirectory();
+	tempPath.createDirectory();
 	setProjectRoot(projects.getChildFile(juce::String(juce::Time::currentTimeMillis())));
 	juce::Array<juce::File> files;
 	projects.findChildFiles(files, juce::File::TypesOfFileToFind::findDirectories, false);
@@ -23,6 +25,11 @@ std::string Config::toString() { return juce::JSON::toString(config).toStdString
 void Config::save() {
 	configPath.replaceWithText(juce::JSON::toString(config));
 	changed = false;
+}
+
+bool Config::isTempProject() { return isTempProject(projectRoot); }
+bool Config::isTempProject(juce::File root) {
+	return root.isAChildOf(projects);
 }
 
 void Config::setProjectRoot(juce::File root) {

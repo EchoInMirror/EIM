@@ -5,9 +5,12 @@ export enum ExplorerType {
   Favorites,
   VSTPlugins
 }
-
 export interface Config {
-  vstSearchPaths: Record<string, string[]>
+  pluginManager: {
+    scanPaths: string[]
+    skipFiles: string[]
+    thread: number
+  }
 }
 
 const serverboundPacketsMap: Record<string, number> = { }

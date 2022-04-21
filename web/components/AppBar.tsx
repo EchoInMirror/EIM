@@ -97,11 +97,20 @@ const LeftSection: React.FC = () => {
           <ListItemIcon><Save fontSize='small' /></ListItemIcon>
           <ListItemText>保存</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(undefined)}>
+        <MenuItem
+          onClick={() => {
+            $client.rpc.saveAs({ })
+            setAnchorEl(undefined)
+          }}
+        >
           <ListItemIcon><SaveAs fontSize='small' /></ListItemIcon>
           <ListItemText>另存为</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(undefined)}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(undefined)
+          }}
+        >
           <ListItemIcon><SaveAlt fontSize='small' /></ListItemIcon>
           <ListItemText>导出...</ListItemText>
         </MenuItem>

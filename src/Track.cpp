@@ -8,7 +8,7 @@ Track::Track(std::string id) : uuid(id), AudioProcessorGraph() {
 }
 
 Track::Track(std::string name, std::string color, std::string uuid)
-    : uuid(uuid.empty() ? randomUuid() : uuid), AudioProcessorGraph(), name(name), color(color) {
+    : AudioProcessorGraph(), uuid(uuid.empty() ? randomUuid() : uuid), name(name), color(color) {
     init();
 }
 
@@ -21,7 +21,7 @@ Track::Track(juce::File dir) : AudioProcessorGraph() {
 	name = info.getProperty("name", "Unknown Track").toString().toStdString();
 	color = info.getProperty("color", "#f44336").toString().toStdString();
 	uuid = info.getProperty("uuid", juce::String(randomUuid())).toString().toStdString();
-	chain.get<1>().setGainLinear((float)info.getProperty("pan", 1));
+	chain.get<1>().setGainLinear((float)info.getProperty("volume", 1));
 	chain.get<0>().setPan((pan = (int)info.getProperty("pan", 0)) / 100.0f);
 	if ((bool)info.getProperty("muted", 1)) currentNode->setBypassed(true);
 
@@ -58,6 +58,14 @@ Track::Track(juce::File dir) : AudioProcessorGraph() {
 	}
 
 	init();
+}
+
+Track::Track(Track&& other) : AudioProcessorGraph(), uuid(randomUuid()), name(other.name + " copy"), color(other.color) {
+	/*name = info.getProperty("name", "Unknown Track").toString().toStdString();
+	color = info.getProperty("color", "#f44336").toString().toStdString();
+	uuid = info.getProperty("uuid", juce::String(randomUuid())).toString().toStdString();
+	chain.get<1>().setGainLinear((float)info.getProperty("volume", 1));
+	chain.get<0>().setPan((pan = (int)info.getProperty("pan", 0)) / 100.0f);*/
 }
 
 Track::~Track() {
@@ -134,7 +142,9 @@ void Track::addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::Audi
 }
 
 void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages) {
-	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+	auto& mainWindow = EIMApplication::getEIMInstance()->mainWindow;
+	if (mainWindow == nullptr) return;
+	auto& masterTrack = mainWindow->masterTrack;
 	if (masterTrack == nullptr) return;
     auto& info = masterTrack->currentPositionInfo;
     if (info.isPlaying) {
@@ -227,8 +237,8 @@ void Track::setMuted(bool val) {
     currentNode->setBypassed(val);
 }
 
-void Track::saveState() {
-	auto dir = EIMApplication::getEIMInstance()->config.projectTracksPath.getChildFile(uuid);
+void Track::saveState() { saveState(EIMApplication::getEIMInstance()->config.projectTracksPath.getChildFile(uuid)); }
+void Track::saveState(juce::File dir) {
 	auto pluginsDir = dir.getChildFile("plugins");
 	dir.createDirectory();
 	pluginsDir.createDirectory();

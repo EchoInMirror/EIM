@@ -102,7 +102,6 @@ const items: ItemType[] = [
 
 const mapPluginsResult = (data: packets.ClientboundExplorerData) => {
   const result: Record<string, boolean> = {}
-  console.log(data)
   data.folders.sort().forEach(it => (result[it] = true))
   data.files.sort().forEach(it => (result[it] = false))
   return result

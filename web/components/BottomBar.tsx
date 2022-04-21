@@ -1,9 +1,10 @@
 import './BottomBar.less'
 import React, { useState, useEffect, useContext, memo } from 'react'
 import { Resizable } from 're-resizable'
-import { Paper, Box } from '@mui/material'
+import { Paper, Box, Tooltip } from '@mui/material'
 import { BottomBarContext } from '../reducer'
-import packets from '../../packets'
+import packets, { ClientboundPacket } from '../../packets'
+import { TimeAgoNoSuffix } from './TimeAgo'
 import prettyBytes from 'pretty-bytes'
 import LinkIcon from '@mui/icons-material/Link'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
@@ -11,6 +12,8 @@ import MusicNote from '@mui/icons-material/MusicNote'
 import MemoryOutlined from '@mui/icons-material/MemoryOutlined'
 import Refresh from '@mui/icons-material/Refresh'
 import WarningAmber from '@mui/icons-material/WarningAmber'
+import EventNote from '@mui/icons-material/EventNote'
+import FolderOpen from '@mui/icons-material/FolderOpen'
 import SourceBranch from 'mdi-material-ui/SourceBranch'
 import Piano from 'mdi-material-ui/Piano'
 import Tune from 'mdi-material-ui/Tune'
@@ -33,7 +36,12 @@ const ConnectStatus = memo(function ConnectStatus () {
   return (
     <Box
       component='span'
-      sx={{ backgroundColor: theme => theme.palette.primary.main, color: theme => theme.palette.primary.contrastText, padding: '0 4px', marginRight: 0 }}
+      sx={{
+        backgroundColor: theme => connected ? theme.palette.primary.main : theme.palette.error.main,
+        color: theme => theme.palette.primary.contrastText,
+        padding: '0 4px',
+        marginRight: 0
+      }}
     >
       {connected ? <LinkIcon fontSize='small' /> : <LinkOffIcon fontSize='small' />}
     </Box>
@@ -68,6 +76,31 @@ const SystemStatus = memo(function SystemStatus () {
   )
 })
 
+const ProjectStatus = memo(function ProjectStatus () {
+  const [time, setTime] = useState(0)
+  const [root, setRoot] = useState('')
+  useEffect(() => {
+    const fn = (data: packets.IProjectStatus) => {
+      if (data.projectTime != null) setTime(Date.now() - data.projectTime * 1000)
+      if (data.projectRoot != null) setRoot(data.projectRoot)
+    }
+    $client.on(ClientboundPacket.SetProjectStatus, fn)
+    return () => { $client.off(ClientboundPacket.SetProjectStatus, fn) }
+  }, [])
+  let index = root.lastIndexOf('/')
+  if (!~index) index = root.lastIndexOf('\\')
+  let rootName = root.slice(index + 1)
+  if (/\d{13}/.test(rootName)) rootName = '临时项目'
+  return (
+    <span className='auto-space'>
+      <FolderOpen className='smaller' />
+      <Tooltip arrow title={root} placement='top'><span>{rootName}</span></Tooltip>
+      <EventNote className='smaller' />
+      <TimeAgoNoSuffix live date={time} />
+    </span>
+  )
+})
+
 const Git = memo(function Git () {
   return (
     <span className='auto-space'>
@@ -82,6 +115,7 @@ const StatusBar = memo(function StatusBar () {
   return (
     <Paper square component='footer' elevation={3}>
       <span>
+        <ProjectStatus />
         <Git />
         <span className='auto-space'>
           <WarningAmber className='smaller' />

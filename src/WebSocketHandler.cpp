@@ -51,6 +51,7 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
 					(it.pluginFormatName == "VST" ? " (VST)" : "") + "#EIM#" + it.fileOrIdentifier).toStdString());
 			}
 		}
+		break;
 	case ExplorerType::ServerboundExplorerData_ExplorerType_SAMPLES: {
 		auto file = instance->config.samplesPath.getChildFile(path);
 		if (file.isDirectory()) {
@@ -73,11 +74,6 @@ void ServerService::handleRefresh(WebSocketSession* session) {
 	auto instance = EIMApplication::getEIMInstance();
 	for (auto& track : instance->mainWindow->masterTrack->tracks) ((Track*)track->getProcessor())->writeTrackInfo(info.add_tracks());
 	session->send(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
-	if (EIMApplication::getEIMInstance()->pluginManager->isScanning()) {
-		EIMPackets::Boolean val;
-		val.set_value(true);
-		session->send(EIMMakePackets::makeSetIsScanningVSTsPacket(val));
-	}
 }
 
 void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) {
@@ -105,7 +101,10 @@ void ServerService::handleConfig(WebSocketSession*, std::unique_ptr<EIMPackets::
 }
 
 void ServerService::handleScanVSTs(WebSocketSession*) {
-	juce::MessageManager::callAsync([] { EIMApplication::getEIMInstance()->pluginManager->scanPlugins(); });
+	EIMApplication::getEIMInstance()->pluginManager->scanPlugins();
+}
+void ServerService::handleSkipScanning(WebSocketSession*, std::unique_ptr<EIMPackets::Int32> data) {
+	EIMApplication::getEIMInstance()->pluginManager->skipScanning(data->value());
 }
 
 void ServerService::handleSendMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::MidiMessages> data) {
@@ -131,14 +130,15 @@ void* saveState(void*) {
 	return nullptr;
 }
 
-void ServerService::handleSave(WebSocketSession*, std::function<void(EIMPackets::Empty&)> reply) {
-	DBG("save");
-	juce::MessageManager::getInstance()->callFunctionOnMessageThread(saveState, nullptr);
+void ServerService::handleSave(WebSocketSession* session, std::function<void(EIMPackets::Empty&)> reply) {
+	DBG("aaaa " << (EIMApplication::getEIMInstance()->config.isTempProject() ? "yes" : "not"));
+	if (EIMApplication::getEIMInstance()->config.isTempProject()) handleSaveAs(session);
+	else juce::MessageManager::getInstance()->callFunctionOnMessageThread(saveState, nullptr);
 }
 
 std::unique_ptr<juce::FileChooser> chooser;
 void ServerService::handleOpenProject(WebSocketSession*) {
-	chooser = std::make_unique<juce::FileChooser>("Select Project Root.", juce::File{}, "*");
+	chooser = std::make_unique<juce::FileChooser>("Select Project Root", juce::File{}, "*");
 	runOnMainThread([] {
 		chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories, [](const juce::FileChooser&) {
 			if (chooser->getResult() == juce::File{}) return;
@@ -146,10 +146,18 @@ void ServerService::handleOpenProject(WebSocketSession*) {
 		});
 	});
 }
+void ServerService::handleSaveAs(WebSocketSession*) {
+	chooser = std::make_unique<juce::FileChooser>("Save As", juce::File{}, "*");
+	runOnMainThread([] {
+		chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories, [](const juce::FileChooser&) {
+			if (chooser->getResult() == juce::File{}) return;
+			auto instance = EIMApplication::getEIMInstance();
+			instance->config.setProjectRoot(chooser->getResult());
+			instance->mainWindow->masterTrack->saveState();
+		});
+	});
+}
 
 void ServerService::handlePing(WebSocketSession*, std::function<void(EIMPackets::ClientboundPong&)> reply) {
 	reply(EIMApplication::getEIMInstance()->mainWindow->masterTrack->systemInfo);
-}
-void ServerService::handleRemoveTrack(WebSocketSession*, std::unique_ptr<EIMPackets::String>) {
-
 }

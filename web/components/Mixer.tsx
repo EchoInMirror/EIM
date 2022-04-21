@@ -144,7 +144,7 @@ const Mixer: React.FC = () => {
         const leftLevel = levels[i2]
         const rightLevel = levels[i2 + 1]
         const maxLevel = Math.log10(Math.max(leftLevel, rightLevel)) * 20
-        const color = maxLevel < -6 ? theme.palette.success.main : maxLevel < 0 ? theme.palette.warning.main : theme.palette.error.main
+        const color = maxLevel < -6 ? theme.palette.primary.main : maxLevel < 0 ? theme.palette.warning.main : theme.palette.error.main
         if (left) {
           left.style.height = Math.min(Math.sqrt(leftLevel) / 1.4 * 100, 100) + '%'
           left.style.backgroundColor = color

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { ClientboundPacket } from '../../packets'
-import { useSnackbar, SnackbarKey } from 'notistack'
 import { Config } from '../Client'
 import {
   Dialog, DialogTitle, Tabs, Tab, CircularProgress, IconButton, colors, List, ListItem, ListItemText,
@@ -11,30 +10,43 @@ import {
 
 import Close from '@mui/icons-material/Close'
 import Delete from '@mui/icons-material/Delete'
+import Block from '@mui/icons-material/Block'
 
-let scanningKey: SnackbarKey = -1
+const scanningFiles: Record<string, number> = { }
+let currentFile = 0
+let allFiles = 0
 const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = ({ open, setOpen }) => {
   const [tab, setTab] = useState(0)
   const [config, setConfig] = useState<Config>()
-  const [scanning, setScanning] = useState(false)
-  const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+  const [, update] = useState(0)
 
   useEffect(() => {
     $client.rpc.config({ }).then(it => setConfig(JSON.parse(it.value!)))
   }, [open])
 
   useEffect(() => {
-    $client.on(ClientboundPacket.SetIsScanningVSTs, data => {
-      if (data.value) {
-        setScanning(true)
-        scanningKey = enqueueSnackbar('插件扫描中...', { persist: true, variant: 'info' })
+    $client.on(ClientboundPacket.SetScanningVST, data => {
+      if (data.isFinished) {
+        delete scanningFiles[data.file!]
       } else {
-        setScanning(false)
-        closeSnackbar(scanningKey)
+        allFiles = data.count!
+        currentFile = data.current!
+        scanningFiles[data.file!] = data.thread!
       }
+      update(i => i + 1)
     })
   }, [])
+
   const onClose = () => setOpen(false)
+
+  const files = Object.entries(scanningFiles).map(([it, value]) => (
+    <ListItem key={it}>
+      <ListItemText primary={it} />
+      <ListItemSecondaryAction>
+        <IconButton edge='end' onClick={() => $client.rpc.skipScanning({ value })}><Block /></IconButton>
+      </ListItemSecondaryAction>
+    </ListItem>
+  ))
 
   return (
     <Dialog onClose={onClose} open={open} sx={{ '& .MuiDialog-paper': { minWidth: 180, minHeight: 200 } }}>
@@ -125,26 +137,32 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
               {tab === 2 && (
                 <List dense>
                   <ListSubheader>插件扫描路径</ListSubheader>
-                  <ListItem>
-                    <ListItemText primary='C:\Program Files\Steinberg\VstPlugins' />
-                    <ListItemSecondaryAction>
-                      <IconButton edge='end'><Delete /></IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText primary='C:\Program Files\VstPlugins' />
-                    <ListItemSecondaryAction>
-                      <IconButton edge='end'><Delete /></IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText primary='C:\Program Files\Common Files\VST3' />
-                    <ListItemSecondaryAction>
-                      <IconButton edge='end'><Delete /></IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
+                  {config.pluginManager.scanPaths.map(it => (
+                    <ListItem key={it}>
+                      <ListItemText primary={it} />
+                      <ListItemSecondaryAction>
+                        <IconButton edge='end'><Delete /></IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
                   <Divider />
                   <ListSubheader>忽略扫描的文件列表</ListSubheader>
+                  {config.pluginManager.skipFiles.map(it => (
+                    <ListItem key={it}>
+                      <ListItemText primary={it} />
+                      <ListItemSecondaryAction>
+                        <IconButton edge='end'><Delete /></IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                  {files.length
+                    ? (
+                      <>
+                        <Divider />
+                        <ListSubheader>扫描中 ({currentFile}/{allFiles})</ListSubheader>
+                        {files}
+                      </>)
+                    : undefined}
                 </List>
               )}
             </div>
@@ -161,7 +179,7 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
             {tab === 2 && (
               <DialogActions>
                 <Button color='primary'>添加扫描路径</Button>
-                <Button onClick={() => $client.rpc.scanVSTs({ })} color='primary' disabled={scanning}>扫描插件</Button>
+                <Button onClick={() => $client.rpc.scanVSTs({ })} color='primary'>扫描插件</Button>
               </DialogActions>
             )}
           </>
