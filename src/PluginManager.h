@@ -9,14 +9,13 @@ class PluginManager : juce::Timer {
 
     juce::AudioPluginFormatManager manager;
     juce::KnownPluginList knownPluginList;
-	std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
+    std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
 
     void scanPlugins();
-	void stopScanning();
-	void timerCallback() override;
-	bool isScanning();
-	void createPluginWindow(juce::AudioPluginInstance* instance);
-
+    void stopScanning();
+    void timerCallback() override;
+    bool isScanning();
+    void createPluginWindow(juce::AudioPluginInstance* instance);
 
   private:
     int numThreads = 10;

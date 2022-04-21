@@ -42,21 +42,16 @@ void PluginManager::timerCallback() {
             hasProcessRunning = true;
             continue;
         }
-        DBG("" << i << " " << this->processScanFile[i] << " running");
         if (inited) {
             char arr[10240] = {};
             juce::String str(arr, cur.readProcessOutput(arr, 10240));
-			DBG(str);
             auto xml = juce::XmlDocument::parse(str);
             if (xml != nullptr) {
-				DBG(xml->toString());
                 juce::PluginDescription desc;
                 desc.loadFromXml(*xml.release());
                 knownPluginList.addType(desc);
-                DBG("Scanned: " << str);
             }
             else {
-				DBG("skip " << this->processScanFile[i]);
                 auto& cfg =
                     EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty("pluginManager");
                 cfg.getProperty("skipFiles", juce::StringArray()).getArray()->add(this->processScanFile[i]);
@@ -108,7 +103,6 @@ void PluginManager::scanPlugins() {
 
 void PluginManager::stopScanning() {
     if (!_isScanning) return;
-	DBG("stop scanning");
     auto& cfg = EIMApplication::getEIMInstance()->config;
     cfg.save();
     stopTimer();
@@ -118,13 +112,13 @@ void PluginManager::stopScanning() {
 }
 
 void PluginManager::createPluginWindow(juce::AudioPluginInstance* instance) {
-	if (!instance) return;
-	if (pluginWindows.contains(instance)) {
-		auto& it = pluginWindows.at(instance);
-		it.setAlwaysOnTop(true);
-		it.grabKeyboardFocus();
-		it.setAlwaysOnTop(false);
-	}
-	else
-		pluginWindows.try_emplace(instance, instance, &pluginWindows);
+    if (!instance) return;
+    if (pluginWindows.contains(instance)) {
+        auto& it = pluginWindows.at(instance);
+        it.setAlwaysOnTop(true);
+        it.grabKeyboardFocus();
+        it.setAlwaysOnTop(false);
+    }
+    else
+        pluginWindows.try_emplace(instance, instance, &pluginWindows);
 }
