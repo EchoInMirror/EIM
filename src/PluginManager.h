@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginWindow.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
 class PluginManager : juce::Timer {
@@ -8,11 +9,14 @@ class PluginManager : juce::Timer {
 
     juce::AudioPluginFormatManager manager;
     juce::KnownPluginList knownPluginList;
+	std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
 
     void scanPlugins();
-    void stopScanning();
-    void timerCallback() override;
-    bool isScanning();
+	void stopScanning();
+	void timerCallback() override;
+	bool isScanning();
+	void createPluginWindow(juce::AudioPluginInstance* instance);
+
 
   private:
     int numThreads = 10;

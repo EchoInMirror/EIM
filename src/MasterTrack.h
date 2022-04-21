@@ -1,6 +1,5 @@
 #pragma once
 
-#include "PluginWindow.h"
 #include "Track.h"
 #include "packets.pb.h"
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -10,7 +9,6 @@ class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead,
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
-	std::unordered_map<juce::AudioPluginInstance*, PluginWindow> pluginWindows;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     short ppq = 96;
 
@@ -24,8 +22,8 @@ public:
 	void loadPluginFromFile(juce::var& json, juce::File data, juce::AudioPluginFormat::PluginCreationCallback callback);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
 	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-    void createPluginWindow(juce::AudioPluginInstance* instance);
     void writeProjectStatus(EIMPackets::ProjectStatus&);
+	void init();
 	void saveState();
 	void loadProject(juce::File);
 
@@ -48,8 +46,6 @@ private:
 	std::vector<std::string> deletedTracks;
 
     void calcPositionInfo();
-	void init();
-	void initEmptyMasterTrack();
     juce::AudioProcessorGraph::Node::Ptr initTrack(std::unique_ptr<Track> track);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrack)

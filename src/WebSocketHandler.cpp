@@ -1,5 +1,6 @@
 #include "Main.h"
 #include "websocket/WebSocketSession.h"
+#include "utils/Utils.h"
 
 void ServerService::handleSetProjectStatus(WebSocketSession*, std::unique_ptr<EIMPackets::ProjectStatus> data) {
 	auto shouldUpdate = false;
@@ -80,7 +81,7 @@ void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EI
 	auto plugin = data->has_index()
 		? track->plugins.size() > data->index() ? (juce::AudioPluginInstance*)track->plugins[data->index()]->getProcessor() : nullptr
 		: track->getInstrumentInstance();
-	if (plugin) juce::MessageManager::callAsync([plugin] { EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(plugin); });
+	if (plugin) juce::MessageManager::callAsync([plugin] { EIMApplication::getEIMInstance()->pluginManager->createPluginWindow(plugin); });
 }
 
 void ServerService::handleConfig(WebSocketSession*, std::unique_ptr<EIMPackets::OptionalString> data, std::function<void(EIMPackets::OptionalString&)> reply) {
@@ -126,4 +127,15 @@ void* saveState(void*) {
 void ServerService::handleSave(WebSocketSession*, std::function<void(EIMPackets::Empty&)> reply) {
 	DBG("save");
 	juce::MessageManager::getInstance()->callFunctionOnMessageThread(saveState, nullptr);
+}
+
+std::unique_ptr<juce::FileChooser> chooser;
+void ServerService::handleOpenProject(WebSocketSession*) {
+	chooser = std::make_unique<juce::FileChooser>("Select Project Root.", juce::File{}, "*");
+	runOnMainThread([] {
+		chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories, [](const juce::FileChooser&) {
+			if (chooser->getResult() == juce::File{}) return;
+			EIMApplication::getEIMInstance()->mainWindow->masterTrack->loadProject(chooser->getResult());
+		});
+	});
 }

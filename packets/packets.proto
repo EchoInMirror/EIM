@@ -30,6 +30,7 @@ message ProjectStatus {
   optional uint32 ppq = 6;
   optional bool isPlaying = 7;
   optional uint32 maxNoteTime = 8;
+  optional bool isLoading = 9;
 }
 
 message ServerboundExplorerData {
@@ -117,6 +118,7 @@ service ServerService { // Server bound
   rpc undo (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc redo (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc save (google.protobuf.Empty) returns (Empty);
+  rpc openProject (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound

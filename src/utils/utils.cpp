@@ -55,3 +55,31 @@ juce::DynamicObject* savePluginState(juce::AudioPluginInstance* instance, juce::
 	obj->setProperty("stateFile", id);
 	return obj;
 }
+
+class AsyncFunctionCallback : public juce::MessageManager::MessageBase {
+public:
+	AsyncFunctionCallback(std::function<void()> const f) : func(f) {}
+
+	void messageCallback() override {
+		func();
+		finished.signal();
+	}
+
+	juce::WaitableEvent finished;
+private:
+	std::function<void()> const func;
+
+	JUCE_DECLARE_NON_COPYABLE(AsyncFunctionCallback)
+};
+
+void runOnMainThread(std::function<void()> fn) {
+	auto instance = juce::MessageManager::getInstance();
+	if (instance->isThisTheMessageThread()) return fn();
+
+	// If this thread has the message manager locked, then this will deadlock!
+	jassert(!instance->currentThreadHasLockedMessageManager());
+
+	const juce::ReferenceCountedObjectPtr<AsyncFunctionCallback> message(new AsyncFunctionCallback(fn));
+
+	if (message->post()) message->finished.wait();
+}

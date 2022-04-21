@@ -78,12 +78,22 @@ const LeftSection: React.FC = () => {
           <ListItemIcon><NoteAdd fontSize='small' /></ListItemIcon>
           <ListItemText>新建</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(undefined)}>
+        <MenuItem
+          onClick={() => {
+            $client.rpc.openProject({ })
+            setAnchorEl(undefined)
+          }}
+        >
           <ListItemIcon><FileOpen fontSize='small' /></ListItemIcon>
           <ListItemText>打开</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => setAnchorEl(undefined)}>
+        <MenuItem
+          onClick={() => {
+            $client.rpc.save({ })
+            setAnchorEl(undefined)
+          }}
+        >
           <ListItemIcon><Save fontSize='small' /></ListItemIcon>
           <ListItemText>保存</ListItemText>
         </MenuItem>

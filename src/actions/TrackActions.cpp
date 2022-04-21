@@ -14,7 +14,7 @@ void loadPluginAndAdd(std::string identifier, bool setName, Track* track,
             std::move(type),
             [callback, track](std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& err) {
                 if (err.isEmpty()) {
-                    EIMApplication::getEIMInstance()->mainWindow->masterTrack->createPluginWindow(instance.get());
+                    EIMApplication::getEIMInstance()->pluginManager->createPluginWindow(instance.get());
                     auto inst = instance.get();
                     if (instance->getPluginDescription().isInstrument) track->setInstrument(std::move(instance));
                     else

@@ -28,7 +28,7 @@ Track::Track(juce::File dir) : AudioProcessorGraph() {
 	if (midiFile.existsAsFile()) {
 		auto midi = juce::JSON::parse(midiFile.loadFileAsString());
 		auto& arr = *midi.getArray();
-		for (int i = 0, size = arr.size() / 2; i < size; i++)
+		for (int i = 0, size = arr.size(); i < size; i += 2)
 			midiSequence.addEvent(decodeMidiMessage(arr[i + 1], arr[i]));
 	}
 
@@ -56,14 +56,16 @@ Track::Track(juce::File dir) : AudioProcessorGraph() {
 				addEffectPlugin(std::move(plugin));
 			});
 	}
+
+	init();
 }
 
 Track::~Track() {
-	auto& pluginWindows = EIMApplication::getEIMInstance()->mainWindow->masterTrack->pluginWindows;
+	auto& pluginWindows = EIMApplication::getEIMInstance()->pluginManager->pluginWindows;
 	for (auto& it : plugins) {
-		pluginWindows.erase((juce::AudioPluginInstance*)it->getProcessor());
+		auto processor = (juce::AudioPluginInstance*)it->getProcessor();
+		pluginWindows.erase(processor);
 	}
-	AudioProcessorGraph::~AudioProcessorGraph();
 }
 
 void Track::init() {
