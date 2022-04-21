@@ -124,6 +124,12 @@ message ClientboundScanningVST {
   optional int32 thread = 5;
 }
 
+message ServerboundBrowserPath {
+  int32 type = 1;
+  string title = 2;
+  optional string patterns = 3;
+}
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
@@ -146,6 +152,7 @@ service ServerService { // Server bound
   rpc openProject (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc ping (google.protobuf.Empty) returns (ClientboundPong);
   rpc removeTrack (String) returns (google.protobuf.Empty);
+  rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
 }
 
 service ClientService { // Client bound

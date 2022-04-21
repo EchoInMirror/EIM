@@ -88,12 +88,10 @@ void ServerService::handleOpenPluginWindow(WebSocketSession*, std::unique_ptr<EI
 }
 
 void ServerService::handleConfig(WebSocketSession*, std::unique_ptr<EIMPackets::OptionalString> data, std::function<void(EIMPackets::OptionalString&)> reply) {
-	auto instance = EIMApplication::getEIMInstance();
-	auto& cfg = instance->config;
-	auto& manager = instance->pluginManager;
+	auto& cfg = EIMApplication::getEIMInstance()->config;
 	if (data->has_value()) {
 		cfg.config = juce::JSON::parse(data->value());
-		data->clear_value();
+		cfg.save();
 	} else {
 		data->set_value(juce::JSON::toString(cfg.config).toStdString());
 	}
@@ -154,6 +152,18 @@ void ServerService::handleSaveAs(WebSocketSession*) {
 			auto instance = EIMApplication::getEIMInstance();
 			instance->config.setProjectRoot(chooser->getResult());
 			instance->mainWindow->masterTrack->saveState();
+		});
+	});
+}
+
+void ServerService::handleBrowserPath(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundBrowserPath> data, std::function<void(EIMPackets::OptionalString&)> reply) {
+	chooser = std::make_unique<juce::FileChooser>(data->title(), juce::File{}, data->has_patterns() ? data->patterns() : "*");
+	int type = data->type();
+	runOnMainThread([type, reply] {
+		chooser->launchAsync(type, [reply](const juce::FileChooser&) {
+			EIMPackets::OptionalString res;
+			if (chooser->getResult() != juce::File{}) res.set_value(chooser->getResult().getFullPathName().toStdString());
+			reply(res);
 		});
 	});
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import packets, { ClientboundPacket } from '../../packets'
 import { Config } from '../Client'
+import { FileChooserFlags } from '../utils'
 import {
   Dialog, DialogTitle, Tabs, Tab, CircularProgress, IconButton, colors, List, ListItem, ListItemText,
   ListSubheader, ListItemSecondaryAction, DialogActions, Button, Divider, FormControl, InputLabel,
@@ -20,9 +21,8 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
   const [config, setConfig] = useState<Config>()
   const [, update] = useState(0)
 
-  useEffect(() => {
-    $client.rpc.config({ }).then(it => setConfig(JSON.parse(it.value!)))
-  }, [open])
+  const updateConfig = () => $client.rpc.config({ value: JSON.stringify(config) }).then(it => setConfig(JSON.parse(it.value!)))
+  useEffect(() => { $client.rpc.config({ }).then(it => setConfig(JSON.parse(it.value!))) }, [open])
 
   useEffect(() => {
     const fn = (data: packets.IClientboundScanningVST) => {
@@ -143,7 +143,15 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
                     <ListItem key={it}>
                       <ListItemText primary={it} />
                       <ListItemSecondaryAction>
-                        <IconButton edge='end'><Delete /></IconButton>
+                        <IconButton
+                          edge='end'
+                          onClick={() => {
+                            config.pluginManager.scanPaths = config.pluginManager.scanPaths.filter(p => p !== it)
+                            updateConfig()
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
                       </ListItemSecondaryAction>
                     </ListItem>
                   ))}
@@ -153,7 +161,15 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
                     <ListItem key={it}>
                       <ListItemText primary={it} />
                       <ListItemSecondaryAction>
-                        <IconButton edge='end'><Delete /></IconButton>
+                        <IconButton
+                          edge='end'
+                          onClick={() => {
+                            config.pluginManager.skipFiles = config.pluginManager.skipFiles.filter(p => p !== it)
+                            updateConfig()
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
                       </ListItemSecondaryAction>
                     </ListItem>
                   ))}
@@ -180,7 +196,16 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
             )}
             {tab === 2 && (
               <DialogActions>
-                <Button color='primary'>添加扫描路径</Button>
+                <Button
+                  color='primary'
+                  onClick={() => $client.browserPath({ type: FileChooserFlags.canSelectDirectories, title: '添加扫描路径' }).then(it => {
+                    if (!it) return
+                    config.pluginManager.scanPaths = [...new Set([...config.pluginManager.scanPaths, it])]
+                    updateConfig()
+                  })}
+                >
+                  添加扫描路径
+                </Button>
                 <Button onClick={() => $client.rpc.scanVSTs({ })} color='primary'>扫描插件</Button>
               </DialogActions>
             )}

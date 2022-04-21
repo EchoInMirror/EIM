@@ -123,4 +123,8 @@ export default class Client extends ClientService {
       $dispatch({ })
     })
   }
+
+  public async browserPath (data: packets.IServerboundBrowserPath) {
+    return (await this.rpc.browserPath(data)).value
+  }
 }

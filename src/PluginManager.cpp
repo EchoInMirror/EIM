@@ -21,7 +21,11 @@ PluginManager::PluginManager(juce::File rootPath)
             obj2->setProperty("scanPaths", juce::StringArray({"C:\\Program Files\\Common Files\\VST3",
                                                               "C:\\Program Files\\VstPlugins",
                                                               "C:\\Program Files\\Steinberg\\VSTPlugins"}));
-        }
+		} else if (juce::SystemStats::getOperatingSystemType() == juce::SystemStats::Linux) {
+			juce::StringArray arr;
+			arr.addTokens(juce::SystemStats::getEnvironmentVariable("LADSPA_PATH", "/usr/lib/ladspa;/usr/local/lib/ladspa;~/.ladspa").replace(":", ";"), ";");
+			obj2->setProperty("scanPaths", arr);
+		} else obj2->setProperty("scanPaths", juce::StringArray());
         obj2->setProperty("skipFiles", juce::StringArray());
         obj2->setProperty("thread", 10);
         obj->setProperty("pluginManager", pluginManager);
@@ -71,7 +75,9 @@ void PluginManager::timerCallback() {
 			if (flag) {
 				auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty(
 					"pluginManager");
-				cfg.getProperty("skipFiles", juce::StringArray()).getArray()->add(processScanFile[i]);
+				auto arr = cfg.getProperty("skipFiles", juce::StringArray());
+				auto ptr = arr.getArray();
+				ptr->addIfNotAlreadyThere(processScanFile[i]);
 			}
 			EIMPackets::ClientboundScanningVST pkg;
 			pkg.set_file(processScanFile[i].toStdString());
