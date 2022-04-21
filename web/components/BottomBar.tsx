@@ -53,6 +53,7 @@ const SystemStatus = memo(function SystemStatus () {
   const [info, setInfo] = useState<packets.IClientboundPong & { time: number }>(defaultSystemInfo as any)
   useEffect(() => {
     const fn = () => {
+      if (!$client.isConnected) return
       const time = Date.now()
       $client.rpc.ping({ }).then((data: any) => {
         data.time = Date.now() - time

@@ -22,7 +22,7 @@
   ],
   "globals": {
     "$client": "readonly",
-    "$dragObject": "writable"
+    "$dragObject": "readonly"
   },
   "rules": {
     "no-use-before-define": "off",

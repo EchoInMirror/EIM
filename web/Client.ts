@@ -21,6 +21,9 @@ export default class Client extends ClientService {
   private ws: WebSocket
   private replyId = 0
   private replies: Record<number, RPCImplCallback | undefined> = { }
+  private connected = false
+
+  public get isConnected () { return this.connected }
 
   public rpc: packets.ServerService
 
@@ -30,9 +33,13 @@ export default class Client extends ClientService {
     this.ws = new WebSocket(address)
     this.ws.onopen = () => {
       this.ws.binaryType = 'arraybuffer'
+      this.connected = true
       callback()
     }
-    this.ws.onclose = e => this.emit('websocket:close', e.reason)
+    this.ws.onclose = e => {
+      this.connected = false
+      this.emit('websocket:close', e.reason)
+    }
     this.ws.onmessage = e => {
       const view = new DataView(e.data)
       const event = view.getUint8(0)

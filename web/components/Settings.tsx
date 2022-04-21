@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ClientboundPacket } from '../../packets'
+import packets, { ClientboundPacket } from '../../packets'
 import { Config } from '../Client'
 import {
   Dialog, DialogTitle, Tabs, Tab, CircularProgress, IconButton, colors, List, ListItem, ListItemText,
@@ -25,7 +25,7 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
   }, [open])
 
   useEffect(() => {
-    $client.on(ClientboundPacket.SetScanningVST, data => {
+    const fn = (data: packets.IClientboundScanningVST) => {
       if (data.isFinished) {
         delete scanningFiles[data.file!]
       } else {
@@ -34,7 +34,9 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
         scanningFiles[data.file!] = data.thread!
       }
       update(i => i + 1)
-    })
+    }
+    $client.on(ClientboundPacket.SetScanningVST, fn)
+    return () => { $client.off(ClientboundPacket.SetScanningVST, fn) }
   }, [])
 
   const onClose = () => setOpen(false)

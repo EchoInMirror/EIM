@@ -14,6 +14,8 @@
     "@mui/styles": "^5.6.0",
     "@parcel/transformer-less": "^2.4.1",
     "babel-plugin-direct-import": "^1.0.0",
+    "del-cli": "^4.0.1",
+    "events": "^3.3.0",
     "jsdoc": "^3.6.10",
     "less": "^4.1.2",
     "long": "^3.2.0",
@@ -50,15 +52,15 @@
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.0.0",
-    "eslint-plugin-react": "^7.29.4",
-    "events": "^3.3.0"
+    "eslint-plugin-react": "^7.29.4"
   },
   "targets": {
     "main": false
   },
   "scripts": {
     "start": "parcel web/index.html",
-    "build": "parcel build web/index.html",
+    "clear": "del-cli dist",
+    "build": "npm run clear && parcel build web/index.html",
     "generate:proto": "pbjs -t static-module -w es6 -o packets/packets.js packets/packets.proto && pbts -o packets/packets.d.ts packets/packets.js && ts-node scripts/generatePacketsClass"
   },
   "repository": {

@@ -55,7 +55,7 @@ const items: ItemType[] = [
           label: isVST ? <del>{name2}</del> : name2,
           draggable: !tree[name],
           onDragStart: e => {
-            $dragObject = { type: 'loadPlugin', isInstrument, data: data }
+            window.$dragObject = { type: 'loadPlugin', isInstrument, data: data }
             e.stopPropagation()
           }
         }
