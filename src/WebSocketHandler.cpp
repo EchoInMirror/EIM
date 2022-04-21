@@ -114,13 +114,13 @@ void ServerService::handleSendMidiMessages(WebSocketSession*, std::unique_ptr<EI
 }
 
 void ServerService::handleUndo(WebSocketSession*) {
-	DBG("undo: " << EIMApplication::getEIMInstance()->undoManager.getUndoDescription());
-	EIMApplication::getEIMInstance()->undoManager.undo();
+	DBG("undo: " << EIMApplication::getEIMInstance()->undoManager.getUndoDescription()
+		<< ": " << (EIMApplication::getEIMInstance()->undoManager.undo() ? "true" : "false"));
 }
 
 void ServerService::handleRedo(WebSocketSession*) {
-	DBG("redo");
-	EIMApplication::getEIMInstance()->undoManager.redo();
+	DBG("redo: " << EIMApplication::getEIMInstance()->undoManager.getRedoDescription()
+		<< ": " << (EIMApplication::getEIMInstance()->undoManager.redo() ? "true" : "false"));
 }
 
 void* saveState(void*) {

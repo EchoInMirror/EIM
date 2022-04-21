@@ -184,10 +184,19 @@ const SideBarButton = memo(function SideBarButton ({ active, title, ...props }: 
   )
 })
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+export let setType = (_val: number) => { }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+export let setWidth = (_val: number | ((val: number) => number)) => { }
+
 const SideBar = memo(function SideBar () {
-  const [width, setWidth] = useState(0)
-  const [type, setType] = useState(1)
+  const [width, _setWidth] = useState(0)
+  const [type, _setType] = useState(1)
   const [bottomBarType, setBottomBarType] = useContext(BottomBarContext)
+
+  setType = _setType
+  setWidth = _setWidth
+
   return (
     <Box component='nav' className='side-bar' sx={{ zIndex: theme => theme.zIndex.appBar - 1 }}>
       <Paper square elevation={3} sx={{ background: theme => theme.palette.background.bright }}>

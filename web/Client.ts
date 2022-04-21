@@ -113,7 +113,6 @@ export default class Client extends ClientService {
       })
       $dispatch({ })
     }).on(ClientboundPacket.EditMidiMessages, data => {
-      console.log(data)
       const track = $globalData.tracks[data.uuid!]
       if (!track) return
       track.midi = [...track.midi!]

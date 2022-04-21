@@ -65,9 +65,14 @@ public:
 		auto& tracks = masterTrack->tracksMap;
 		if (!uuid.empty()) {
 			if (tracks.contains(uuid)) return true;
-			auto path = instance->config.tempPath.getChildFile(uuid);
+			auto path = instance->config.tempTracksPath.getChildFile(uuid);
 			if (!path.getChildFile("track.json").existsAsFile()) return false;
-			masterTrack->addTrack(std::make_unique<Track>(path));
+			masterTrack->addTrack(std::make_unique<Track>(path, [](Track* track) {
+				EIMPackets::ClientboundTracksInfo info;
+				track->writeTrackInfo(info.add_tracks());
+				EIMApplication::getEIMInstance()->listener->boardcast(
+					std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+			}));
 			return true;
 		}
 		auto track = (Track*)masterTrack->addTrack(std::make_unique<Track>(data->name(), data->color()))->getProcessor();
@@ -104,7 +109,10 @@ public:
 		auto instance = EIMApplication::getEIMInstance();
 		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
 		if (!tracks.contains(uuid)) return false;
-		((Track*)tracks[uuid]->getProcessor())->saveState(instance->config.tempPath);
+		auto track = ((Track*)tracks[uuid]->getProcessor());
+		runOnMainThread([&] {
+			track->saveState(instance->config.tempTracksPath.getChildFile(uuid));
+		});
 		instance->mainWindow->masterTrack->removeTrack(uuid);
 		EIMPackets::String msg;
 		msg.set_value(uuid);
@@ -122,65 +130,48 @@ void ServerService::handleCreateTrack(WebSocketSession*, std::unique_ptr<EIMPack
 	EIMApplication::getEIMInstance()->undoManager.beginNewTransaction();
 }
 
-/*class DeleteTrackAction : public juce::UndoableAction {
+class DeleteTrackAction : public juce::UndoableAction {
 private:
-	std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data;
-	std::function<void()> callback;
-	std::string uuid = "";
+	std::string uuid;
 
 public:
-	DeleteTrackAction(std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data)
-		: data(std::move(data)), callback(nullptr) {
-	}
-	DeleteTrackAction(std::unique_ptr<EIMPackets::ServerboundCreateTrackData> data, std::function<void()> callback)
-		: data(std::move(data)), callback(callback) {
-	}
+	DeleteTrackAction(std::string uuid) : uuid(uuid) { }
 	bool perform() override {
-		auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
-
-		auto track = std::make_unique<Track>(data->name(), data->color());
-		auto trackPtr = track.get();
-		auto env = juce::SystemStats::getEnvironmentVariable("MIDI_IMPORT_PATH", "");
-		if (env.isNotEmpty()) {
-			juce::MidiFile file;
-			juce::FileInputStream theStream(env);
-			file.readFrom(theStream);
-			track->addMidiEvents(*file.getTrack(1), file.getTimeFormat());
-			masterTrack->checkEndTime((int)(file.getTrack(1)->getEndTime() / file.getTimeFormat() * masterTrack->ppq));
-		}
-		uuid = track->uuid;
-		if (data->has_identifier()) {
-			loadPluginAndAdd(data->identifier(), true, trackPtr, [this, trackPtr](bool, juce::AudioPluginInstance*) {
-				EIMPackets::ClientboundTracksInfo info;
-				trackPtr->writeTrackInfo(info.add_tracks());
-				EIMApplication::getEIMInstance()->listener->boardcast(
-					std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
-				if (callback != nullptr) {
-					callback();
-					callback = nullptr;
-				}
-				});
-		}
-		else {
-			EIMPackets::ClientboundTracksInfo info;
-			track->writeTrackInfo(info.add_tracks());
-			EIMApplication::getEIMInstance()->listener->boardcast(
-				std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
-		}
-		return true;
-	}
-	bool undo() override {
+		if (uuid.empty()) return false;
 		auto instance = EIMApplication::getEIMInstance();
-		instance->mainWindow->masterTrack->removeTrack(uuid);
+		auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+		auto& tracks = masterTrack->tracksMap;
+		if (!tracks.contains(uuid)) return true;
+		auto track = ((Track*)tracks[uuid]->getProcessor());
+		runOnMainThread([&] {
+			track->saveState(instance->config.tempTracksPath.getChildFile(uuid));
+		});
+		masterTrack->removeTrack(uuid);
 		EIMPackets::String msg;
 		msg.set_value(uuid);
 		instance->listener->boardcast(std::move(EIMMakePackets::makeRemoveTrackPacket(msg)));
 		return true;
 	}
-};*/
+	bool undo() override {
+		auto instance = EIMApplication::getEIMInstance();
+		auto& masterTrack = instance->mainWindow->masterTrack;
+		auto& tracks = masterTrack->tracksMap;
+		if (tracks.contains(uuid)) return true;
+		auto path = instance->config.tempTracksPath.getChildFile(uuid);
+		if (!path.getChildFile("track.json").existsAsFile()) return false;
+		masterTrack->addTrack(std::make_unique<Track>(path, [](Track* track) {
+			EIMPackets::ClientboundTracksInfo info;
+			track->writeTrackInfo(info.add_tracks());
+			EIMApplication::getEIMInstance()->listener->boardcast(
+				std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+		}));
+		return true;
+	}
+};
 
-void ServerService::handleRemoveTrack(WebSocketSession*, std::unique_ptr<EIMPackets::String>) {
-	// TODO
+void ServerService::handleRemoveTrack(WebSocketSession*, std::unique_ptr<EIMPackets::String> data) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new DeleteTrackAction(data->value()), "DeleteTrackAction");
+	EIMApplication::getEIMInstance()->undoManager.beginNewTransaction();
 }
 
 class UpdateTrackInfoAction : public juce::UndoableAction {

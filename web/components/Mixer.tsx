@@ -2,9 +2,10 @@ import './Mixer.less'
 import React, { useEffect, useState } from 'react'
 import packets, { ClientboundPacket } from '../../packets'
 import useGlobalData from '../reducer'
+import Marquee from 'react-fast-marquee'
+import { setType, setWidth } from './SideBar'
 import { levelMarks } from '../utils'
 import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button, Tooltip, useTheme } from '@mui/material'
-import Marquee from 'react-fast-marquee'
 
 import Power from '@mui/icons-material/Power'
 import VolumeUp from '@mui/icons-material/VolumeUp'
@@ -75,7 +76,6 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, 
           min={-100}
           sx={{ [`& .MuiSlider-thumb[data-index="${pan[0] === 0 ? 0 : 1}"]`]: { opacity: 0 } }}
           onChange={(_, val) => {
-            console.log(val)
             const [a, b] = val as number[]
             const cur = a === 0 ? b : a
             $client.rpc.updateTrackInfo({ uuid, pan: cur })
@@ -113,6 +113,10 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, 
           size='small'
           loading={loading}
           sx={{ width: '100%', borderRadius: 0 }}
+          onClick={() => {
+            setType(1)
+            setWidth(width => width || 200)
+          }}
           onDragOver={e => !loading && $dragObject?.type === 'loadPlugin' && !$dragObject.isInstrument && e.preventDefault()}
           onDrop={() => {
             if (loading || $dragObject?.type !== 'loadPlugin' || $dragObject.isInstrument) return

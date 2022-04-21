@@ -5,7 +5,10 @@
 class PluginWindow : public juce::DocumentWindow {
 public:
     PluginWindow(juce::AudioPluginInstance* instance, std::unordered_map<juce::AudioPluginInstance*, PluginWindow>* pluginWindows);
-    ~PluginWindow() { clearContentComponent(); }
+    ~PluginWindow() {
+		DBG("~PluginWindow");
+		clearContentComponent();
+	}
 
     void closeButtonPressed() override;
     int getDesktopWindowStyleFlags() const override;

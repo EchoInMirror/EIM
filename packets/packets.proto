@@ -135,6 +135,7 @@ service ServerService { // Server bound
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
   rpc refresh (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc createTrack (ServerboundCreateTrackData) returns (Empty);
+  rpc removeTrack (String) returns (google.protobuf.Empty);
   rpc updateTrackInfo (TrackInfo) returns (google.protobuf.Empty);
   rpc openPluginWindow (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
   rpc config (OptionalString) returns (OptionalString);
@@ -151,7 +152,6 @@ service ServerService { // Server bound
   rpc saveAs (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc openProject (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc ping (google.protobuf.Empty) returns (ClientboundPong);
-  rpc removeTrack (String) returns (google.protobuf.Empty);
   rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
 }
 

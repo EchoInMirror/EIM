@@ -11,6 +11,6 @@ export const defaultHandlers = {
   REDO: () => $client.rpc.redo({ }),
   SAVE: (e: any) => {
     e.preventDefault()
-    $client.rpc.save({ }).then(console.log)
+    $client.rpc.save({ })
   }
 }

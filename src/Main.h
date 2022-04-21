@@ -33,7 +33,6 @@ public:
 
     void shutdown() override;
     void systemRequestedQuit() override;
-    void handlePacket(WebSocketSession* buf);
     static EIMApplication* getEIMInstance();
 private:
     boost::asio::io_context ioc{ 4 };

@@ -12,7 +12,7 @@ Track::Track(std::string name, std::string color, std::string uuid)
     init();
 }
 
-Track::Track(juce::File dir) : AudioProcessorGraph() {
+Track::Track(juce::File dir, std::function<void(Track*)> callback) : AudioProcessorGraph() {
 	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
 	auto info = juce::JSON::parse(dir.getChildFile("track.json").loadFileAsString());
 	auto pluginsDir = dir.getChildFile("plugins");
@@ -32,28 +32,29 @@ Track::Track(juce::File dir) : AudioProcessorGraph() {
 			midiSequence.addEvent(decodeMidiMessage(arr[i + 1], arr[i]));
 	}
 
-	if (info.hasProperty("instrument")) {
-		auto it = info.getProperty("instrument", new juce::DynamicObject());
-		masterTrack->loadPluginFromFile(it, pluginsDir,
-			[this](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
-				if (plugin == nullptr) {
-					DBG(error);
-					return;
-				}
-				setInstrument(std::move(plugin));
-			});
-	}
+	if (info.hasProperty("instrument")) allPluginsCount++;
 
 	auto pluginsArr = info.getProperty("plugins", juce::Array<juce::var>());
 	for (auto& it : *pluginsArr.getArray()) {
-		if (!it.isObject()) continue;
+		if (it.isObject()) allPluginsCount++;
+	}
+
+	if (info.hasProperty("instrument")) {
+		auto it = info.getProperty("instrument", new juce::DynamicObject());
 		masterTrack->loadPluginFromFile(it, pluginsDir,
-			[this](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
-				if (plugin == nullptr) {
-					DBG(error);
-					return;
-				}
-				addEffectPlugin(std::move(plugin));
+			[this, callback](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
+				if (plugin != nullptr) setInstrument(std::move(plugin));
+				if (--allPluginsCount == 0 && callback != nullptr) callback(this);
+			});
+	}
+
+	for (auto& it : *pluginsArr.getArray()) {
+		if (!it.isObject()) continue;
+		auto it = info.getProperty("instrument", new juce::DynamicObject());
+		masterTrack->loadPluginFromFile(it, pluginsDir,
+			[this, callback](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
+				if (plugin != nullptr) addEffectPlugin(std::move(plugin));
+				if (--allPluginsCount == 0 && callback != nullptr) callback(this);
 			});
 	}
 
@@ -70,10 +71,8 @@ Track::Track(Track&& other) : AudioProcessorGraph(), uuid(randomUuid()), name(ot
 
 Track::~Track() {
 	auto& pluginWindows = EIMApplication::getEIMInstance()->pluginManager->pluginWindows;
-	for (auto& it : plugins) {
-		auto processor = (juce::AudioPluginInstance*)it->getProcessor();
-		pluginWindows.erase(processor);
-	}
+	if (instrumentNode) pluginWindows.erase((juce::AudioPluginInstance*)instrumentNode->getProcessor());
+	for (auto& it : plugins) pluginWindows.erase((juce::AudioPluginInstance*)it->getProcessor());
 }
 
 void Track::init() {
@@ -244,6 +243,7 @@ void Track::saveState(juce::File dir) {
 	pluginsDir.createDirectory();
 	auto obj = new juce::DynamicObject();
 	juce::Array<juce::var> plguins;
+	obj->setProperty("uuid", juce::String(uuid));
 	obj->setProperty("name", juce::String(name));
 	obj->setProperty("color", juce::String(color));
 	obj->setProperty("pan", pan);

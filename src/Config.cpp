@@ -4,7 +4,8 @@ Config::Config() : rootPath(juce::File::getSpecialLocation(juce::File::SpecialLo
     configPath(rootPath.getChildFile("config.json")),
 	projects(rootPath.getChildFile("projects")),
 	samplesPath(rootPath.getChildFile("samples")),
-	tempPath(juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile("EchoInMirror"))
+	tempPath(juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile("EchoInMirror")),
+	tempTracksPath(tempPath.getChildFile("tracks"))
 {
 	rootPath.createDirectory();
 	if (!configPath.exists()) configPath.replaceWithText("{}");
@@ -12,6 +13,7 @@ Config::Config() : rootPath(juce::File::getSpecialLocation(juce::File::SpecialLo
 	projects.createDirectory();
 	samplesPath.createDirectory();
 	tempPath.createDirectory();
+	tempTracksPath.createDirectory();
 	setProjectRoot(projects.getChildFile(juce::String(juce::Time::currentTimeMillis())));
 	juce::Array<juce::File> files;
 	projects.findChildFiles(files, juce::File::TypesOfFileToFind::findDirectories, false);

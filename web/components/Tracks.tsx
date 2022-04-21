@@ -6,7 +6,10 @@ import useGlobalData from '../reducer'
 import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
 import { colorMap, colorValues, levelMarks } from '../utils'
-import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme } from '@mui/material'
+import {
+  Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme,
+  Menu, MenuItem
+} from '@mui/material'
 
 import Power from '@mui/icons-material/Power'
 import VolumeUp from '@mui/icons-material/VolumeUp'
@@ -18,6 +21,7 @@ export const playHeadRef = createRef<HTMLDivElement>()
 const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
   const [state, dispatch] = useGlobalData()
   const [color, setColor] = useState(info.color!)
+  const [contextMenu, setContextMenu] = React.useState<{ left: number, top: number } | undefined>()
 
   const uuid = info.uuid!
 
@@ -27,6 +31,10 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
       component='li'
       onClick={() => dispatch({ activeTrack: uuid })}
       sx={state.activeTrack === uuid ? { backgroundColor: theme => theme.palette.background.brighter } : undefined}
+      onContextMenu={(e: any) => {
+        e.preventDefault()
+        setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
+      }}
     >
       <ColorPicker
         deferred
@@ -42,10 +50,7 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
           <IconButton
             size='small'
             className='instrument'
-            onClick={() => {
-              console.log(Date.now())
-              $client.rpc.openPluginWindow({ uuid })
-            }}
+            onClick={() => { $client.rpc.openPluginWindow({ uuid }) }}
           >
             <Power fontSize='small' />
           </IconButton>
@@ -75,6 +80,9 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
           />
         </Stack>
       </div>
+      <Menu open={!!contextMenu} onClose={close} anchorReference='anchorPosition' anchorPosition={contextMenu}>
+        <MenuItem onClick={() => $client.rpc.removeTrack({ value: uuid })}>删除</MenuItem>
+      </Menu>
     </Box>
   )
 }

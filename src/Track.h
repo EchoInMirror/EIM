@@ -10,7 +10,7 @@ class Track : public juce::AudioProcessorGraph {
   public:
     Track(std::string uuid);
     Track(std::string name, std::string color, std::string uuid = "");
-	Track(juce::File trackRoot);
+	Track(juce::File trackRoot, std::function<void(Track*)> callback = nullptr);
 	Track(Track&& other);
 	~Track();
     std::string uuid;
@@ -46,6 +46,7 @@ class Track : public juce::AudioProcessorGraph {
     juce::CriticalSection processLock;
     int samplesPlayed = 0;
     double nextStartTime = 0;
+	std::atomic<int> allPluginsCount = 0;
     juce::AudioProcessorGraph::NodeID midiIn, begin, end;
     juce::AudioProcessorGraph::Node::Ptr instrumentNode = nullptr;
     juce::dsp::PannerRule panRule = juce::dsp::PannerRule::balanced;
