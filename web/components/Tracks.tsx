@@ -1,7 +1,8 @@
 import './Tracks.less'
+import React, { useState, useEffect, createRef, useRef, useMemo, memo } from 'react'
 import LoadingButton from '@mui/lab/LoadingButton'
 import PlayRuler from './PlayRuler'
-import React, { useState, useEffect, createRef, useRef, useMemo, memo } from 'react'
+import ContentEditable from 'react-contenteditable'
 import useGlobalData from '../reducer'
 import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
@@ -21,11 +22,13 @@ export const playHeadRef = createRef<HTMLDivElement>()
 const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
   const [state, dispatch] = useGlobalData()
   const [color, setColor] = useState(info.color!)
+  const [name, setName] = useState(info.name!)
   const [contextMenu, setContextMenu] = React.useState<{ left: number, top: number } | undefined>()
 
   const uuid = info.uuid!
 
   useEffect(() => setColor(info.color!), [info.color])
+  useEffect(() => setName(info.name!), [info.name])
   return (
     <Box
       component='li'
@@ -55,7 +58,18 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
             <Power fontSize='small' />
           </IconButton>
         )}
-        <span className='name'>{info.name}</span>
+        <ContentEditable
+          className='name'
+          tagName='span'
+          html={name}
+          onChange={e => setName(e.target.value)}
+          onBlur={e => $client.rpc.updateTrackInfo({ uuid, name: e.target.innerText })}
+          onKeyDown={e => {
+            if (e.code !== 'Enter') return
+            e.preventDefault()
+            $client.rpc.updateTrackInfo({ uuid, name: (e.target as HTMLSpanElement).innerText })
+          }}
+        />
       </div>
       <div>
         <Stack spacing={1} direction='row' alignItems='center'>
