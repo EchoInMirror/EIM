@@ -4,7 +4,8 @@
 #include "Main.h"
 
 MasterTrack::MasterTrack()
-    : AudioProcessorGraph(), juce::AudioPlayHead(), thumbnailCache(5), thumbnail(512, formatManager, thumbnailCache) {
+    : AudioProcessorGraph(), juce::AudioPlayHead(), juce::Timer(),
+	thumbnailCache(5), thumbnail(512, formatManager, thumbnailCache) {
     setPlayHead(this);
     thumbnail.addChangeListener(this);
     formatManager.registerBasicFormats();
@@ -20,6 +21,7 @@ MasterTrack::MasterTrack()
     setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate,
                          setup.bufferSize == 0 ? 1024 : setup.bufferSize);
     prepareToPlay(getSampleRate(), getBlockSize());
+	startTimer(100);
     /*
     chooser = std::make_unique<juce::FileChooser>("Select a Wave file to play...", juce::File{}, "*");
     auto chooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
@@ -182,7 +184,6 @@ void MasterTrack::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffe
 
 void MasterTrack::writeProjectStatus(EIMPackets::ProjectStatus& it) {
     it.set_bpm((int)currentPositionInfo.bpm);
-    it.set_position((int)currentPositionInfo.ppqPosition);
     it.set_timesignumerator(currentPositionInfo.timeSigNumerator);
     it.set_timesigdenominator(currentPositionInfo.timeSigDenominator);
     it.set_ppq(ppq);
@@ -248,4 +249,25 @@ void MasterTrack::loadProject(juce::File newRoot) {
 	instance->undoManager.clearUndoHistory();
 	instance->config.setProjectRoot(newRoot);
 	init();
+}
+
+void MasterTrack::timerCallback() {
+	EIMPackets::ClientboundPing data;
+	data.set_position((int)currentPositionInfo.ppqPosition);
+	for (auto& it : tracks) {
+		auto track = (Track*)it->getProcessor();
+		data.add_levels(track->levelL);
+		data.add_levels(track->levelR);
+		track->levelL = track->levelR = 0.0f;
+	}
+	EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makePingPacket(data));
+}
+
+MasterTrack::SystemInfoTimer::SystemInfoTimer() { startTimer(1000); }
+void MasterTrack::SystemInfoTimer::timerCallback() {
+	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+	masterTrack->systemInfo.set_cpu((int)(masterTrack->deviceManager.getCpuUsage() * 100.0));
+	masterTrack->systemInfo.set_memory((int)getCurrentRSS());
+	masterTrack->systemInfo.set_events(masterTrack->events);
+	masterTrack->events = 0;
 }

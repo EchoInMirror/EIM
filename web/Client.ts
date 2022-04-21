@@ -23,6 +23,7 @@ export default class Client extends ClientService {
 
   constructor (address: string, callback: () => void) {
     super()
+    this.setMaxListeners(0)
     this.ws = new WebSocket(address)
     this.ws.onopen = () => {
       this.ws.binaryType = 'arraybuffer'

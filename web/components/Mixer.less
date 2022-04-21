@@ -40,17 +40,30 @@
     }
 
     .level {
-      height: 120px;
+      height: 150px;
       display: flex;
       justify-content: center;
       margin: 10px 0;
       position: relative;
 
-      .MuiSlider-valueLabel { pointer-events: none; }
+      .volume-slider .MuiSlider-valueLabel { pointer-events: none; }
 
-      .MuiSlider-root {
+      .volume-slider {
         z-index: 1;
         margin-left: -14px;
+        margin-right: 0;
+      }
+
+      .volume-mark {
+        opacity: 0.5;
+        margin-left: -4px;
+        font-size: 0.7rem;
+        letter-spacing: -1px;
+        transform: translate(-100%, 50%);
+
+        &[data-index='2'] {
+          margin-left: -2px;
+        }
       }
 
       input[type=range] {
@@ -70,6 +83,15 @@
       position: relative;
       -webkit-tap-highlight-color: transparent;
 
+      div {
+        z-index: 1;
+        position: absolute;
+        border-radius: 12px;
+        bottom: 0;
+        width: inherit;
+        transition: 100ms ease-in-out;
+      }
+
       &::after {
         content: '';
         position: absolute;
@@ -79,6 +101,7 @@
         right: 0;
         opacity: .38;
         border-radius: 12px;
+        white-space: nowrap;
         background-color: var(--primary-color);
       }
     }
@@ -94,6 +117,7 @@
         font-size: 12px;
         font-weight: bold;
         letter-spacing: -1px;
+        white-space: nowrap;
       }
     }
 

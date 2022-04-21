@@ -1,7 +1,8 @@
 import './Mixer.less'
 import React, { useEffect, useState } from 'react'
+import packets, { ClientboundPacket } from '../../packets'
 import useGlobalData from '../reducer'
-import packets from '../../packets'
+import { levelMarks } from '../utils'
 import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button, Tooltip, useTheme } from '@mui/material'
 import Marquee from 'react-fast-marquee'
 
@@ -29,6 +30,10 @@ const TrackPlugin: React.FC<{ plugin: packets.TrackInfo.IPluginData, uuid: strin
 }
 
 const defaultPan = [0, 0]
+const indexToUUID: Record<number, string> = { }
+const leftLevels: Record<string, HTMLDivElement | null> = {}
+const rightLevels: Record<string, HTMLDivElement | null> = {}
+const levelTexts: Record<string, HTMLSpanElement | null> = {}
 
 const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, active }) => {
   const [pan, setPan] = useState(defaultPan)
@@ -88,6 +93,8 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, 
             value={Math.sqrt(info.volume!) * 100}
             max={140}
             min={0}
+            marks={levelMarks}
+            classes={{ markLabel: 'volume-mark', root: 'volume-slider' }}
             valueLabelFormat={val => `${Math.round(val)}% ${val > 0 ? (Math.log10((val / 100) ** 2) * 20).toFixed(2) + '分贝' : '静音'}`}
             onChange={(_, val) => {
               const volume = info.volume = ((val as number) / 100) ** 2
@@ -95,8 +102,8 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, 
               dispatch({ tracks: { ...state.tracks, [uuid]: info } })
             }}
           />
-          <div className='left'><span>-12.0</span><div /></div>
-          <div className='right'><div /></div>
+          <div className='left'><span ref={it => (levelTexts[uuid] = it)}>-12.0</span><div ref={it => (leftLevels[uuid] = it)} /></div>
+          <div className='right'><div ref={it => (rightLevels[uuid] = it)} /></div>
         </div>
       </div>
       <Divider className='mid-divider' />
@@ -122,9 +129,41 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, 
 
 const Mixer: React.FC = () => {
   const [globalData] = useGlobalData()
+  const theme = useTheme()
+  useEffect(() => {
+    const handlePing = (data: packets.IClientboundPing) => {
+      const levels = data.levels!
+      const size = levels.length / 2 | 0
+      for (let i = 0; i < size; i++) {
+        const uuid = indexToUUID[i]
+        if (uuid == null) continue
+        const i2 = i * 2
+        const left = leftLevels[uuid]
+        const right = rightLevels[uuid]
+        const span = levelTexts[uuid]
+        const leftLevel = levels[i2]
+        const rightLevel = levels[i2 + 1]
+        const maxLevel = Math.log10(Math.max(leftLevel, rightLevel)) * 20
+        const color = maxLevel < -6 ? theme.palette.success.main : maxLevel < 0 ? theme.palette.warning.main : theme.palette.error.main
+        if (left) {
+          left.style.height = Math.min(Math.sqrt(leftLevel) / 1.4 * 100, 100) + '%'
+          left.style.backgroundColor = color
+        }
+        if (right) {
+          right.style.height = Math.min(Math.sqrt(rightLevel) / 1.4 * 100, 100) + '%'
+          right.style.backgroundColor = color
+        }
+        if (span) span.innerText = maxLevel === -Infinity ? '-inf' : maxLevel.toFixed(2)
+      }
+    }
+    $client.on(ClientboundPacket.Ping, handlePing)
+    return () => { $client.on(ClientboundPacket.Ping, handlePing) }
+  }, [theme])
 
   const tracks: JSX.Element[] = []
+  let i = 0
   for (const uuid in globalData.tracks!) {
+    indexToUUID[i++] = uuid
     tracks.push(<Track key={uuid} info={globalData.tracks[uuid]!} active={globalData.activeTrack === uuid} />)
   }
 

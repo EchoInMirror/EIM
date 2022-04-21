@@ -7,7 +7,7 @@ import { PlayArrow, Stop, Pause } from '@mui/icons-material'
 import { useSnackbar } from 'notistack'
 import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } from './Editor'
 import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
-import { ClientboundPacket, HandlerTypes } from '../../packets'
+import packets, { ClientboundPacket, HandlerTypes } from '../../packets'
 import { keyNames } from '../utils'
 
 import NoteAdd from '@mui/icons-material/NoteAdd'
@@ -121,11 +121,21 @@ const LeftSection: React.FC = () => {
   )
 }
 
+let startTime = Date.now()
+let position = 0
 const CenterSection: React.FC = () => {
   const [state] = useGlobalData()
   const timeRef = useRef<HTMLSpanElement | null>(null)
   const barRef = useRef<HTMLSpanElement | null>(null)
 
+  useEffect(() => {
+    const fn = (data: packets.IClientboundPing) => {
+      startTime = Date.now()
+      position = data.position!
+    }
+    $client.on(ClientboundPacket.Ping, fn)
+    return () => { $client.off(ClientboundPacket.Ping, fn) }
+  }, [])
   useEffect(() => {
     if (!timeRef.current || !barRef.current) return
     const minutesNode = timeRef.current as HTMLSpanElement
@@ -135,7 +145,7 @@ const CenterSection: React.FC = () => {
     const beatsNode = barsNode.nextElementSibling as HTMLSpanElement
     const stepsNode = beatsNode.nextElementSibling as HTMLSpanElement
     const update = () => {
-      const beats = $globalData.position / $globalData.ppq + ($globalData.isPlaying ? (Date.now() - $globalData.startTime) / 1000 / 60 * $globalData.bpm : 0)
+      const beats = position / $globalData.ppq + ($globalData.isPlaying ? (Date.now() - startTime) / 1000 / 60 * $globalData.bpm : 0)
       const time = beats / $globalData.bpm * 60
       minutesNode.innerText = (time / 60 | 0).toString().padStart(2, '0')
       secondsNode.innerText = (time % 60 | 0).toString().padStart(2, '0')
@@ -151,7 +161,7 @@ const CenterSection: React.FC = () => {
       if (!timeRef.current || !barRef.current) return
       update()
       if (!moving && ++cnt > 10) {
-        setProgress($globalData.position + ($globalData.isPlaying ? (Date.now() - $globalData.startTime) / 1000 / 60 * $globalData.bpm * $globalData.ppq | 0 : 0))
+        setProgress(position + ($globalData.isPlaying ? (Date.now() - startTime) / 1000 / 60 * $globalData.bpm * $globalData.ppq | 0 : 0))
         cnt = 0
       }
     }, 30)

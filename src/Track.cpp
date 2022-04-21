@@ -135,6 +135,7 @@ void Track::addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::Audi
 
 void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages) {
 	auto& masterTrack = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
+	if (masterTrack == nullptr) return;
     auto& info = masterTrack->currentPositionInfo;
     if (info.isPlaying) {
         auto startTime = info.ppqPosition;
@@ -144,16 +145,20 @@ void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessage
         for (auto it = midiSequence.begin() + midiSequence.getNextIndexAtTime(startTime);
              it < midiSequence.end() && (curTime = (*it)->message.getTimeStamp()) < endTime; it++) {
             midiMessages.addEvent((*it)->message, juce::roundToInt((curTime - startTime) / totalTime * sampleCount));
+			masterTrack->events++;
         }
     }
     messageCollector.removeNextBlockOfMessages(midiMessages, sampleCount);
 }
 
 void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
-    addMidiEventsToBuffer(buffer.getNumSamples(), midiMessages);
+	auto numSamples = buffer.getNumSamples();
+    addMidiEventsToBuffer(numSamples, midiMessages);
     AudioProcessorGraph::processBlock(buffer, midiMessages);
     auto inoutBlock = juce::dsp::AudioBlock<float>(buffer).getSubsetChannelBlock(0, (size_t)2);
     chain.process(juce::dsp::ProcessContextReplacing<float>(inoutBlock));
+	levelL = juce::jmax(buffer.getMagnitude(0, 0, numSamples), levelL);
+	levelR = juce::jmax(buffer.getMagnitude(1, 0, numSamples), levelR);
 }
 
 void Track::processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) {

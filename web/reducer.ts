@@ -9,9 +9,7 @@ export const initialState = {
   isPlaying: false,
   timeSigNumerator: 4,
   timeSigDenominator: 4,
-  position: 0,
   maxNoteTime: 0,
-  startTime: 0,
   tracks: { } as Record<string, packets.ITrackInfo | undefined>
 }
 

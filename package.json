@@ -21,6 +21,7 @@
     "mui-color": "^2.0.0-beta.2",
     "notistack": "^2.0.3",
     "parcel": "^2.4.1",
+    "pretty-bytes": "^6.0.0",
     "protobufjs": "^6.11.2",
     "re-resizable": "^6.9.5",
     "react": "^18.0.0",

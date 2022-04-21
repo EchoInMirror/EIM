@@ -2,12 +2,14 @@
 
 Config::Config() : rootPath(juce::File::getSpecialLocation(juce::File::SpecialLocationType::userApplicationDataDirectory).getChildFile("EchoInMirror")),
     configPath(rootPath.getChildFile("config.json")),
-	projects(rootPath.getChildFile("projects"))
+	projects(rootPath.getChildFile("projects")),
+	samplesPath(rootPath.getChildFile("samples"))
 {
 	rootPath.createDirectory();
 	if (!configPath.exists()) configPath.replaceWithText("{}");
     config = juce::JSON::parse(configPath);
 	projects.createDirectory();
+	samplesPath.createDirectory();
 	setProjectRoot(projects.getChildFile(juce::String(juce::Time::currentTimeMillis())));
 	juce::Array<juce::File> files;
 	projects.findChildFiles(files, juce::File::TypesOfFileToFind::findDirectories, false);

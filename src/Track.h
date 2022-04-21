@@ -16,6 +16,7 @@ class Track : public juce::AudioProcessorGraph {
     std::string name;
     std::string color;
     juce::MidiMessageSequence midiSequence;
+	float levelL = 0, levelR = 0;
     int pan = 0;
 
     juce::AudioProcessorGraph::Node* currentNode = nullptr;

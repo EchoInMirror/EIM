@@ -43,7 +43,7 @@ const items: ItemType[] = [
     title: '插件',
     icon: <SettingsInputHdmiOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.PLUGINS,
-    mapNodeProps: (name, tree) => {
+    mapNodeProps (name, tree) {
       const [trueName, data] = name.split('#EIM#', 2)
       if (data) {
         const isInstrument = trueName.startsWith('I#')
@@ -90,12 +90,19 @@ const items: ItemType[] = [
   {
     title: '采样',
     icon: <GraphicEqOutlined />,
-    type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
+    type: packets.ServerboundExplorerData.ExplorerType.SAMPLES,
+    mapNodeProps (name, tree) {
+      if (tree[name]) return
+      return {
+        icon: <GraphicEqOutlined />
+      }
+    }
   }
 ]
 
 const mapPluginsResult = (data: packets.ClientboundExplorerData) => {
   const result: Record<string, boolean> = {}
+  console.log(data)
   data.folders.sort().forEach(it => (result[it] = true))
   data.files.sort().forEach(it => (result[it] = false))
   return result
@@ -123,7 +130,7 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: ItemType }> = ({ ty
     }
     if (type.mapNodeProps) {
       const props = type.mapNodeProps!(name, tree)
-      if (props) node = <DraggableTreeItem key={cur} nodeId={cur} onClick={handleClick} {...props} />
+      if (props) node = <DraggableTreeItem key={cur} nodeId={cur} label={name} onClick={handleClick} {...props} />
     }
     nodes.push(node || <TreeItem key={cur} nodeId={cur} label={name} onClick={handleClick}>{children}</TreeItem>)
   }

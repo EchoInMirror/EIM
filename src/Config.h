@@ -6,7 +6,7 @@ public:
 
 	bool changed = false;
     juce::var config;
-    const juce::File rootPath, configPath, projects;
+    const juce::File rootPath, configPath, projects, samplesPath;
 	juce::File projectRoot, projectInfoPath, projectTracksPath;
 
     std::string toString();

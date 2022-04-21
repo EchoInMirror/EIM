@@ -18,7 +18,7 @@ import BottomBar from './BottomBar'
 import Tracks from './Tracks'
 import hotkeys, { defaultHandlers } from '../hotkeys'
 import { GlobalDataContext, initialState, BottomBarContext } from '../reducer'
-import packets, { ClientboundPacket } from '../../packets'
+import { ClientboundPacket } from '../../packets'
 
 const palette: PaletteOptions = {
   background: {
@@ -88,14 +88,9 @@ const App: React.FC = () => {
   window.$dispatch = ctx[1]
 
   useEffect(() => {
-    const fn = (data: packets.IProjectStatus) => {
-      if (typeof data.position === 'number' || data.isPlaying) {
-        $dispatch({ ...(data as any), startTime: Date.now() })
-      } else $dispatch(data as any)
-    }
-    $client.on(ClientboundPacket.SetProjectStatus, fn)
+    $client.on(ClientboundPacket.SetProjectStatus, $dispatch as any)
     $client.rpc.refresh({ })
-    return () => { $client.off(ClientboundPacket.SetProjectStatus, fn) }
+    return () => { $client.off(ClientboundPacket.SetProjectStatus, $dispatch as any) }
   }, [])
 
   return (

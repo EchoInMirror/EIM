@@ -5,12 +5,15 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 
-class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead, public juce::ChangeListener {
+class MasterTrack: public juce::AudioProcessorGraph, public juce::AudioPlayHead, public juce::ChangeListener,
+	private juce::Timer {
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     short ppq = 96;
+	int events = 0;
+	EIMPackets::ClientboundPong systemInfo;
 
     MasterTrack();
     ~MasterTrack() { deviceManager.closeAudioDevice(); }
@@ -35,7 +38,7 @@ public:
 private:
     int endTime = 0;
     juce::AudioProcessorGraph::NodeID outputNodeID;
-    juce::AudioDeviceManager deviceManager;
+	juce::AudioDeviceManager deviceManager;
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     juce::AudioProcessorPlayer graphPlayer;
 	juce::AudioFormatManager formatManager;
@@ -46,7 +49,17 @@ private:
 	std::vector<std::string> deletedTracks;
 
     void calcPositionInfo();
+	void timerCallback() override;
     juce::AudioProcessorGraph::Node::Ptr initTrack(std::unique_ptr<Track> track);
+
+	class SystemInfoTimer : public juce::Timer {
+	public:
+		SystemInfoTimer();
+		void timerCallback() override;
+	private:
+		JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SystemInfoTimer)
+	};
+	SystemInfoTimer systemInfoTimer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrack)
 };

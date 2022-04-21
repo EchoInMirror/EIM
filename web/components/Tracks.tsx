@@ -5,7 +5,7 @@ import React, { useState, useEffect, createRef, useRef, useMemo, memo } from 're
 import useGlobalData from '../reducer'
 import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
-import { colorMap, colorValues } from '../utils'
+import { colorMap, colorValues, levelMarks } from '../utils'
 import { Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme } from '@mui/material'
 
 import Power from '@mui/icons-material/Power'
@@ -64,6 +64,8 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
             sx={{ margin: '0!important' }}
             max={140}
             min={0}
+            marks={levelMarks}
+            classes={{ markLabel: 'volume-mark' }}
             valueLabelFormat={val => `${Math.round(val)}% ${val > 0 ? (Math.log10((val / 100) ** 2) * 20).toFixed(2) + '分贝' : '静音'}`}
             onChange={(_, val) => {
               const volume = info.volume = ((val as number) / 100) ** 2
