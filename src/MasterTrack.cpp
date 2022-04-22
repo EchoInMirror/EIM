@@ -74,13 +74,13 @@ void MasterTrack::init() {
 void MasterTrack::loadPlugin(PluginState& state, juce::AudioPluginFormat::PluginCreationCallback callback) {
 	auto instance = EIMApplication::getEIMInstance();
 	auto desc = instance->pluginManager->knownPluginList.getTypeForIdentifierString(state.identifier);
-	if (desc == nullptr) {
+	if (!desc) {
 		callback(nullptr, "No such plugin");
 		return;
 	}
 	instance->pluginManager->manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(),
 		[callback, &state](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
-			if (plugin == nullptr) {
+			if (!plugin) {
 				callback(nullptr, error);
 				return;
 			}
@@ -99,14 +99,14 @@ void MasterTrack::loadPluginFromFile(juce::var& json, juce::File root,
 	juce::AudioPluginFormat::PluginCreationCallback callback) {
 	auto instance = EIMApplication::getEIMInstance();
 	auto desc = instance->pluginManager->knownPluginList.getTypeForIdentifierString(json.getProperty("identifier", ""));
-	if (desc == nullptr) {
+	if (!desc) {
 		callback(nullptr, "No such plugin");
 		return;
 	}
 	auto stateFile = json.getProperty("stateFile", "").toString();
 	instance->pluginManager->manager.createPluginInstanceAsync(*desc, getSampleRate(), getBlockSize(),
 		[callback, root, stateFile](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
-			if (plugin == nullptr) {
+			if (!plugin) {
 				callback(nullptr, error);
 				return;
 			}

@@ -8,7 +8,7 @@ void loadPluginAndAdd(std::string identifier, bool setName, Track* track,
     auto instance = EIMApplication::getEIMInstance();
     auto type = instance->pluginManager->knownPluginList.getTypeForFile(identifier);
     if (setName) track->name = type->name.toStdString();
-    if (type == nullptr) callback(false, nullptr);
+    if (!type) callback(false, nullptr);
     else
         instance->mainWindow->masterTrack->loadPlugin(
             std::move(type),
@@ -237,7 +237,7 @@ public:
     }
 	UndoableAction* createCoalescedAction(UndoableAction* nextAction) override {
 		UpdateTrackInfoAction* next = dynamic_cast<UpdateTrackInfoAction*>(nextAction);
-		if (next == nullptr || next->data->uuid() != data->uuid() ||
+		if (!next || next->data->uuid() != data->uuid() ||
 			data->has_name() || data->has_color() || data->has_solo() || data->has_muted() ||
 			next->data->has_name() || next->data->has_color() || next->data->has_solo() || next->data->has_muted()) return nullptr;
 		data->set_volume(data->volume() + next->data->volume());
@@ -293,7 +293,7 @@ class LoadVSTAction : public juce::UndoableAction {
         return true;
     }
     bool undo() override {
-        if (_pluginInstance == nullptr) return false;
+        if (!_pluginInstance) return false;
         auto instance = EIMApplication::getEIMInstance();
         auto& tracks = instance->mainWindow->masterTrack->tracksMap;
         auto& uuid = data->uuid();

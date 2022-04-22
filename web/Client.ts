@@ -14,6 +14,11 @@ export interface Config {
 }
 
 const serverboundPacketsMap: Record<string, number> = { }
+const messageTypes = {
+  1: 'success',
+  2: 'warning',
+  3: 'error'
+}
 
 for (const id in ServerboundPacket) serverboundPacketsMap[ServerboundPacket[id]] = +id
 
@@ -120,6 +125,9 @@ export default class Client extends ClientService {
       track.midi!.forEach((it: any, i) => (it._oldIndex = i))
       track.midi!.sort((a, b) => (a.time || 0) - (b.time || 0))
       $dispatch({ })
+    }).on(ClientboundPacket.SendMessage, data => {
+      console.log(data)
+      $notice.enqueueSnackbar(data.message!, { variant: messageTypes[data.type! as 1 | 2 | 3] as any || 'info' })
     })
   }
 

@@ -22,7 +22,8 @@
   ],
   "globals": {
     "$client": "readonly",
-    "$dragObject": "readonly"
+    "$dragObject": "readonly",
+    "$enqueueSnackbar": "readonly"
   },
   "rules": {
     "no-use-before-define": "off",

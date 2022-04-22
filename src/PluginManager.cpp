@@ -4,7 +4,7 @@
 
 PluginManager::PluginManager(juce::File rootPath)
     : juce::Timer(), knownPluginListXMLFile(rootPath.getChildFile("knownPlugins.xml")),
-      scannerPath(juce::File::getCurrentWorkingDirectory().getChildFile("EIMPluginScanner.exe").getFileName()) {
+      scannerPath(juce::File::getCurrentWorkingDirectory().getChildFile("EIMPluginScanner.exe").getFullPathName()) {
     manager.addDefaultFormats();
 
     if (knownPluginListXMLFile.exists()) {
@@ -84,6 +84,7 @@ void PluginManager::timerCallback() {
 			pkg.set_isfinished(true);
 			EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetScanningVSTPacket(pkg));
         }
+        if (scainngFiles.empty()) continue;
 		auto& path = scainngFiles.front();
 		EIMPackets::ClientboundScanningVST pkg;
 		pkg.set_count(numFiles);
@@ -92,9 +93,6 @@ void PluginManager::timerCallback() {
 		pkg.set_file(path.toStdString());
 		pkg.set_isfinished(false);
 		EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetScanningVSTPacket(pkg));
-        if (scainngFiles.empty()) {
-            continue;
-        }
         cur.start(juce::StringArray{scannerPath, path});
         processScanFile[i] = path;
         scainngFiles.pop();
@@ -108,27 +106,43 @@ void PluginManager::timerCallback() {
 
 void PluginManager::scanPlugins() {
     if (_isScanning) return;
-	auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty("pluginManager");
-	numThreads = (int)cfg.getProperty("thread", 10);
-	auto pathsArr = cfg.getProperty("scanPaths", juce::StringArray());
-	if (pathsArr.getArray()->isEmpty()) return;
-	juce::FileSearchPath paths;
-	for (auto& it : *pathsArr.getArray())
-		paths.add(juce::File(it));
-	paths.removeRedundantPaths();
-	paths.removeNonExistentPaths();
-	std::queue<juce::String> empty;
-	std::swap(scainngFiles, empty);
-	for (auto it : manager.getFormats())
-		for (auto& path : it->searchPathsForPlugins(paths, true, true))
-			if (knownPluginList.getTypeForFile(path) != nullptr) scainngFiles.emplace(path);
-	_isScanning = true;
-	inited = false;
-	numFiles = (int)scainngFiles.size();
-	processes = new juce::ChildProcess[numThreads];
-	processScanFile.clear();
-	processScanFile.resize(numThreads);
-	startTimer(100);
+	EIMPackets::ClientboundSendMessage msg;
+	if (juce::File(scannerPath).existsAsFile()) {
+		auto& cfg = EIMApplication::getEIMInstance()->config.config.getDynamicObject()->getProperty("pluginManager");
+		numThreads = (int)cfg.getProperty("thread", 10);
+		auto pathsArr = cfg.getProperty("scanPaths", juce::StringArray());
+		if (pathsArr.getArray()->isEmpty()) return;
+		juce::FileSearchPath paths;
+		for (auto& it : *pathsArr.getArray())
+			paths.add(juce::File(it));
+		paths.removeRedundantPaths();
+		paths.removeNonExistentPaths();
+		std::queue<juce::String> empty;
+		std::swap(scainngFiles, empty);
+		for (auto it : manager.getFormats())
+			for (auto& path : it->searchPathsForPlugins(paths, true, true)) {
+				auto it = knownPluginList.getTypeForFile(path);
+				if (!it || it->name.isEmpty()) scainngFiles.emplace(path);
+			}
+		if (scainngFiles.empty()) {
+			msg.set_message("No any plugin to scan.");
+		}
+		else {
+			_isScanning = true;
+			inited = false;
+			numFiles = (int)scainngFiles.size();
+			processes = new juce::ChildProcess[numThreads];
+			processScanFile.clear();
+			processScanFile.resize(numThreads);
+			startTimer(100);
+			msg.set_message("Plugin scanning start!");
+		}
+	}
+	else {
+		msg.set_message("No EIMPluginScanner!");
+		msg.set_type(EIMPackets::ClientboundSendMessage::MessageType::ClientboundSendMessage_MessageType_WARNING);
+	}
+	EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSendMessagePacket(msg));
 }
 
 void PluginManager::skipScanning(int i) {
@@ -143,12 +157,21 @@ void PluginManager::stopScanning() {
     cfg.save();
     stopTimer();
     _isScanning = false;
+	EIMPackets::ClientboundScanningVST pkg;
+	pkg.set_count(0);
+	pkg.set_file("");
+	pkg.set_isfinished(true);
+	EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetScanningVSTPacket(pkg));
     knownPluginList.createXml().release()->writeTo(knownPluginListXMLFile);
 	for (int i = 0; i < numThreads; i++) {
 		auto& cur = processes[i];
 		if (cur.isRunning()) cur.kill();
 	}
     delete[] processes;
+	EIMPackets::ClientboundSendMessage msg;
+	msg.set_message("Plugin scanning finished!");
+	msg.set_type(EIMPackets::ClientboundSendMessage::MessageType::ClientboundSendMessage_MessageType_SUCCESS);
+	EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSendMessagePacket(msg));
 }
 
 void PluginManager::createPluginWindow(juce::AudioPluginInstance* instance) {

@@ -8,6 +8,8 @@ import Client from './Client'
 
 window.$dispatch = () => console.warn('Not initialized!')
 window.$globalData = { ...initialState }
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+window.$notice = { enqueueSnackbar () { return 1 }, closeSnackbar () { } }
 const root = createRoot(document.getElementById('root')!)
 window.$client = new Client('ws://127.0.0.1:8088', () => root.render(<StrictMode><App /></StrictMode>))
 document.addEventListener('dragend', () => (window.$dragObject = undefined))

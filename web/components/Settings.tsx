@@ -27,7 +27,8 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
   useEffect(() => {
     const fn = (data: packets.IClientboundScanningVST) => {
       if (data.isFinished) {
-        delete scanningFiles[data.file!]
+        if (data.count) delete scanningFiles[data.file!]
+        else allFiles = 0
       } else {
         allFiles = data.count!
         currentFile = data.current!
@@ -173,7 +174,7 @@ const Settings: React.FC<{ open: boolean, setOpen: (val: boolean) => void }> = (
                       </ListItemSecondaryAction>
                     </ListItem>
                   ))}
-                  {files.length
+                  {files.length && allFiles
                     ? (
                       <>
                         <Divider />

@@ -7,7 +7,7 @@ import './App.less'
 import React, { useEffect, useReducer, memo } from 'react'
 import { CssBaseline, Paper } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
-import { SnackbarProvider } from 'notistack'
+import { SnackbarProvider, useSnackbar } from 'notistack'
 import { zhCN } from '@mui/material/locale'
 import { GlobalHotKeys } from 'react-hotkeys'
 import type { PaletteOptions } from '@mui/material/styles/createPalette'
@@ -52,6 +52,7 @@ const bottomBarReducer = (_state: string, action: string) => {
 }
 const defaultBottomBarType = localStorage.getItem('eim:bottomBar:type') || ''
 const BottomAndSideBar = memo(function BottomAndSideBar () {
+  window.$notice = useSnackbar()
   return (
     <BottomBarContext.Provider value={useReducer(bottomBarReducer, defaultBottomBarType)}>
       <SideBar />

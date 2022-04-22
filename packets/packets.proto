@@ -130,6 +130,17 @@ message ServerboundBrowserPath {
   optional string patterns = 3;
 }
 
+message ClientboundSendMessage {
+  enum MessageType {
+    INFO = 0;
+    SUCCESS = 1;
+    WARNING = 2;
+    ERROR = 3;
+  }
+  string message = 1;
+  optional MessageType type = 2;
+}
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
@@ -164,4 +175,5 @@ service ClientService { // Client bound
   rpc editMidiMessages (MidiMessages) returns (google.protobuf.Empty);
   rpc removeTrack (String) returns (google.protobuf.Empty);
   rpc ping (ClientboundPing) returns (google.protobuf.Empty);
+  rpc sendMessage (ClientboundSendMessage) returns (google.protobuf.Empty);
 }

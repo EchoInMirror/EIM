@@ -118,7 +118,7 @@ void Track::removeEffectPlugin(juce::AudioPluginInstance* instance) {
 }
 
 void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
-    if (instance == nullptr) {
+    if (!instance) {
         instrumentNode = nullptr;
         return;
     }
@@ -142,9 +142,9 @@ void Track::addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::Audi
 
 void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessages) {
 	auto& mainWindow = EIMApplication::getEIMInstance()->mainWindow;
-	if (mainWindow == nullptr) return;
+	if (!mainWindow) return;
 	auto& masterTrack = mainWindow->masterTrack;
-	if (masterTrack == nullptr) return;
+	if (!masterTrack) return;
     auto& info = masterTrack->currentPositionInfo;
     if (info.isPlaying) {
         auto startTime = info.ppqPosition;
@@ -206,7 +206,7 @@ void Track::writeTrackInfo(EIMPackets::TrackInfo* data) {
 }
 
 juce::AudioPluginInstance* Track::getInstrumentInstance() {
-    return instrumentNode == nullptr ? nullptr : (juce::AudioPluginInstance*)instrumentNode->getProcessor();
+    return instrumentNode ? (juce::AudioPluginInstance*)instrumentNode->getProcessor() : nullptr;
 }
 
 void Track::setProcessingPrecision(ProcessingPrecision newPrecision) {

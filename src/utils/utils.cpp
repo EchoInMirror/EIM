@@ -51,7 +51,7 @@ juce::DynamicObject* savePluginState(juce::AudioPluginInstance* instance, juce::
 	juce::MemoryBlock memory;
 	instance->getStateInformation(memory);
 	auto xml = juce::AudioProcessor::getXmlFromBinary(memory.getData(), (int)memory.getSize());
-	if (xml == nullptr) pluginsDir.getChildFile(id += ".bin").replaceWithData(memory.getData(), memory.getSize());
+	if (!xml) pluginsDir.getChildFile(id += ".bin").replaceWithData(memory.getData(), memory.getSize());
 	else {
 		auto file = pluginsDir.getChildFile(id += ".xml");
 		file.deleteFile();
