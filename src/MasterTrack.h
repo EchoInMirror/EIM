@@ -45,9 +45,6 @@ private:
 	juce::AudioDeviceManager deviceManager;
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     juce::AudioProcessorPlayer graphPlayer;
-	juce::AudioFormatManager formatManager;
-	juce::AudioThumbnailCache thumbnailCache;
-	juce::AudioThumbnail thumbnail;
 	std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
 	std::unique_ptr<juce::FileChooser> chooser;
 	std::vector<std::string> deletedTracks;

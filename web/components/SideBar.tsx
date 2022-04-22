@@ -118,7 +118,7 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: ItemType }> = ({ ty
     let node: JSX.Element | undefined
     const handleClick = () => {
       if (subTrees[name]) return
-      $client.rpc.getExplorerData({ type: packets.ServerboundExplorerData.ExplorerType.PLUGINS, path: cur.replace(/^\//, '') }).then(data => {
+      $client.rpc.getExplorerData({ type: type.type, path: cur.replace(/^\//, '') }).then(data => {
         subTrees[name] = mapPluginsResult(data)
         if (callbackMap[cur]) {
           callbackMap[cur]!()
@@ -137,7 +137,7 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: ItemType }> = ({ ty
   return (<>{nodes}</>)
 }
 
-const Explorer: React.FC<{ type: ItemType }> = ({ type }) => {
+const Explorer = memo(function Explorer ({ type }: { type: ItemType }) {
   const [tree, setTree] = useState<TreeNode>({})
   const [expanded, setExpanded] = React.useState<string[]>([])
   useEffect(() => {
@@ -161,7 +161,7 @@ const Explorer: React.FC<{ type: ItemType }> = ({ type }) => {
       <Item tree={tree} parent='' type={type} />
     </TreeView>
   )
-}
+})
 
 const SideBarButton = memo(function SideBarButton ({ active, title, ...props }: { active?: boolean, title: string } & ButtonProps) {
   return (

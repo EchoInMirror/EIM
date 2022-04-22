@@ -4,11 +4,8 @@
 #include "Main.h"
 
 MasterTrack::MasterTrack()
-    : AudioProcessorGraph(), juce::AudioPlayHead(), juce::Timer(),
-	thumbnailCache(5), thumbnail(512, formatManager, thumbnailCache) {
+    : AudioProcessorGraph(), juce::AudioPlayHead(), juce::Timer() {
     setPlayHead(this);
-    thumbnail.addChangeListener(this);
-    formatManager.registerBasicFormats();
 
     endTime = currentPositionInfo.timeSigNumerator * ppq;
 
@@ -217,22 +214,7 @@ void MasterTrack::stopAllNotes() {
         ((Track*)it->getProcessor())->messageCollector.addMessageToQueue(msg);
 }
 
-void MasterTrack::changeListenerCallback(juce::ChangeBroadcaster* source) {
-    if (source == &thumbnail && thumbnail.isFullyLoaded()) {
-        auto length = thumbnail.getTotalLength();
-        int width = juce::roundToInt(length / 60.0 * currentPositionInfo.bpm * 96 * 6);
-        juce::Rectangle<int> thumbnailBounds(0, 0, width, 70);
-        auto img = juce::Image(juce::Image::ARGB, width, 70, true);
-        juce::Graphics g(img);
-        g.setColour(juce::Colours::white);
-        thumbnail.drawChannels(g, thumbnailBounds, 0.0, length, 1.0f);
-        juce::PNGImageFormat format;
-        auto file = juce::File::getCurrentWorkingDirectory().getChildFile("test.png");
-        file.deleteFile();
-        juce::FileOutputStream stream(file);
-        format.writeImageToStream(img, stream);
-        DBG("FINISHED");
-    }
+void MasterTrack::changeListenerCallback(juce::ChangeBroadcaster*) {
 }
 
 void MasterTrack::saveState() {

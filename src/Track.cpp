@@ -1,7 +1,6 @@
 #include "Track.h"
 #include "Main.h"
 #include "MasterTrack.h"
-#include "ProcessorBase.h"
 
 Track::Track(std::string id) : uuid(id), AudioProcessorGraph() {
     init();
@@ -42,7 +41,7 @@ Track::Track(juce::File dir, std::function<void(Track*)> callback) : AudioProces
 	if (info.hasProperty("instrument")) {
 		auto it = info.getProperty("instrument", new juce::DynamicObject());
 		masterTrack->loadPluginFromFile(it, pluginsDir,
-			[this, callback](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
+			[this, callback](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String&) {
 				if (plugin != nullptr) setInstrument(std::move(plugin));
 				if (--allPluginsCount == 0 && callback != nullptr) callback(this);
 			});
@@ -51,7 +50,7 @@ Track::Track(juce::File dir, std::function<void(Track*)> callback) : AudioProces
 	for (auto& it : *pluginsArr.getArray()) {
 		if (!it.isObject()) continue;
 		masterTrack->loadPluginFromFile(it, pluginsDir,
-			[this, callback](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
+			[this, callback](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String&) {
 				if (plugin != nullptr) addEffectPlugin(std::move(plugin));
 				if (--allPluginsCount == 0 && callback != nullptr) callback(this);
 			});
@@ -79,6 +78,7 @@ void Track::init() {
     setChannelLayoutOfBus(false, 0, juce::AudioChannelSet::canonicalChannelSet(2));
     auto input = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
         juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode));
+	sampler = addNode(std::make_unique<Sampler>());
     begin = addNode(std::make_unique<ProcessorBase>())->nodeID;
     end = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
                       juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))
@@ -90,6 +90,7 @@ void Track::init() {
                                juce::AudioProcessorGraph::AudioGraphIOProcessor::midiOutputNode))
                        ->nodeID;
 
+	addAudioConnection(sampler->nodeID, begin);
     addAudioConnection(input->nodeID, begin);
     addAudioConnection(begin, end);
     addConnection({{midiIn, juce::AudioProcessorGraph::midiChannelIndex},
@@ -129,6 +130,7 @@ void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
 
 void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
     AudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
+	((Sampler*)sampler->getProcessor())->setCurrentPlaybackSampleRate(newSampleRate);
     for (auto it : getNodes())
         it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
     messageCollector.reset(newSampleRate);
@@ -195,7 +197,10 @@ void Track::writeTrackInfo(EIMPackets::TrackInfo* data) {
     data->set_pan(pan);
 	data->set_isreplacing(true);
     for (auto& it : plugins) {
-        data->add_plugins()->set_name(it->getProcessor()->getName().toStdString());
+		auto plugin = it->getProcessor();
+		auto pluginName = plugin->getName();
+		for (auto& str : plugin->getAlternateDisplayNames()) if (str.length() <= name.length()) pluginName = str;
+        data->add_plugins()->set_name(pluginName.toStdString());
     }
     for (auto& it : midiSequence) {
         auto note = data->add_midi();
@@ -217,6 +222,7 @@ void Track::setProcessingPrecision(ProcessingPrecision newPrecision) {
 void Track::prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) {
     AudioProcessorGraph::prepareToPlay(sampleRate, estimatedSamplesPerBlock);
     chain.prepare({sampleRate, (juce::uint32)estimatedSamplesPerBlock, 2});
+	((Sampler*)sampler->getProcessor())->setCurrentPlaybackSampleRate(sampleRate);
     for (auto it : getNodes())
         it->getProcessor()->prepareToPlay(sampleRate, estimatedSamplesPerBlock);
 }
@@ -270,4 +276,8 @@ void Track::saveState(juce::File dir) {
 		midiOut << '\n';
 	}
 	midiOut << "]";
+}
+
+void Track::Sampler::processBlock(juce::AudioSampleBuffer& buffer, juce::MidiBuffer&) {
+	renderNextBlock(buffer, 0, buffer.getNumSamples());
 }

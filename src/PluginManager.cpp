@@ -121,8 +121,8 @@ void PluginManager::scanPlugins() {
 		std::swap(scainngFiles, empty);
 		for (auto it : manager.getFormats())
 			for (auto& path : it->searchPathsForPlugins(paths, true, true)) {
-				auto it = knownPluginList.getTypeForFile(path);
-				if (!it || it->name.isEmpty()) scainngFiles.emplace(path);
+				auto type = knownPluginList.getTypeForFile(path);
+				if (!type || type->name.isEmpty()) scainngFiles.emplace(path);
 			}
 		if (scainngFiles.empty()) {
 			msg.set_message("No any plugin to scan.");

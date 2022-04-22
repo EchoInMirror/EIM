@@ -346,13 +346,13 @@ public:
 		if (data->has_index()) {
 			if (plugins.size() <= data->index()) return true;
 			auto plugin = (juce::AudioPluginInstance*)plugins[data->index()]->getProcessor();
-			getPluginState(plugin, state);
+			runOnMainThread([&] { getPluginState(plugin, state); });
 			track->removeEffectPlugin(plugin);
 		}
 		else {
 			auto plugin = track->getInstrumentInstance();
 			if (plugin == nullptr) return true;
-			getPluginState(plugin, state);
+			runOnMainThread([&] { getPluginState(plugin, state); });
 			track->setInstrument(nullptr);
 		}
 		EIMPackets::ClientboundTracksInfo info;
@@ -372,7 +372,7 @@ public:
 			track->writeTrackInfo(info.add_tracks());
 			EIMApplication::getEIMInstance()->listener->boardcast(
 				std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
-			});
+		});
 		return true;
 	}
 };

@@ -40,4 +40,10 @@ void Config::setProjectRoot(juce::File root) {
 	projectTracksPath = root.getChildFile("tracks");
 	projectTracksPath.createDirectory();
 	projectInfoPath = root.getChildFile("eim-project.json");
+	projectSamples = root.getChildFile("samples");
+	projectSamples.createDirectory();
+	projectTempPath = root.getChildFile(".temp");
+	projectTempPath.createDirectory();
+	projectSamplesPreviewPath = projectTempPath.getChildFile("samples-preview");
+	projectSamplesPreviewPath.createDirectory();
 }

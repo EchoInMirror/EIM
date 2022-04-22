@@ -54,6 +54,7 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
 		break;
 	case ExplorerType::ServerboundExplorerData_ExplorerType_SAMPLES: {
 		auto file = instance->config.samplesPath.getChildFile(path);
+		DBG(file.getFullPathName());
 		if (file.isDirectory()) {
 			for (auto& it : file.findChildFiles(juce::File::TypesOfFileToFind::findFilesAndDirectories, false)) {
 				if (it.isDirectory()) out.add_folders(it.getFileName().toStdString());

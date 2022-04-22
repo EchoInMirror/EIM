@@ -10,7 +10,7 @@ public:
     //==============================================================================
     void prepareToPlay (double, int) override {}
     void releaseResources() override {}
-    void processBlock (juce::AudioSampleBuffer&, juce::MidiBuffer&) override {}
+    virtual void processBlock (juce::AudioSampleBuffer&, juce::MidiBuffer&) override {}
  
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override          { return nullptr; }

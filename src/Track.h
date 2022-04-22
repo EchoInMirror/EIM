@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ProcessorBase.h"
 #include "utils/utils.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
@@ -43,10 +44,14 @@ class Track : public juce::AudioProcessorGraph {
 	void saveState(juce::File);
 
   private:
+	class Sampler : public juce::SamplerVoice, public ProcessorBase {
+		void processBlock(juce::AudioSampleBuffer&, juce::MidiBuffer&) override;
+	};
     juce::CriticalSection processLock;
     int samplesPlayed = 0;
     double nextStartTime = 0;
 	std::atomic<int> allPluginsCount = 0;
+	juce::AudioProcessorGraph::Node::Ptr sampler;
     juce::AudioProcessorGraph::NodeID midiIn, begin, end;
     juce::AudioProcessorGraph::Node::Ptr instrumentNode = nullptr;
     juce::dsp::PannerRule panRule = juce::dsp::PannerRule::balanced;
