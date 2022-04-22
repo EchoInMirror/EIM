@@ -164,6 +164,7 @@ service ServerService { // Server bound
   rpc openProject (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc ping (google.protobuf.Empty) returns (ClientboundPong);
   rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
+  rpc deleteVST (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound

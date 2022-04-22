@@ -1,18 +1,20 @@
 import './Mixer.less'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, memo } from 'react'
 import packets, { ClientboundPacket } from '../../packets'
 import useGlobalData from '../reducer'
 import Marquee from 'react-fast-marquee'
 import { setType, setWidth } from './SideBar'
 import { levelMarks } from '../utils'
-import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button, Tooltip, useTheme } from '@mui/material'
+import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button, Tooltip, Menu, MenuItem, useTheme } from '@mui/material'
 
 import Power from '@mui/icons-material/Power'
 import VolumeUp from '@mui/icons-material/VolumeUp'
 import VolumeOff from '@mui/icons-material/VolumeOff'
 import LoadingButton from '@mui/lab/LoadingButton'
 
-const TrackPlugin: React.FC<{ plugin: packets.TrackInfo.IPluginData, uuid: string, index: number }> = ({ plugin, uuid, index }) => {
+const TrackPlugin = memo(function TrackPlugin ({ plugin, uuid, index }: { plugin: packets.TrackInfo.IPluginData, uuid: string, index: number }) {
+  const [contextMenu, setContextMenu] = React.useState<{ left: number, top: number } | undefined>()
+
   return (
     <>
       <Tooltip title='233' arrow placement='right'>
@@ -21,14 +23,27 @@ const TrackPlugin: React.FC<{ plugin: packets.TrackInfo.IPluginData, uuid: strin
           size='small'
           color='inherit'
           onClick={() => $client.rpc.openPluginWindow({ uuid, index })}
+          onContextMenu={(e: any) => {
+            e.preventDefault()
+            setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
+          }}
         >
           <Marquee gradient={false} pauseOnHover>{plugin.name}&nbsp;&nbsp;&nbsp;&nbsp;</Marquee>
         </Button>
       </Tooltip>
       <Divider variant='middle' />
+      <Menu open={!!contextMenu} onClose={() => setContextMenu(undefined)} anchorReference='anchorPosition' anchorPosition={contextMenu}>
+        <MenuItem
+          onClick={() => {
+            setContextMenu(undefined)
+          }}
+        >
+          删除
+        </MenuItem>
+      </Menu>
     </>
   )
-}
+})
 
 const defaultPan = [0, 0]
 const indexToUUID: Record<number, string> = { }
@@ -36,7 +51,7 @@ const leftLevels: Record<string, HTMLDivElement | null> = {}
 const rightLevels: Record<string, HTMLDivElement | null> = {}
 const levelTexts: Record<string, HTMLSpanElement | null> = {}
 
-const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, active }) => {
+const Track = memo(function Track ({ info, active }: { info: packets.ITrackInfo, active: boolean }) {
   const [pan, setPan] = useState(defaultPan)
   const [loading, setLoading] = useState(false)
   const [state, dispatch] = useGlobalData()
@@ -129,7 +144,7 @@ const Track: React.FC<{ info: packets.ITrackInfo, active: boolean }> = ({ info, 
       </div>
     </Card>
   )
-}
+})
 
 const Mixer: React.FC = () => {
   const [globalData] = useGlobalData()

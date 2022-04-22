@@ -490,3 +490,7 @@ void ServerService::handleEditMidiMessages(WebSocketSession*, std::unique_ptr<EI
     EIMApplication::getEIMInstance()->undoManager.perform(new EditMidiMessagesAction(std::move(data)), "EditMidiMessagesAction");
 	EIMApplication::getEIMInstance()->undoManager.beginNewTransaction();
 }
+
+void ServerService::handleDeleteVST(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow>) {
+	// TODO
+}

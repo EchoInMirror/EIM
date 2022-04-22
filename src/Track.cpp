@@ -50,7 +50,6 @@ Track::Track(juce::File dir, std::function<void(Track*)> callback) : AudioProces
 
 	for (auto& it : *pluginsArr.getArray()) {
 		if (!it.isObject()) continue;
-		auto it = info.getProperty("instrument", new juce::DynamicObject());
 		masterTrack->loadPluginFromFile(it, pluginsDir,
 			[this, callback](std::unique_ptr<juce::AudioPluginInstance> plugin, const juce::String& error) {
 				if (plugin != nullptr) addEffectPlugin(std::move(plugin));

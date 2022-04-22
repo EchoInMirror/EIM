@@ -94,7 +94,7 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
           />
         </Stack>
       </div>
-      <Menu open={!!contextMenu} onClose={close} anchorReference='anchorPosition' anchorPosition={contextMenu}>
+      <Menu open={!!contextMenu} onClose={() => setContextMenu(undefined)} anchorReference='anchorPosition' anchorPosition={contextMenu}>
         <MenuItem onClick={() => $client.rpc.removeTrack({ value: uuid })}>删除</MenuItem>
       </Menu>
     </Box>
