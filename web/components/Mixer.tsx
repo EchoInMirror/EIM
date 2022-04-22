@@ -5,14 +5,17 @@ import useGlobalData from '../reducer'
 import Marquee from 'react-fast-marquee'
 import { setType, setWidth } from './SideBar'
 import { levelMarks } from '../utils'
-import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button, Tooltip, Menu, MenuItem, useTheme } from '@mui/material'
+import { Slider, IconButton, Card, Divider, Stack, getLuminance, Button, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, useTheme } from '@mui/material'
 
 import Power from '@mui/icons-material/Power'
 import VolumeUp from '@mui/icons-material/VolumeUp'
 import VolumeOff from '@mui/icons-material/VolumeOff'
 import LoadingButton from '@mui/lab/LoadingButton'
+import Delete from '@mui/icons-material/Delete'
+import ArrowDownward from '@mui/icons-material/ArrowDownward'
+import ArrowUpward from '@mui/icons-material/ArrowUpward'
 
-const TrackPlugin = memo(function TrackPlugin ({ plugin, uuid, index }: { plugin: packets.TrackInfo.IPluginData, uuid: string, index: number }) {
+const TrackPlugin = memo(function TrackPlugin ({ plugin, uuid, index, isLast }: { plugin: packets.TrackInfo.IPluginData, uuid: string, index: number, isLast: boolean }) {
   const [contextMenu, setContextMenu] = React.useState<{ left: number, top: number } | undefined>()
 
   return (
@@ -36,9 +39,29 @@ const TrackPlugin = memo(function TrackPlugin ({ plugin, uuid, index }: { plugin
         <MenuItem
           onClick={() => {
             setContextMenu(undefined)
+            $client.rpc.deleteVST({ uuid, index })
           }}
         >
-          删除
+          <ListItemIcon><Delete fontSize='small' /></ListItemIcon>
+          <ListItemText>删除插件</ListItemText>
+        </MenuItem>
+        <MenuItem
+          disabled={!index}
+          onClick={() => {
+            setContextMenu(undefined)
+          }}
+        >
+          <ListItemIcon><ArrowUpward fontSize='small' /></ListItemIcon>
+          <ListItemText>上移</ListItemText>
+        </MenuItem>
+        <MenuItem
+          disabled={isLast}
+          onClick={() => {
+            setContextMenu(undefined)
+          }}
+        >
+          <ListItemIcon><ArrowDownward fontSize='small' /></ListItemIcon>
+          <ListItemText>下移</ListItemText>
         </MenuItem>
       </Menu>
     </>
@@ -55,6 +78,7 @@ const Track = memo(function Track ({ info, active }: { info: packets.ITrackInfo,
   const [pan, setPan] = useState(defaultPan)
   const [loading, setLoading] = useState(false)
   const [state, dispatch] = useGlobalData()
+  const [contextMenu, setContextMenu] = React.useState<{ left: number, top: number } | undefined>()
   const theme = useTheme()
 
   const uuid = info.uuid!
@@ -74,12 +98,16 @@ const Track = memo(function Track ({ info, active }: { info: packets.ITrackInfo,
         variant='contained'
         color={isMaster ? 'primary' : undefined}
         style={isMaster ? undefined : { backgroundColor: color, color: getLuminance(color) > 0.5 ? '#000' : '#fff' }}
-        onClick={() => $client.rpc.openPluginWindow({ uuid })}
-        onDragOver={e => !loading && $dragObject?.type === 'loadPlugin' && $dragObject.isInstrument && e.preventDefault()}
+        onClick={() => !isMaster && $client.rpc.openPluginWindow({ uuid })}
+        onDragOver={e => !isMaster && !loading && $dragObject?.type === 'loadPlugin' && $dragObject.isInstrument && e.preventDefault()}
         onDrop={() => {
-          if (loading || !$dragObject?.isInstrument || $dragObject.type !== 'loadPlugin') return
+          if (isMaster || loading || !$dragObject?.isInstrument || $dragObject.type !== 'loadPlugin') return
           setLoading(true)
           $client.rpc.loadVST({ uuid, identifier: $dragObject.data }).finally(() => setLoading(false))
+        }}
+        onContextMenu={(e: any) => {
+          e.preventDefault()
+          if (!isMaster) setContextMenu(contextMenu ? undefined : { left: e.clientX - 2, top: e.clientY - 4 })
         }}
       >
         <Marquee gradient={false} pauseOnHover>{isMaster ? '主轨道' : info.name}&nbsp;&nbsp;&nbsp;&nbsp;</Marquee>{info.hasInstrument && <Power fontSize='small' />}
@@ -123,7 +151,7 @@ const Track = memo(function Track ({ info, active }: { info: packets.ITrackInfo,
       </div>
       <Divider className='mid-divider' />
       <div className='plugins'>
-        {info.plugins!.map((it, i) => <TrackPlugin key={i} plugin={it} uuid={uuid} index={i} />)}
+        {info.plugins!.map((it, i) => <TrackPlugin key={i} plugin={it} uuid={uuid} index={i} isLast={info.plugins!.length === i + 1} />)}
         <LoadingButton
           size='small'
           loading={loading}
@@ -142,6 +170,17 @@ const Track = memo(function Track ({ info, active }: { info: packets.ITrackInfo,
           添加插件
         </LoadingButton>
       </div>
+      <Menu open={!!contextMenu} onClose={() => setContextMenu(undefined)} anchorReference='anchorPosition' anchorPosition={contextMenu}>
+        <MenuItem
+          onClick={() => {
+            setContextMenu(undefined)
+            $client.rpc.deleteVST({ uuid })
+          }}
+        >
+          <ListItemIcon><Delete fontSize='small' /></ListItemIcon>
+          <ListItemText>删除插件</ListItemText>
+        </MenuItem>
+      </Menu>
     </Card>
   )
 })

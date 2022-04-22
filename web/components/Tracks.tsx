@@ -9,17 +9,20 @@ import { ColorPicker } from 'mui-color'
 import { colorMap, colorValues, levelMarks } from '../utils'
 import {
   Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme,
-  Menu, MenuItem
+  Menu, MenuItem, ListItemText, ListItemIcon
 } from '@mui/material'
 
 import Power from '@mui/icons-material/Power'
 import VolumeUp from '@mui/icons-material/VolumeUp'
 import VolumeOff from '@mui/icons-material/VolumeOff'
+import Delete from '@mui/icons-material/Delete'
+import ArrowDownward from '@mui/icons-material/ArrowDownward'
+import ArrowUpward from '@mui/icons-material/ArrowUpward'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
 
-const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
+const TrackActions = memo(function TrackActions ({ info, index }: { info: packets.ITrackInfo, index: number }) {
   const [state, dispatch] = useGlobalData()
   const [color, setColor] = useState(info.color!)
   const [name, setName] = useState(info.name!)
@@ -95,11 +98,36 @@ const TrackActions: React.FC<{ info: packets.ITrackInfo }> = ({ info }) => {
         </Stack>
       </div>
       <Menu open={!!contextMenu} onClose={() => setContextMenu(undefined)} anchorReference='anchorPosition' anchorPosition={contextMenu}>
-        <MenuItem onClick={() => $client.rpc.removeTrack({ value: uuid })}>删除</MenuItem>
+        <MenuItem
+          onClick={() => {
+            setContextMenu(undefined)
+            $client.rpc.removeTrack({ value: uuid })
+          }}
+        >
+          <ListItemIcon><Delete fontSize='small' /></ListItemIcon>
+          <ListItemText>删除轨道</ListItemText>
+        </MenuItem>
+        <MenuItem
+          disabled={!index}
+          onClick={() => {
+            setContextMenu(undefined)
+          }}
+        >
+          <ListItemIcon><ArrowUpward fontSize='small' /></ListItemIcon>
+          <ListItemText>上移</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setContextMenu(undefined)
+          }}
+        >
+          <ListItemIcon><ArrowDownward fontSize='small' /></ListItemIcon>
+          <ListItemText>下移</ListItemText>
+        </MenuItem>
       </Menu>
     </Box>
   )
-}
+})
 
 const TrackNotes: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data, width }) => {
   return (
@@ -171,7 +199,7 @@ const Tracks: React.FC = () => {
   for (const id in state.tracks) {
     if (!id) continue
     const it = state.tracks[id]!
-    actions.push(<React.Fragment key={id}><TrackActions info={it} /><Divider variant='middle' /></React.Fragment>)
+    actions.push(<React.Fragment key={id}><TrackActions info={it} index={trackCount} /><Divider variant='middle' /></React.Fragment>)
     midis.push((
       <Box key={id} sx={{ backgroundColor: alpha(it.color!, 0.1), '& .notes div': { backgroundColor: it.color! } }}>
         <div className='content'>

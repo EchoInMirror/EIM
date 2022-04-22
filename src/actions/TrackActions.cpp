@@ -327,6 +327,61 @@ void ServerService::handleLoadVST(WebSocketSession*, std::unique_ptr<EIMPackets:
 	EIMApplication::getEIMInstance()->undoManager.beginNewTransaction();
 }
 
+class DeleteVSTAction : public juce::UndoableAction {
+private:
+	std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data;
+	PluginState state;
+
+public:
+	DeleteVSTAction(std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) : data(std::move(data)) {
+	}
+	bool perform() override {
+		auto instance = EIMApplication::getEIMInstance();
+		auto& masterTrack = instance->mainWindow->masterTrack;
+		auto& tracks = masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		auto track = (Track*)tracks[uuid]->getProcessor();
+		auto& plugins = track->plugins;
+		if (data->has_index()) {
+			if (plugins.size() <= data->index()) return true;
+			auto plugin = (juce::AudioPluginInstance*)plugins[data->index()]->getProcessor();
+			getPluginState(plugin, state);
+			track->removeEffectPlugin(plugin);
+		}
+		else {
+			auto plugin = track->getInstrumentInstance();
+			if (plugin == nullptr) return true;
+			getPluginState(plugin, state);
+			track->setInstrument(nullptr);
+		}
+		EIMPackets::ClientboundTracksInfo info;
+		track->writeTrackInfo(info.add_tracks());
+		instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+		return true;
+	}
+	bool undo() override {
+		auto instance = EIMApplication::getEIMInstance();
+		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+		auto& uuid = data->uuid();
+		if (!tracks.contains(uuid)) return false;
+		auto& trackPtr = tracks[uuid];
+		auto track = (Track*)trackPtr->getProcessor();
+		loadPluginAndAdd(state, track, [this, track](bool, juce::AudioPluginInstance*) {
+			EIMPackets::ClientboundTracksInfo info;
+			track->writeTrackInfo(info.add_tracks());
+			EIMApplication::getEIMInstance()->listener->boardcast(
+				std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+			});
+		return true;
+	}
+};
+
+void ServerService::handleDeleteVST(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) {
+	EIMApplication::getEIMInstance()->undoManager.perform(new DeleteVSTAction(std::move(data)), "DeleteVSTAction");
+	EIMApplication::getEIMInstance()->undoManager.beginNewTransaction();
+}
+
 class AddMidiMessagesAction : public juce::UndoableAction {
   private:
     std::unique_ptr<EIMPackets::MidiMessages> data;
@@ -489,8 +544,4 @@ class EditMidiMessagesAction : public juce::UndoableAction {
 void ServerService::handleEditMidiMessages(WebSocketSession*, std::unique_ptr<EIMPackets::MidiMessages> data) {
     EIMApplication::getEIMInstance()->undoManager.perform(new EditMidiMessagesAction(std::move(data)), "EditMidiMessagesAction");
 	EIMApplication::getEIMInstance()->undoManager.beginNewTransaction();
-}
-
-void ServerService::handleDeleteVST(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow>) {
-	// TODO
 }
