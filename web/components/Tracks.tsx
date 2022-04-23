@@ -1,12 +1,12 @@
 import './Tracks.less'
-import React, { useState, useEffect, createRef, useRef, useMemo, memo } from 'react'
+import React, { useState, useEffect, createRef, useRef, memo } from 'react'
 import LoadingButton from '@mui/lab/LoadingButton'
 import PlayRuler from './PlayRuler'
 import ContentEditable from 'react-contenteditable'
 import useGlobalData from '../reducer'
 import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
-import { colorMap, colorValues, levelMarks } from '../utils'
+import { colorMap, colorValues, levelMarks, FULL_BACKEND_PATH } from '../utils'
 import {
   Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme,
   Menu, MenuItem, ListItemText, ListItemIcon
@@ -129,41 +129,59 @@ const TrackActions = memo(function TrackActions ({ info, index }: { info: packet
   )
 })
 
-const TrackNotes: React.FC<{ data: packets.IMidiMessage[], width: number }> = ({ data, width }) => {
+const TrackNotes = memo(function TrackNotes ({ data, width }: { data: packets.IMidiMessage[], width: number }) {
+  const arr: JSX.Element[] = []
+  const midiOn: Record<number, number | undefined> = { }
+  data.forEach(({ time, data }, i) => {
+    switch (data! & 0xf0) {
+      case 0x90: // NoteOn
+        midiOn[data! >> 8 & 0xff] = time || 0
+        break
+      case 0x80: { // NoteOff
+        const key = data! >> 8 & 0xff
+        const val = midiOn[key]
+        if (val !== undefined) {
+          midiOn[key] = undefined
+          arr.push((
+            <div
+              key={i}
+              style={{
+                bottom: (key / 132 * 100) + '%',
+                left: val * width,
+                width: (time! - val) * width
+              }}
+            />
+          ))
+        }
+      }
+    }
+  })
   return (
-    <div className='notes'>
-      {useMemo(() => {
-        const arr: JSX.Element[] = []
-        const midiOn: Record<number, number | undefined> = { }
-        data.forEach(({ time, data }, i) => {
-          switch (data! & 0xf0) {
-            case 0x90: // NoteOn
-              midiOn[data! >> 8 & 0xff] = time || 0
-              break
-            case 0x80: { // NoteOff
-              const key = data! >> 8 & 0xff
-              const val = midiOn[key]
-              if (val !== undefined) {
-                midiOn[key] = undefined
-                arr.push((
-                  <div
-                    key={i}
-                    style={{
-                      bottom: (key / 132 * 100) + '%',
-                      left: val * width,
-                      width: (time! - val) * width
-                    }}
-                  />
-                ))
-              }
-            }
-          }
-        })
-        return arr
-      }, [data, width])}
+    <div className='notes'>{arr}</div>
+  )
+})
+
+const TrackSamples = memo(function TrackSamples ({ data, noteWidth }:
+  { data: packets.ISampleData[], noteWidth: number }) {
+  const [key, setKey] = useState(0)
+  return (
+    <div className='audio-clips' key={key}>
+      {data.map((it, i) => {
+        const src = FULL_BACKEND_PATH + 'samples-preview/' + it.file + '.png'
+        return (
+          <div
+            key={i}
+            style={{
+              left: noteWidth * it.position!
+            }}
+          >
+            <div style={{ WebkitMaskBoxImage: `url('${src}')` }}><img src={src} onError={() => setTimeout(setKey, 250, key + 1)} /></div>
+          </div>
+        )
+      })}
     </div>
   )
-}
+})
 
 const Grid = memo(function Grid ({ width, timeSigNumerator }: { timeSigNumerator: number, width: number }) {
   const theme = useTheme()
@@ -194,31 +212,39 @@ const Tracks: React.FC = () => {
   const beatWidth = barLength / (16 / state.timeSigDenominator)
 
   const actions: JSX.Element[] = []
-  const midis: JSX.Element[] = []
+  const contents: JSX.Element[] = []
   let trackCount = 0
+  const scale = 1 / 1000 / 60 * state.bpm * state.ppq * noteWidth
   for (const id in state.tracks) {
     if (!id) continue
     const it = state.tracks[id]!
     actions.push(<React.Fragment key={id}><TrackActions info={it} index={trackCount} /><Divider variant='middle' /></React.Fragment>)
-    midis.push((
-      <Box key={id} sx={{ backgroundColor: alpha(it.color!, 0.1), '& .notes div': { backgroundColor: it.color! } }}>
-        <div className='content'>
+    contents.push((
+      <Box
+        key={id}
+        sx={{
+          backgroundColor: alpha(it.color!, 0.1),
+          '& .notes div': { backgroundColor: it.color! },
+          '& .audio-clips > div': {
+            transform: `scaleX(${scale})`,
+            backgroundColor: alpha(it.color!, 0.2),
+            border: '1px solid ' + it.color!,
+            '& > div': { backgroundColor: it.color! }
+          }
+        }}
+      >
+        <div
+          className='content'
+          onDragOver={e => $dragObject?.type === 'loadSample' && e.preventDefault()}
+          onDrop={e => {
+            if (!$dragObject || $dragObject.type !== 'loadSample') return
+            const alignment = +localStorage.getItem('eim:editor:alignment')! || state.ppq
+            const position = Math.round((e.pageX - e.currentTarget.getBoundingClientRect().left) / noteWidth / alignment) * alignment
+            $client.rpc.addSample({ uuid: id, data: [{ position, file: $dragObject.data }] })
+          }}
+        >
           <TrackNotes data={it.midi!} width={noteWidth} />
-          {/* <div className='audio-clips'>
-            {Array.from({ length: 32 }, (_, i) => (
-              <div
-                key={i}
-                style={{
-                  background: it.color!,
-                  WebkitMaskBoxImage: 'url(http://127.0.0.1:8088/test.png)',
-                  transform: `scaleX(${state.ppq / 96 / 6 * noteWidth})`,
-                  left: barLength * i
-                }}
-              >
-                <img src='http://127.0.0.1:8088/test.png' style={{ opacity: 0 }} />
-              </div>
-            ))}
-          </div> */}
+          <TrackSamples data={it.samples!} noteWidth={noteWidth} />
         </div>
         <Divider />
       </Box>
@@ -268,7 +294,7 @@ const Tracks: React.FC = () => {
             <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
               <rect fill='url(#playlist-grid)' x='0' y='0' width='100%' height='100%' />
             </svg>
-            {midis}
+            {contents}
           </div>
         </Box>
       </Box>

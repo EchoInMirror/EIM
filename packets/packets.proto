@@ -64,6 +64,11 @@ message MidiMessage {
   uint32 data = 2;
 }
 
+message SampleData {
+  int32 position = 1;
+  string file = 2;
+}
+
 message TrackInfo {
   message PluginData {
     string name = 1;
@@ -80,7 +85,8 @@ message TrackInfo {
   optional int32 pan = 9;
   repeated PluginData plugins = 10;
   repeated MidiMessage midi = 11;
-  optional bool isReplacing = 12;
+  repeated SampleData samples = 12;
+  optional bool isReplacing = 13;
 }
 
 message ClientboundTracksInfo {
@@ -141,6 +147,17 @@ message ClientboundSendMessage {
   optional MessageType type = 2;
 }
 
+message TrackSampleData {
+  string uuid = 1;
+  repeated SampleData data = 2;
+}
+
+message EditTrackSampleData {
+  string uuid = 1;
+  int32 left = 2;
+  repeated SampleData data = 3;
+}
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
@@ -166,6 +183,9 @@ service ServerService { // Server bound
   rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
   rpc deleteVST (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
   rpc render (google.protobuf.Empty) returns (Empty);
+  rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
+  rpc deleteSample (TrackSampleData) returns (google.protobuf.Empty);
+  rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);
 }
 
 service ClientService { // Client bound
@@ -178,4 +198,7 @@ service ClientService { // Client bound
   rpc removeTrack (String) returns (google.protobuf.Empty);
   rpc ping (ClientboundPing) returns (google.protobuf.Empty);
   rpc sendMessage (ClientboundSendMessage) returns (google.protobuf.Empty);
+  rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
+  rpc deleteSample (TrackSampleData) returns (google.protobuf.Empty);
+  rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);
 }

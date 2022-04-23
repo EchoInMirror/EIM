@@ -9,6 +9,10 @@ export const merge = <T> (source: any, target: T) => {
   return target
 }
 
+export const BACKEND_PATH = '//' + (process.env.NODE_ENV === 'development' ? '127.0.0.1:8088' : location.host) + '/'
+export const FULL_BACKEND_PATH = location.protocol + BACKEND_PATH
+
+export const allowAudioExtensions = ['.wav', '.flac', '.mp3', '.ogg']
 export const keyNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 export const levelMarks = [ // Math.sqrt(10 ** (db * 0.05)) * 100
   { value: 100, label: '0' },

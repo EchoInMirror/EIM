@@ -134,6 +134,13 @@
         image-rendering: pixelated;
         position: absolute;
         transform-origin: left;
+
+        & > div { height: inherit; }
+
+        img {
+          opacity: 0;
+          pointer-events: none;
+        }
       }
     }
   }

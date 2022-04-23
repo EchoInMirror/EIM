@@ -46,4 +46,5 @@ void Config::setProjectRoot(juce::File root) {
 	projectTempPath.createDirectory();
 	projectSamplesPreviewPath = projectTempPath.getChildFile("samples-preview");
 	projectSamplesPreviewPath.createDirectory();
+	projectTempPathString = projectTempPath.getFullPathName().toStdString();
 }

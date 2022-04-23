@@ -569,3 +569,34 @@ void ServerService::handleRender(WebSocketSession*, std::function<void(EIMPacket
         outStream.get(), track->getSampleRate(), (unsigned int)track->getTotalNumOutputChannels(), 16, pair, 0));
     render->render(track.get(), std::move(audioWirte));
 }
+
+void ServerService::handleAddSample(WebSocketSession*, std::unique_ptr<EIMPackets::TrackSampleData> data) {
+    auto instance = EIMApplication::getEIMInstance();
+    auto& masterTrack = instance->mainWindow->masterTrack;
+    auto& tracks = masterTrack->tracksMap;
+    auto& uuid = data->uuid();
+    if (!tracks.contains(uuid)) return;
+    auto& sampleManager = masterTrack->sampleManager;
+    auto track = (Track*)tracks[uuid]->getProcessor();
+    auto& samplePath = instance->config.samplesPath;
+    std::vector<SampleManager::SampleInfo*> infoArr;
+    for (auto& it : data->data()) {
+        infoArr.push_back(sampleManager.samples.contains(it.file()) ?
+                              &sampleManager.samples[it.file()] :
+                              sampleManager.loadSample(samplePath.getChildFile(it.file())));
+    }
+    runOnMainThread([&] {
+        int i = 0;
+        for (auto& it : data->data()) {
+            if (infoArr[i] != nullptr) track->addSample(infoArr[i], it.position());
+            i++;
+        }
+    });
+    instance->listener->boardcast(std::move(EIMMakePackets::makeAddSamplePacket(*data)));
+}
+
+void ServerService::handleDeleteSample(WebSocketSession*, std::unique_ptr<EIMPackets::TrackSampleData> data) {
+}
+
+void ServerService::handleEditSample(WebSocketSession*, std::unique_ptr<EIMPackets::EditTrackSampleData> data) {
+}

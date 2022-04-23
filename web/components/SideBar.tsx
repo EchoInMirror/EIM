@@ -6,6 +6,7 @@ import TreeItem from '@mui/lab/TreeItem'
 import { Resizable } from 're-resizable'
 import { actions } from './BottomBar'
 import { BottomBarContext } from '../reducer'
+import { allowAudioExtensions } from '../utils'
 import { Paper, Box, alpha, Toolbar, Button, Tooltip, colors } from '@mui/material'
 import {
   FavoriteOutlined, SettingsInputHdmiOutlined, ExpandMore, ChevronRight, GraphicEq, Piano,
@@ -30,7 +31,7 @@ export interface ItemType {
   title: string
   icon: JSX.Element
   type: packets.ServerboundExplorerData.ExplorerType
-  mapNodeProps?: (name: string, tree: TreeNode) => Partial<TreeItemProps> | undefined
+  mapNodeProps?: (name: string, tree: TreeNode, path: string) => Partial<TreeItemProps> | undefined
   nodeSort?: (a: JSX.Element, b: JSX.Element) => number
 }
 const items: ItemType[] = [
@@ -91,10 +92,15 @@ const items: ItemType[] = [
     title: '采样',
     icon: <GraphicEqOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.SAMPLES,
-    mapNodeProps (name, tree) {
-      if (tree[name]) return
+    mapNodeProps (name, tree, data) {
+      if (tree[name] || !allowAudioExtensions.some(it => name.endsWith(it))) return
       return {
-        icon: <GraphicEqOutlined />
+        icon: <GraphicEqOutlined />,
+        draggable: true,
+        onDragStart: e => {
+          window.$dragObject = { type: 'loadSample', data: data.replace(/^\//, '') }
+          e.stopPropagation()
+        }
       }
     }
   }
@@ -128,7 +134,7 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: ItemType }> = ({ ty
       })
     }
     if (type.mapNodeProps) {
-      const props = type.mapNodeProps!(name, tree)
+      const props = type.mapNodeProps!(name, tree, cur)
       if (props) node = <DraggableTreeItem key={cur} nodeId={cur} label={name} onClick={handleClick} {...props} />
     }
     nodes.push(node || <TreeItem key={cur} nodeId={cur} label={name} onClick={handleClick}>{children}</TreeItem>)
