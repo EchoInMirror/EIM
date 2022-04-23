@@ -188,12 +188,11 @@ void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& mid
 				auto totalTime = numSamples / getSampleRate() / 60.0 * info.bpm * masterTrack->ppq;
 				auto endTime = startTime + totalTime;
 				auto tmp = info.bpm * masterTrack->ppq / 60.0;
-				int i = 0;
 				juce::AudioBuffer<float> buffer2(buffer.getNumChannels(), buffer.getNumSamples());
 				juce::AudioSourceChannelInfo channelInfo(buffer2);
 				for (auto it : samples) {
 					auto fullPPQ = it->fullTime == 0 ? it->info->fullTime * tmp : it->fullTime;
-					if (it->startPPQ <= startTime && endTime <= it->startPPQ + fullPPQ) {
+					if (it->startPPQ - 10 <= startTime && endTime <= it->startPPQ + fullPPQ + 10) {
 						it->positionableSource.setNextReadPosition((int)(it->positionableSource.getTotalLength()
 							* (startTime - it->startPPQ) / fullPPQ));
 						it->resamplingAudioSource.getNextAudioBlock(channelInfo);
