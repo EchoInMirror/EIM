@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Renderable.h"
+#include "Renderer.h"
 #include "Track.h"
 #include "packets.pb.h"
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -44,6 +45,7 @@ public:
 
     bool isRenderEnd() override;
     void processBlockBuffer(juce::AudioBuffer<float>&) override;
+    void render(juce::File) override;
 
     bool getCurrentPosition(CurrentPositionInfo& result) override;
     bool canControlTransport() override {

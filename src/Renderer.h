@@ -12,6 +12,8 @@ public:
 
 class Renderer : private juce::Timer {
 public:
+    Renderer(){};
+    ~Renderer(){};
     void render(Renderable*, std::unique_ptr<juce::AudioFormatWriter>);
 
 private:

@@ -559,15 +559,9 @@ void ServerService::handleEditMidiMessages(WebSocketSession*, std::unique_ptr<EI
 }
 
 void ServerService::handleRender(WebSocketSession*, std::function<void(EIMPackets::Empty&)>) {
-    auto render = new Renderer();
     auto file = juce::File::getCurrentWorkingDirectory().getChildFile("test-4-23.wav");
-    auto outStream = file.createOutputStream();
     auto& track = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
-    juce::WavAudioFormat format;
-    juce::StringPairArray pair;
-    std::unique_ptr<juce::AudioFormatWriter> audioWirte(format.createWriterFor(
-        outStream.get(), track->getSampleRate(), (unsigned int)track->getTotalNumOutputChannels(), 16, pair, 0));
-    render->render(track.get(), std::move(audioWirte));
+    track->render(file);
 }
 
 void ServerService::handleAddSample(WebSocketSession*, std::unique_ptr<EIMPackets::TrackSampleData> data) {

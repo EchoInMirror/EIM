@@ -283,10 +283,29 @@ void MasterTrack::SystemInfoTimer::timerCallback() {
 }
 
 bool MasterTrack::isRenderEnd() {
-    return endTime >= currentPositionInfo.ppqPosition;
+    DBG(endTime << " , " << currentPositionInfo.ppqPosition);
+    return endTime <= currentPositionInfo.ppqPosition;
 }
 
 void MasterTrack::processBlockBuffer(juce::AudioBuffer<float>& buffer) {
     juce::MidiBuffer midiBuffer;
     this->processBlock(buffer, midiBuffer);
+}
+
+void MasterTrack::render(juce::File file) {
+    this->graphPlayer.setProcessor(nullptr);
+    this->currentPositionInfo.ppqPosition = 0;
+    this->currentPositionInfo.timeInSamples = 0;
+    this->currentPositionInfo.timeInSeconds = 0;
+    this->currentPositionInfo.editOriginTime = 0;
+    auto outStream = file.createOutputStream();
+    juce::WavAudioFormat format;
+    juce::StringPairArray pair;
+    this->bufferBlockSize = this->getBlockSize();
+    DBG("start render : " << this->getSampleRate() << "; " << this->getNumOutputChannels());
+    std::unique_ptr<juce::AudioFormatWriter> audioWirte(
+        format.createWriterFor(outStream.release(), this->getSampleRate(), this->getNumOutputChannels(), 16, pair, 0));
+    this->currentPositionInfo.isPlaying = true;
+    auto render = new Renderer();
+    render->render(this, std::move(audioWirte));
 }
