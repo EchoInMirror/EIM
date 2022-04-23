@@ -111,14 +111,36 @@ juce::AudioProcessorGraph::NodeID Track::addEffectPlugin(std::unique_ptr<juce::A
 }
 
 void Track::removeEffectPlugin(juce::AudioPluginInstance* instance) {
+	auto found = false;
+	for (auto it = plugins.begin(); it != plugins.end(); it++) if ((*it)->getProcessor() == instance) {
+		plugins.erase(it);
+		found = true;
+		break;
+	}
+	if (!found) return;
+	EIMApplication::getEIMInstance()->pluginManager->pluginWindows.erase(instance);
     for (auto node : getNodes()) {
-        if (node->getProcessor() == instance) removeNode(node);
+		if (node->getProcessor() == instance) {
+			juce::AudioProcessorGraph::NodeID prev, post;
+			for (auto& conn : getConnections()) {
+				if (conn.destination.nodeID == node->nodeID) prev = conn.source.nodeID;
+				else post = conn.destination.nodeID;
+			}
+			addAudioConnection(prev, post);
+			removeNode(node);
+			break;
+		}
     }
 }
 
 void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
+	if (instrumentNode) {
+		EIMApplication::getEIMInstance()->pluginManager->pluginWindows
+			.erase((juce::AudioPluginInstance*)instrumentNode->getProcessor());
+		removeNode(instrumentNode);
+	}
     if (!instance) {
-        instrumentNode = nullptr;
+		instrumentNode = nullptr;
         return;
     }
     instrumentNode = addNode(std::move(instance));

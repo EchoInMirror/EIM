@@ -117,7 +117,7 @@ void MasterTrack::checkEndTime() {
 		auto cur = (int)track->midiSequence.getEndTime();
 		if (cur > time) time = cur;
 		for (auto& sample : track->samples) {
-			auto cur = (int)(sample->startPPQ + (sample->fullTime <= 0 ? sample->info->fullTime * tmp : sample->fullTime));
+			cur = (int)(sample->startPPQ + (sample->fullTime <= 0 ? sample->info->fullTime * tmp : sample->fullTime));
 			if (cur > time) time = cur;
 		}
 	}

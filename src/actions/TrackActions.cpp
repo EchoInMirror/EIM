@@ -300,16 +300,18 @@ class LoadVSTAction : public juce::UndoableAction {
         if (!tracks.contains(uuid)) return false;
         auto& trackPtr = tracks[uuid];
         auto track = (Track*)trackPtr->getProcessor();
-		try {
-			getPluginState(_pluginInstance, state);
-		}
-		catch (...) { }
-		if (_isInstrument) {
-			track->setInstrument(nullptr);
-		}
-		else {
-			track->removeEffectPlugin(_pluginInstance);
-		}
+		runOnMainThread([&] {
+			try {
+				getPluginState(_pluginInstance, state);
+			}
+			catch (...) {}
+			if (_isInstrument) {
+				track->setInstrument(nullptr);
+			}
+			else {
+				track->removeEffectPlugin(_pluginInstance);
+			}
+		});
 		_pluginInstance = nullptr;
 		EIMPackets::ClientboundTracksInfo info;
 		track->writeTrackInfo(info.add_tracks());
@@ -346,14 +348,18 @@ public:
 		if (data->has_index()) {
 			if (plugins.size() <= data->index()) return true;
 			auto plugin = (juce::AudioPluginInstance*)plugins[data->index()]->getProcessor();
-			runOnMainThread([&] { getPluginState(plugin, state); });
-			track->removeEffectPlugin(plugin);
+			runOnMainThread([&] {
+				getPluginState(plugin, state);
+				track->removeEffectPlugin(plugin);
+			});
 		}
 		else {
 			auto plugin = track->getInstrumentInstance();
 			if (plugin == nullptr) return true;
-			runOnMainThread([&] { getPluginState(plugin, state); });
-			track->setInstrument(nullptr);
+			runOnMainThread([&] {
+				getPluginState(plugin, state);
+				track->setInstrument(nullptr);
+			});
 		}
 		EIMPackets::ClientboundTracksInfo info;
 		track->writeTrackInfo(info.add_tracks());
@@ -581,13 +587,11 @@ void ServerService::handleDeleteSample(WebSocketSession*, std::unique_ptr<EIMPac
 	auto& tracks = masterTrack->tracksMap;
 	auto& uuid = data->uuid();
 	if (!tracks.contains(uuid)) return;
-	auto& sampleManager = masterTrack->sampleManager;
+	// auto& sampleManager = masterTrack->sampleManager;
 	auto track = (Track*)tracks[uuid]->getProcessor();
 	auto& samples = track->samples;
 	int times = 0;
-	DBG(uuid);
 	for (auto it : data->index()) {
-		DBG(it);
 		auto cur = it - times;
 		if (samples.size() > cur) {
 			samples.erase(samples.begin() + cur);
