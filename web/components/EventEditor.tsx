@@ -3,9 +3,7 @@ import packets from '../../packets'
 import React, { useMemo, memo, useEffect, useRef, useState } from 'react'
 import { Resizable } from 're-resizable'
 import { Paper, Box, useTheme, alpha, Select, MenuItem, Button, CircularProgress } from '@mui/material'
-import EIMPackets from '../../packets'
 import IMidiMessages = EIMPackets.IMidiMessages
-import ReactDOM from 'react-dom'
 
 const EventEditorGrid = memo(function EventEditorGrid ({
   width,
@@ -18,21 +16,23 @@ const EventEditorGrid = memo(function EventEditorGrid ({
   const gridXDeepColor = alpha(theme.palette.divider, 0.26)
   const beats = 16 / timeSigDenominator
   for (let j = 0, cur = 0; j < timeSigNumerator; j++) {
-    rectsX.push(<rect width="1" height="3240" x={width * cur++} y="0"
-                      fill={j ? gridXDeepColor : alpha(theme.palette.divider, 0.44)} key={j << 5}/>)
+    rectsX.push(<rect width='1' height='3240' x={width * cur++} y='0'
+      fill={j ? gridXDeepColor : alpha(theme.palette.divider, 0.44)} key={j << 5}
+                />)
     if (width >= 9.6) {
       for (let i = 1; i < beats; i++) {
-        rectsX.push(<rect width="1" height="3240" x={width * cur++} y="0" key={j << 5 | i}/>)
+        rectsX.push(<rect width='1' height='3240' x={width * cur++} y='0' key={j << 5 | i} />)
       }
     } else {
       cur += beats - 1
     }
   }
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style={{ position: 'absolute' }}>
+    <svg xmlns='http://www.w3.org/2000/svg' width='0' height='0' style={{ position: 'absolute' }}>
       <defs>
-        <pattern id="event-editor-grid-x" x="0" y="0" width={width * beats * timeSigNumerator} height="3240"
-                 patternUnits="userSpaceOnUse">
+        <pattern id='event-editor-grid-x' x='0' y='0' width={width * beats * timeSigNumerator} height='3240'
+          patternUnits='userSpaceOnUse'
+        >
           <g fill={theme.palette.divider}>{rectsX}</g>
         </pattern>
       </defs>
@@ -146,11 +146,11 @@ const Velocity = memo(function Velocity ({
     return arr
   }, [midi, noteWidth])
 
-  if (!midi) return <div/>
+  if (!midi) return <div />
 
   return (
     <Box
-      className="velocity"
+      className='velocity'
       ref={ref}
       sx={{ '& div': { backgroundColor: color } }}
       onMouseDown={e => {
@@ -194,9 +194,13 @@ const EventEditor = memo(function EventEditor ({
       $client.off('editor:selectedNotes', setSelectedIndexes)
     }
   }, [])
+
+  // 加载条状态
+  const [loadingCirOn, setLoadingCir] = useState(false)
+  const loadingDisplay = loadingCirOn ? 'block' : 'none'
   return (
-    <Resizable enable={{ top: true }} minHeight={0} className="event-editor">
-      <Box id={'eventEditorCir'} />
+    <Resizable enable={{ top: true }} minHeight={0} className='event-editor'>
+      <Box className='event-editor-cir' sx={{ display: loadingDisplay }}><Box><CircularProgress /></Box></Box>
       <Paper
         square
         elevation={3}
@@ -209,17 +213,18 @@ const EventEditor = memo(function EventEditor ({
         <Paper
           square
           elevation={6}
-          className="event-editor-actions"
+          className='event-editor-actions'
           sx={{
             flexDirection: 'column',
             overflow: 'hidden'
           }}
         >
-          <Select value="velocity" variant="standard" className="editor-selector"><MenuItem
-            value="velocity">力度</MenuItem></Select>
+          <Select value='velocity' variant='standard' className='editor-selector'>
+            <MenuItem value='velocity'>力度</MenuItem>
+          </Select>
           <Button
-            variant="text"
-            size="small"
+            variant='text'
+            size='small'
             onClick={() => {
               if (!_midi) return
               const midis: IMidiMessages = {
@@ -233,13 +238,11 @@ const EventEditor = memo(function EventEditor ({
               } else {
                 targetMidiIndexes = _midi
               }
-              const waitSometime = Object.keys(targetMidiIndexes).length * (200 + Math.random() * 20 - Math.random() * 20)
-              const cir = document.getElementById('eventEditorCir')
-              const cirContent = (<Box><Box><Box><CircularProgress /></Box></Box></Box>)
-              ReactDOM.render(cirContent, cir)
+              const waitSometime = Object.keys(targetMidiIndexes).length * (100 + Math.random() * 20 - Math.random() * 20)
+              setLoadingCir(true)
 
               for (const id in targetMidiIndexes) {
-                var randomVel: number = Math.floor((Math.random() * 50) + 60)
+                const randomVel: number = Math.floor((Math.random() * 50) + 60)
                 const note = _midi[id]
                 midis.data?.push(Number(id))
                 const data = (note.data! << 16 >> 16) | (randomVel << 16)
@@ -248,9 +251,9 @@ const EventEditor = memo(function EventEditor ({
                   data: data
                 })
               }
-              setTimeout(()=>{
+              setTimeout(() => {
                 $client.rpc.editMidiMessages(midis)
-                ReactDOM.render((<span></span>), cir)
+                setLoadingCir(false)
               }, waitSometime)
             }}
           >
@@ -258,7 +261,7 @@ const EventEditor = memo(function EventEditor ({
           </Button>
         </Paper>
         <Box
-          className="content"
+          className='content'
           ref={eventEditorRef}
           sx={{
             backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.primary.main, 0.1) : theme.palette.background.default,
@@ -266,15 +269,17 @@ const EventEditor = memo(function EventEditor ({
           }}
         >
           <EventEditorGrid width={beatWidth} timeSigNumerator={timeSigNumerator}
-                           timeSigDenominator={timeSigDenominator}/>
-          <svg xmlns="http://www.w3.org/2000/svg" height="100%" className="grid">
-            <rect fill="url(#event-editor-grid-x)" x="0" y="0" width="100%" height="100%"/>
+            timeSigDenominator={timeSigDenominator}
+          />
+          <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
+            <rect fill='url(#event-editor-grid-x)' x='0' y='0' width='100%' height='100%' />
           </svg>
           <div style={{
             width: contentWidth,
             height: '100%'
-          }}>
-            <Velocity midi={midi} color={color} noteWidth={noteWidth}/>
+          }}
+          >
+            <Velocity midi={midi} color={color} noteWidth={noteWidth} />
           </div>
         </Box>
       </Paper>
