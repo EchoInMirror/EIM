@@ -135,6 +135,14 @@ export default class Client extends ClientService {
       })
       track.samples = track.samples!.concat(data.data!)
       $dispatch({ })
+    }).on(ClientboundPacket.DeleteSample, data => {
+      const track = $globalData.tracks[data.uuid!]
+      if (!track) return
+      console.log(data, track.samples)
+      const map: Record<number, true> = { }
+      data.index!.forEach(it => (map[it] = true))
+      track.samples = track.samples!.filter((_, i) => !map[i])
+      $dispatch({ })
     })
   }
 

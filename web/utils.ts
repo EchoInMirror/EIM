@@ -20,6 +20,22 @@ export const levelMarks = [ // Math.sqrt(10 ** (db * 0.05)) * 100
   { value: 50.11872336272722, label: '-12' }
 ]
 
+const images: Record<string, Promise<void>> = {}
+export const tryLoadImage = (url: string) => {
+  if (!images[url]) {
+    let fn: () => void
+    images[url] = new Promise(resolve => (fn = resolve))
+    const tryLoad = () => {
+      const img = new Image()
+      img.onload = () => fn()
+      img.onerror = () => setTimeout(tryLoad, 300)
+      img.src = url
+    }
+    tryLoad()
+  }
+  return images[url]
+}
+
 export enum FileChooserFlags {
   // specifies that the component should allow the user to choose an existing file with the intention of opening it.
   openMode = 1,

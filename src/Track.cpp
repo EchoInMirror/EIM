@@ -163,9 +163,10 @@ void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& mid
 			auto& info = masterTrack->currentPositionInfo;
 			if (info.isPlaying) {
 				auto startTime = info.ppqPosition;
+				auto tmp = info.bpm * masterTrack->ppq / 60.0;
 				for (auto it : samples) if (it->startPPQ <= startTime) {
 					it->positionableSource.setNextReadPosition((int)(it->positionableSource.getTotalLength()
-						* (startTime - it->startPPQ) / (it->info->fullTime / 60.0 * info.bpm * masterTrack->ppq)));
+						* (startTime - it->startPPQ) / (it->fullTime == 0 ? it->info->fullTime * tmp : it->fullTime)));
 					juce::AudioSourceChannelInfo channelInfo(buffer);
 					it->resamplingAudioSource.getNextAudioBlock(channelInfo);
 				}
@@ -219,6 +220,8 @@ void Track::writeTrackInfo(EIMPackets::TrackInfo* data) {
 	for (auto& it : samples) {
 		auto note = data->add_samples();
 		note->set_position(it->startPPQ);
+		note->set_duration(it->info->fullTime);
+		note->set_fulltime(it->fullTime);
 		note->set_file(it->info->name.toStdString());
 	}
 }

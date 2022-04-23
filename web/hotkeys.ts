@@ -1,5 +1,5 @@
 export default {
-  PLAY_OR_PAUSE: 'space',
+  PLAY_OR_PAUSE: ['space', 'MediaPause', 'Pause', 'Play', 'MediaPlay'],
   UNDO: 'ctrl+z',
   REDO: 'ctrl+y',
   SAVE: 'ctrl+s'

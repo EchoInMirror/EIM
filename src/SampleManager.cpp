@@ -1,7 +1,7 @@
 #include "SampleManager.h"
 #include "Main.h"
 #include "juce_cryptography/hashing/juce_MD5.h"
-#define EIM_WAVEFORM_HEIGHT 140
+#define EIM_WAVEFORM_HEIGHT 70
 
 SampleManager::SampleManager() {
 	formatManager.registerBasicFormats();
@@ -26,26 +26,6 @@ SampleManager::SampleInfo* SampleManager::loadSample(juce::File file) {
 	auto image = instance->config.projectSamplesPreviewPath.getChildFile(key + ".png");
 	if (!image.existsAsFile()) drawWaveform(reader, image);
 	return res;
-}
-
-void SampleManager::changeListenerCallback(juce::ChangeBroadcaster* source) {
-	/*
-	if (source == &thumbnail && thumbnail.isFullyLoaded()) {
-		auto length = thumbnail.getTotalLength();
-		int width = 
-		juce::Rectangle<int> thumbnailBounds(0, 0, width, 70);
-		auto img = juce::Image(juce::Image::ARGB, width, 70, true);
-		juce::Graphics g(img);
-		g.setColour(juce::Colours::white);
-		thumbnail.drawChannels(g, thumbnailBounds, 0.0, length, 1.0f);
-		juce::PNGImageFormat format;
-		auto file = juce::File::getCurrentWorkingDirectory().getChildFile("test.png");
-		file.deleteFile();
-		juce::FileOutputStream stream(file);
-		format.writeImageToStream(img, stream);
-		DBG("FINISHED");
-	}
-	*/
 }
 
 void SampleManager::drawWaveform(juce::AudioFormatReader* reader, juce::File file) {
@@ -88,12 +68,12 @@ void SampleManager::drawWaveform(juce::AudioFormatReader* reader, juce::File fil
 	thread.detach();
 }
 
-Sampler::Sampler(const Sampler& other) : info(other.info), startPPQ(other.startPPQ),
+Sampler::Sampler(const Sampler& other) : info(other.info), startPPQ(other.startPPQ), fullTime(other.fullTime),
 	positionableSource(other.info->reader, false),
 	resamplingAudioSource(&positionableSource, false, juce::jmin((int)other.info->reader->numChannels, 2)) {
 	resamplingAudioSource.setResamplingRatio(other.info->sampleRate / EIMApplication::getEIMInstance()->mainWindow->masterTrack->getSampleRate());
 }
-Sampler::Sampler(SampleManager::SampleInfo* info, int startPPQ) : info(info), startPPQ(startPPQ),
+Sampler::Sampler(SampleManager::SampleInfo* info, int startPPQ, int fullTime) : info(info), startPPQ(startPPQ), fullTime(fullTime),
 	positionableSource(info->reader, false),
 	resamplingAudioSource(&positionableSource, false, juce::jmin((int)info->reader->numChannels, 2)) {
 	resamplingAudioSource.setResamplingRatio(info->sampleRate / EIMApplication::getEIMInstance()->mainWindow->masterTrack->getSampleRate());
