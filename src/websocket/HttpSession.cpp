@@ -90,7 +90,6 @@ template<class Body, class Allocator, class Send> void handleRequest(boost::beas
 
 	if (ec == boost::system::errc::no_such_file_or_directory) {
 		path = pathJoin(EIMApplication::getEIMInstance()->config.projectTempPathString, decodePath);
-		DBG(path);
 		ec.clear();
 		body.open(path.c_str(), boost::beast::file_mode::scan, ec);
 		if (ec == boost::system::errc::no_such_file_or_directory) return send(notFound(decodePath));
