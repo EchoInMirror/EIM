@@ -126,8 +126,15 @@ export default class Client extends ClientService {
       track.midi!.sort((a, b) => (a.time || 0) - (b.time || 0))
       $dispatch({ })
     }).on(ClientboundPacket.SendMessage, data => {
-      console.log(data)
       $notice.enqueueSnackbar(data.message!, { variant: messageTypes[data.type! as 1 | 2 | 3] as any || 'info' })
+    }).on(ClientboundPacket.AddSample, data => {
+      const track = $globalData.tracks[data.uuid!]
+      if (!track) return
+      data.data!.forEach(it => {
+        it.file = it.file!.slice(it.file!.lastIndexOf('/') + 1)
+      })
+      track.samples = track.samples!.concat(data.data!)
+      $dispatch({ })
     })
   }
 

@@ -1,5 +1,6 @@
 #include "HttpSession.h"
 #include "WebSocketSession.h"
+#include "../Main.h"
 #include <iostream>
 #include <boost/beast.hpp>
 #include <boost/config.hpp>
@@ -79,14 +80,21 @@ template<class Body, class Allocator, class Send> void handleRequest(boost::beas
     if (req.target().empty() || req.target()[0] != '/' || req.target().find("..") != boost::beast::string_view::npos)
         return send(badRequest("Illegal request-target"));
 
-    std::string path = pathJoin(doc_root, req.target());
+	auto decodePath = juce::URL::removeEscapeChars(req.target().to_string()).toStdString();
+    std::string path = pathJoin(doc_root, decodePath);
     if (req.target().back() == '/') path.append("index.html");
 
     boost::beast::error_code ec;
     http::file_body::value_type body;
     body.open(path.c_str(), boost::beast::file_mode::scan, ec);
 
-    if (ec == boost::system::errc::no_such_file_or_directory) return send(notFound(req.target()));
+	if (ec == boost::system::errc::no_such_file_or_directory) {
+		path = pathJoin(EIMApplication::getEIMInstance()->config.projectTempPathString, decodePath);
+		DBG(path);
+		ec.clear();
+		body.open(path.c_str(), boost::beast::file_mode::scan, ec);
+		if (ec == boost::system::errc::no_such_file_or_directory) return send(notFound(decodePath));
+	}
 
     if (ec) return send(serverError(ec.message()));
 

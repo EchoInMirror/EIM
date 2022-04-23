@@ -16,6 +16,7 @@ import Save from '@mui/icons-material/Save'
 import SaveAs from '@mui/icons-material/SaveAs'
 import SaveAlt from '@mui/icons-material/SaveAlt'
 import SettingsIcon from '@mui/icons-material/Settings'
+import FiberManualRecord from '@mui/icons-material/FiberManualRecord'
 
 const LogoIcon = memo(function LogoIcon () {
   return (
@@ -134,6 +135,7 @@ let startTime = Date.now()
 let position = 0
 const CenterSection: React.FC = () => {
   const [state] = useGlobalData()
+  const [isRecording, setRecording] = useState(false)
   const timeRef = useRef<HTMLSpanElement | null>(null)
   const barRef = useRef<HTMLSpanElement | null>(null)
 
@@ -206,6 +208,12 @@ const CenterSection: React.FC = () => {
         onClick={() => $client.rpc.setProjectStatus({ isPlaying: false, position: 0 })}
       >
         <Stop fontSize='large' />
+      </IconButton>
+      <IconButton
+        color={isRecording ? 'error' : 'inherit'}
+        onClick={() => setRecording(!isRecording)}
+      >
+        <FiberManualRecord sx={{ fontSize: '1.82rem' }} />
       </IconButton>
     </section>
   )

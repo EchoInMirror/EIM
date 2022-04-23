@@ -71,6 +71,7 @@ Track::~Track() {
 	auto& pluginWindows = EIMApplication::getEIMInstance()->pluginManager->pluginWindows;
 	if (instrumentNode) pluginWindows.erase((juce::AudioPluginInstance*)instrumentNode->getProcessor());
 	for (auto& it : plugins) pluginWindows.erase((juce::AudioPluginInstance*)it->getProcessor());
+	for (auto it : samples) delete it;
 }
 
 void Track::init() {
@@ -78,7 +79,6 @@ void Track::init() {
     setChannelLayoutOfBus(false, 0, juce::AudioChannelSet::canonicalChannelSet(2));
     auto input = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
         juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode));
-	sampler = addNode(std::make_unique<Sampler>());
     begin = addNode(std::make_unique<ProcessorBase>())->nodeID;
     end = addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
                       juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode))
@@ -90,7 +90,6 @@ void Track::init() {
                                juce::AudioProcessorGraph::AudioGraphIOProcessor::midiOutputNode))
                        ->nodeID;
 
-	addAudioConnection(sampler->nodeID, begin);
     addAudioConnection(input->nodeID, begin);
     addAudioConnection(begin, end);
     addConnection({{midiIn, juce::AudioProcessorGraph::midiChannelIndex},
@@ -128,14 +127,6 @@ void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
                    {instrumentNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
 }
 
-void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
-    AudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
-	((Sampler*)sampler->getProcessor())->setCurrentPlaybackSampleRate(newSampleRate);
-    for (auto it : getNodes())
-        it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
-    messageCollector.reset(newSampleRate);
-}
-
 void Track::addAudioConnection(juce::AudioProcessorGraph::NodeID src, juce::AudioProcessorGraph::NodeID dest) {
     addConnection({{src, 0}, {dest, 0}});
     addConnection({{src, 1}, {dest, 1}});
@@ -164,6 +155,24 @@ void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessage
 void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
 	auto numSamples = buffer.getNumSamples();
     addMidiEventsToBuffer(numSamples, midiMessages);
+
+	auto& mainWindow = EIMApplication::getEIMInstance()->mainWindow;
+	if (mainWindow) {
+		auto& masterTrack = mainWindow->masterTrack;
+		if (masterTrack) {
+			auto& info = masterTrack->currentPositionInfo;
+			if (info.isPlaying) {
+				auto startTime = info.ppqPosition;
+				for (auto it : samples) if (it->startPPQ <= startTime) {
+					it->positionableSource.setNextReadPosition((int)(it->positionableSource.getTotalLength()
+						* (startTime - it->startPPQ) / (it->info->fullTime / 60.0 * info.bpm * masterTrack->ppq)));
+					juce::AudioSourceChannelInfo channelInfo(buffer);
+					it->resamplingAudioSource.getNextAudioBlock(channelInfo);
+				}
+			}
+		}
+	}
+
     AudioProcessorGraph::processBlock(buffer, midiMessages);
     auto inoutBlock = juce::dsp::AudioBlock<float>(buffer).getSubsetChannelBlock(0, (size_t)2);
     chain.process(juce::dsp::ProcessContextReplacing<float>(inoutBlock));
@@ -207,6 +216,11 @@ void Track::writeTrackInfo(EIMPackets::TrackInfo* data) {
         note->set_time((int)it->message.getTimeStamp());
         note->set_data(encodeMidiMessage(it->message));
     }
+	for (auto& it : samples) {
+		auto note = data->add_samples();
+		note->set_position(it->startPPQ);
+		note->set_file(it->info->name.toStdString());
+	}
 }
 
 juce::AudioPluginInstance* Track::getInstrumentInstance() {
@@ -222,9 +236,23 @@ void Track::setProcessingPrecision(ProcessingPrecision newPrecision) {
 void Track::prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) {
     AudioProcessorGraph::prepareToPlay(sampleRate, estimatedSamplesPerBlock);
     chain.prepare({sampleRate, (juce::uint32)estimatedSamplesPerBlock, 2});
-	((Sampler*)sampler->getProcessor())->setCurrentPlaybackSampleRate(sampleRate);
+	for (auto& it : samples) {
+		it->resamplingAudioSource.prepareToPlay(estimatedSamplesPerBlock, sampleRate);
+		it->resamplingAudioSource.setResamplingRatio(it->info->sampleRate / sampleRate);
+	}
     for (auto it : getNodes())
         it->getProcessor()->prepareToPlay(sampleRate, estimatedSamplesPerBlock);
+}
+
+void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
+	AudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
+	for (auto& it : samples) {
+		it->resamplingAudioSource.prepareToPlay(newBlockSize, newSampleRate);
+		it->resamplingAudioSource.setResamplingRatio(it->info->sampleRate / newSampleRate);
+	}
+	for (auto it : getNodes())
+		it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
+	messageCollector.reset(newSampleRate);
 }
 
 void Track::setPlayHead(juce::AudioPlayHead* newPlayHead) {
@@ -239,6 +267,12 @@ void Track::setMuted(bool val) {
     msg.setTimeStamp(juce::Time::getMillisecondCounterHiRes() * 0.001);
     messageCollector.addMessageToQueue(msg);
     currentNode->setBypassed(val);
+}
+
+void Track::addSample(SampleManager::SampleInfo* info, int startPPQ) {
+	auto sample = new Sampler(info, startPPQ);
+	sample->resamplingAudioSource.prepareToPlay(getBlockSize(), getSampleRate());
+	samples.emplace_back(sample);
 }
 
 void Track::saveState() { saveState(EIMApplication::getEIMInstance()->config.projectTracksPath.getChildFile(uuid)); }
@@ -276,8 +310,4 @@ void Track::saveState(juce::File dir) {
 		midiOut << '\n';
 	}
 	midiOut << "]";
-}
-
-void Track::Sampler::processBlock(juce::AudioSampleBuffer& buffer, juce::MidiBuffer&) {
-	renderNextBlock(buffer, 0, buffer.getNumSamples());
 }

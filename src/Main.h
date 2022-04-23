@@ -4,6 +4,7 @@
 #include "PluginManager.h"
 #include "MasterTrack.h"
 #include "websocket/Listener.h"
+#include "SampleManager.h"
 
 class MainWindow: public juce::DocumentWindow {
 public:

@@ -11,6 +11,7 @@ public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
     juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
+	SampleManager sampleManager;
     short ppq = 96;
 	int events = 0;
 	int projectTime = 0;
@@ -34,11 +35,11 @@ public:
 	void checkEndTime();
 	void checkEndTime(int endTime);
 
-    virtual bool getCurrentPosition(CurrentPositionInfo& result) override;
-    virtual bool canControlTransport() override { return true; }
-    virtual void transportPlay(bool shouldStartPlaying) override;
-    virtual void transportRecord(bool shouldStartRecording) override { juce::ignoreUnused(shouldStartRecording); }
-    virtual void transportRewind() override { }
+    bool getCurrentPosition(CurrentPositionInfo& result) override;
+    bool canControlTransport() override { return true; }
+    void transportPlay(bool shouldStartPlaying) override;
+    void transportRecord(bool shouldStartRecording) override { juce::ignoreUnused(shouldStartRecording); }
+    void transportRewind() override { }
 private:
     int endTime = 0;
     juce::AudioProcessorGraph::NodeID outputNodeID;

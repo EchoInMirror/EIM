@@ -1,7 +1,7 @@
 import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { initialState } from './reducer'
-import { colorValues } from './utils'
+import { colorValues, BACKEND_PATH } from './utils'
 
 import App from './components/App'
 import Client from './Client'
@@ -11,7 +11,7 @@ window.$globalData = { ...initialState }
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 window.$notice = { enqueueSnackbar () { return 1 }, closeSnackbar () { } }
 const root = createRoot(document.getElementById('root')!)
-window.$client = new Client('ws://127.0.0.1:8088', () => root.render(<StrictMode><App /></StrictMode>))
+window.$client = new Client('ws:' + BACKEND_PATH, () => root.render(<StrictMode><App /></StrictMode>))
 document.addEventListener('dragend', () => (window.$dragObject = undefined))
 
 ;(window as any).$coll = (elm: HTMLElement, name: string) => {
