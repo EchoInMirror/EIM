@@ -19,16 +19,6 @@ MasterTrack::MasterTrack()
                          setup.bufferSize == 0 ? 1024 : setup.bufferSize);
     prepareToPlay(getSampleRate(), getBlockSize());
 	startTimer(100);
-    /*
-    chooser = std::make_unique<juce::FileChooser>("Select a Wave file to play...", juce::File{}, "*");
-    auto chooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
-
-    chooser->launchAsync(chooserFlags, [this](const juce::FileChooser& fc) {
-        auto file = fc.getResult();
-        if (file == juce::File{}) return;
-        auto* reader = formatManager.createReaderFor(file);
-        if (reader != nullptr) thumbnail.setReader(reader, 0);
-    });*/
 }
 
 void MasterTrack::init() {
@@ -121,9 +111,15 @@ void MasterTrack::loadPluginFromFile(juce::var& json, juce::File root,
 
 void MasterTrack::checkEndTime() {
 	int time = 0;
-	for (auto& track : tracks) {
-		auto cur = (int)((Track*)track->getProcessor())->midiSequence.getEndTime();
+	auto tmp = currentPositionInfo.bpm * ppq / 60.0;
+	for (auto& trackNode : tracks) {
+		auto track = (Track*)trackNode->getProcessor();
+		auto cur = (int)track->midiSequence.getEndTime();
 		if (cur > time) time = cur;
+		for (auto& sample : track->samples) {
+			auto cur = (int)(sample->startPPQ + (sample->fullTime <= 0 ? sample->info->fullTime * tmp : sample->fullTime));
+			if (cur > time) time = cur;
+		}
 	}
 	checkEndTime(time);
 }

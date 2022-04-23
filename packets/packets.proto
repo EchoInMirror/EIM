@@ -65,8 +65,10 @@ message MidiMessage {
 }
 
 message SampleData {
-  int32 position = 1;
-  string file = 2;
+  string file = 1;
+  uint32 position = 2;
+  optional double duration = 3;
+  optional uint32 fullTime = 4;
 }
 
 message TrackInfo {
@@ -112,26 +114,26 @@ message MidiMessages {
 }
 
 message ClientboundPing {
-  int32 position = 1;
+  uint32 position = 1;
   repeated float levels = 2;
 }
 
 message ClientboundPong {
-  int32 cpu = 1;
-  int32 events = 2;
-  int32 memory = 3;
+  uint32 cpu = 1;
+  uint32 events = 2;
+  uint32 memory = 3;
 }
 
 message ClientboundScanningVST {
   string file = 1;
   bool isFinished = 2;
-  optional int32 count = 3;
-  optional int32 current = 4;
-  optional int32 thread = 5;
+  optional uint32 count = 3;
+  optional uint32 current = 4;
+  optional uint32 thread = 5;
 }
 
 message ServerboundBrowserPath {
-  int32 type = 1;
+  uint32 type = 1;
   string title = 2;
   optional string patterns = 3;
 }
@@ -150,6 +152,11 @@ message ClientboundSendMessage {
 message TrackSampleData {
   string uuid = 1;
   repeated SampleData data = 2;
+}
+
+message DeleteTrackSample {
+  string uuid = 1;
+  repeated uint32 index = 2;
 }
 
 message EditTrackSampleData {
@@ -183,7 +190,7 @@ service ServerService { // Server bound
   rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
   rpc deleteVST (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
   rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
-  rpc deleteSample (TrackSampleData) returns (google.protobuf.Empty);
+  rpc deleteSample (DeleteTrackSample) returns (google.protobuf.Empty);
   rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);
 }
 
@@ -198,6 +205,6 @@ service ClientService { // Client bound
   rpc ping (ClientboundPing) returns (google.protobuf.Empty);
   rpc sendMessage (ClientboundSendMessage) returns (google.protobuf.Empty);
   rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
-  rpc deleteSample (TrackSampleData) returns (google.protobuf.Empty);
+  rpc deleteSample (DeleteTrackSample) returns (google.protobuf.Empty);
   rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);
 }

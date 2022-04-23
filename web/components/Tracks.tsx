@@ -6,10 +6,10 @@ import ContentEditable from 'react-contenteditable'
 import useGlobalData from '../reducer'
 import packets from '../../packets'
 import { ColorPicker } from 'mui-color'
-import { colorMap, colorValues, levelMarks, FULL_BACKEND_PATH } from '../utils'
+import { colorMap, colorValues, levelMarks, tryLoadImage, FULL_BACKEND_PATH } from '../utils'
 import {
   Paper, Box, Toolbar, Button, Slider, Stack, IconButton, Divider, alpha, useTheme,
-  Menu, MenuItem, ListItemText, ListItemIcon
+  Menu, MenuItem, ListItemText, ListItemIcon, CircularProgress
 } from '@mui/material'
 
 import Power from '@mui/icons-material/Power'
@@ -161,21 +161,39 @@ const TrackNotes = memo(function TrackNotes ({ data, width }: { data: packets.IM
   )
 })
 
-const TrackSamples = memo(function TrackSamples ({ data, noteWidth }:
-  { data: packets.ISampleData[], noteWidth: number }) {
-  const [key, setKey] = useState(0)
+const MaskBoxImage = memo(function MaskBoxImage ({ url }: { url: string }) {
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    setLoaded(false)
+    tryLoadImage(url).then(() => setLoaded(true))
+  }, [url])
+  return loaded ? <div style={{ WebkitMaskBoxImage: `url('${url}')` }} /> : <Box className='loading-sample'><CircularProgress size={20} /></Box>
+})
+const TrackSamples = memo(function TrackSamples ({ uuid, data, noteWidth, bpm, ppq }:
+  { data: packets.ISampleData[], noteWidth: number, bpm: number, ppq: number, uuid: string }) {
   return (
-    <div className='audio-clips' key={key}>
+    <div
+      className='audio-clips'
+      onMouseDown={e => {
+        const target = e.target as HTMLDivElement
+        if (e.button === 2 && target.dataset.sampleIndex != null) {
+          e.preventDefault()
+          $client.rpc.deleteSample({ uuid, index: [+target.dataset.sampleIndex!] })
+        }
+      }}
+    >
       {data.map((it, i) => {
-        const src = FULL_BACKEND_PATH + 'samples-preview/' + it.file + '.png'
         return (
           <div
             key={i}
+            data-sample-index={i}
             style={{
+              width: (it.fullTime || it.duration! / 60 * bpm * ppq) * noteWidth,
               left: noteWidth * it.position!
             }}
           >
-            <div style={{ WebkitMaskBoxImage: `url('${src}')` }}><img src={src} onError={() => setTimeout(setKey, 250, key + 1)} /></div>
+            <MaskBoxImage url={FULL_BACKEND_PATH + 'samples-preview/' + it.file + '.png'} />
+            <span className='sample-name'>{it.file}</span>
           </div>
         )
       })}
@@ -214,7 +232,6 @@ const Tracks: React.FC = () => {
   const actions: JSX.Element[] = []
   const contents: JSX.Element[] = []
   let trackCount = 0
-  const scale = 1 / 1000 / 60 * state.bpm * state.ppq * noteWidth
   for (const id in state.tracks) {
     if (!id) continue
     const it = state.tracks[id]!
@@ -226,10 +243,12 @@ const Tracks: React.FC = () => {
           backgroundColor: alpha(it.color!, 0.1),
           '& .notes div': { backgroundColor: it.color! },
           '& .audio-clips > div': {
-            transform: `scaleX(${scale})`,
             backgroundColor: alpha(it.color!, 0.2),
             border: '1px solid ' + it.color!,
-            '& > div': { backgroundColor: it.color! }
+            '& .MuiCircularProgress-root': { color: it.color! },
+            '& > div': {
+              backgroundColor: it.color!
+            }
           }
         }}
       >
@@ -244,7 +263,7 @@ const Tracks: React.FC = () => {
           }}
         >
           <TrackNotes data={it.midi!} width={noteWidth} />
-          <TrackSamples data={it.samples!} noteWidth={noteWidth} />
+          <TrackSamples data={it.samples!} noteWidth={noteWidth} ppq={state.ppq} bpm={state.bpm} uuid={id} />
         </div>
         <Divider />
       </Box>
@@ -282,13 +301,14 @@ const Tracks: React.FC = () => {
             onDrop={() => {
               if (!$dragObject || $dragObject.type !== 'loadPlugin') return
               setLoading(true)
-              $client.rpc.createTrack({ name: '轨道' + (trackCount + 1), color: colorValues[colorValues.length * Math.random() | 0], identifier: $dragObject.data }).finally(() => setLoading(false))
+              $client.rpc.createTrack({ name: '轨道' + (trackCount + 1), color: colorValues[colorValues.length * Math.random() | 0], identifier: $dragObject.data })
+                .finally(() => setLoading(false))
             }}
           >
             新增轨道
           </LoadingButton>
         </Paper>
-        <Box className='playlist' sx={{ '& .content': { height }, '& .notes div': { height: height / 132 + 'px' } }} ref={playListRef}>
+        <Box className='playlist' sx={{ '& .content': { height }, '& .notes div': { height: height / 132 + 'px' } }} ref={playListRef} onContextMenu={e => e.preventDefault()}>
           <div style={{ width: (state.maxNoteTime + state.ppq * 4) * noteWidth }}>
             <Grid timeSigNumerator={state.timeSigNumerator} width={beatWidth} />
             <svg xmlns='http://www.w3.org/2000/svg' height='100%' className='grid'>
