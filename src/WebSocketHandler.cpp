@@ -13,8 +13,8 @@ void ServerService::handleSetProjectStatus(WebSocketSession*, std::unique_ptr<EI
 	}
 	if (data->has_position()) {
 		if (info.isPlaying) master->stopAllNotes();
-		info.ppqPosition = data->position();
-		info.timeInSeconds = info.ppqPosition * 60.0 / info.bpm / master->ppq;
+		info.ppqPosition = (double)data->position() / master->ppq;
+		info.timeInSeconds = info.ppqPosition * 60.0 / info.bpm;
 		info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
 		data->clear_position();
 	}

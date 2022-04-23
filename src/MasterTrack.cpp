@@ -176,13 +176,14 @@ void MasterTrack::transportPlay(bool shouldStartPlaying) {
 void MasterTrack::calcPositionInfo() {
     if (!currentPositionInfo.isPlaying) return;
     currentPositionInfo.timeInSeconds = ((double)currentPositionInfo.timeInSamples) / getSampleRate();
-    currentPositionInfo.ppqPosition = currentPositionInfo.timeInSeconds / 60.0 * currentPositionInfo.bpm * ppq;
-    if (endTime >= currentPositionInfo.ppqPosition) return;
+    currentPositionInfo.ppqPosition = currentPositionInfo.timeInSeconds / 60.0 * currentPositionInfo.bpm;
+	currentPositionInfo.ppqPositionOfLastBarStart = (int)(currentPositionInfo.ppqPosition / currentPositionInfo.timeSigNumerator) * currentPositionInfo.timeSigNumerator;
+    if (endTime >= currentPositionInfo.ppqPosition * ppq) return;
     currentPositionInfo.timeInSeconds = 0;
     currentPositionInfo.timeInSamples = 0;
     currentPositionInfo.ppqPosition = 0;
     EIMPackets::ProjectStatus info;
-    info.set_position((int)currentPositionInfo.ppqPosition);
+    info.set_position((int)currentPositionInfo.ppqPosition * ppq);
     EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
 }
 
@@ -250,7 +251,7 @@ void MasterTrack::loadProject(juce::File newRoot) {
 
 void MasterTrack::timerCallback() {
 	EIMPackets::ClientboundPing data;
-	data.set_position((int)currentPositionInfo.ppqPosition);
+	data.set_position((int)(currentPositionInfo.ppqPosition * ppq));
 	for (auto& it : tracks) {
 		auto track = (Track*)it->getProcessor();
 		data.add_levels(track->levelL);

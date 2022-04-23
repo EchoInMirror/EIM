@@ -161,7 +161,7 @@ void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessage
 	if (!masterTrack) return;
     auto& info = masterTrack->currentPositionInfo;
     if (info.isPlaying) {
-        auto startTime = info.ppqPosition;
+        auto startTime = info.ppqPosition * masterTrack->ppq;
         auto totalTime = sampleCount / getSampleRate() / 60.0 * info.bpm * masterTrack->ppq;
         auto endTime = startTime + totalTime;
         double curTime;
@@ -184,7 +184,7 @@ void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& mid
 		if (masterTrack) {
 			auto& info = masterTrack->currentPositionInfo;
 			if (info.isPlaying) {
-				auto startTime = info.ppqPosition;
+				auto startTime = info.ppqPosition * masterTrack->ppq;
 				auto tmp = info.bpm * masterTrack->ppq / 60.0;
 				for (auto it : samples) if (it->startPPQ <= startTime) {
 					it->positionableSource.setNextReadPosition((int)(it->positionableSource.getTotalLength()
@@ -278,12 +278,6 @@ void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) 
 	for (auto it : getNodes())
 		it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
 	messageCollector.reset(newSampleRate);
-}
-
-void Track::setPlayHead(juce::AudioPlayHead* newPlayHead) {
-    AudioProcessorGraph::setPlayHead(newPlayHead);
-    for (auto it : getNodes())
-        it->getProcessor()->setPlayHead(newPlayHead);
 }
 
 void Track::setMuted(bool val) {
