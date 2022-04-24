@@ -115,8 +115,9 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
   _alignment = alignment
+
   // 加载条状态
-  const [loadingCirOn, setLoadingCir] = useState(true)
+  const [loadingCirOn, setLoadingCir] = useState(false)
   const loadingDisplay = loadingCirOn ? 'flex' : 'none'
 
   useEffect(() => {
@@ -667,12 +668,15 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
                     })
                     $client.rpc.addMidiMessages(midis)
                   })
+                  $notice.enqueueSnackbar('操作成功')
                 } else {
-                  console.log('失败')
+                  console.log(res)
+                  $notice.enqueueSnackbar(`接口请求失败 ${res.status}`)
                 }
               },
               err => {
                 console.log(err)
+                $notice.enqueueSnackbar(`错误 ${err.state}`)
               }
             )
             setLoadingCir(false)
