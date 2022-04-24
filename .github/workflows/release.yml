@@ -30,17 +30,28 @@ jobs:
         run: |
           echo "::set-output name=dir::$(npm config get cache)"
 
-      # - uses: actions/cache@v3
-      #   with:
-      #     path: ${{ steps.npm-cache.outputs.dir }}
-      #     key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-node-
+      - uses: actions/cache@v3
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Check out git repository
         uses: actions/checkout@v2
         with:
           submodules: true
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Build web page
+        run: |
+          cd ${{ github.workspace }}
+          npm install --production
+          npm run generate:proto
+          npm run build
 
       - name: Get vcpkg(windows)
         if: ${{ runner.os == 'Windows' && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
@@ -88,12 +99,19 @@ jobs:
 
       - name: Build Solution
         run: |
+          cd ${{ github.workspace }}
           cd build
           cmake --build . --parallel --config Release
+
+      - name: Pack
+        run: |
+          cd ${{ github.workspace }}/build
+          cp ../dist/ EIM_artefacts/Release/ -r
+          zip -r EIM.zip EIM_artefacts/Release/
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/EIM_artefacts/Release/Echo In Mirror.exe
+          file: build/EIM.zip
           tag: ${{ github.ref }}
