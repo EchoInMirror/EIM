@@ -1,5 +1,5 @@
 #include "MasterTrack.h"
-#include "../packets/packets.h"
+#include "packets.h"
 #include "utils/Utils.h"
 #include "Main.h"
 

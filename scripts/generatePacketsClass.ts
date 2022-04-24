@@ -78,7 +78,7 @@ for (const [, method, argType, returnType] of clientService.matchAll(/rpc (\w+) 
 `
 }
 
-fs.writeFileSync('packets/packets.h', `#pragma once
+fs.writeFileSync('src/packets.h', `#pragma once
 #include <boost/beast/core.hpp>
 #include "packets.pb.h"
 
@@ -94,7 +94,7 @@ ${serverServiceHMethods.trimEnd()}
 }
 `)
 
-fs.writeFileSync('packets/packets.cpp', `#include "packets.h"
+fs.writeFileSync('src/packets.cpp', `#include "packets.h"
 #include "../../src/websocket/WebSocketSession.h"
 
 void ServerService::handlePacket(WebSocketSession* session, std::size_t len) {

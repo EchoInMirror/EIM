@@ -1,5 +1,5 @@
 #include "PluginManager.h"
-#include "../packets/packets.h"
+#include "packets.h"
 #include "Main.h"
 
 PluginManager::PluginManager(juce::File rootPath)

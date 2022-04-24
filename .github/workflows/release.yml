@@ -56,6 +56,13 @@ jobs:
           vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
           vcpkgJsonGlob: '${{ github.workspace }}/vcpkg.json'
 
+      - name: Hack vcpkg
+        shell: cmd
+        run: |
+          echo.>> ${{ runner.workspace }}/b/vcpkg/triplets/x64-windows.cmake
+          echo set(VCPKG_BUILD_TYPE %CONFIGURATION%)>> ${{ runner.workspace }}/b/vcpkg/triplets/x64-windows.cmake
+          echo.>> ${{ runner.workspace }}/b/vcpkg/triplets/x64-windows.cmake
+
       - name: Run CMake with vcpkg.json manifest
         uses: lukka/run-cmake@main
         with:
