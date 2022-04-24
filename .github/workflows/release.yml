@@ -75,11 +75,11 @@ jobs:
           cd ${{ github.workspace }}/builds/ninja-multi-vcpkg/EIM_artefacts
           cp ${{ github.workspace }}/dist/ Release/ -r
           cp ../EIMPluginScanner.exe Release/
-          zip -r EIM.zip Release/
+          Compress-Archive -Path Release/ -DestinationPath EchoInMirror-windows-x64.zip 
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ github.workspace }}/builds/ninja-multi-vcpkg/EIM_artefacts/EIM.zip
+          file: ${{ github.workspace }}/builds/ninja-multi-vcpkg/EIM_artefacts/EchoInMirror-windows-x64.zip 
           tag: ${{ github.ref }}
