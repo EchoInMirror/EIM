@@ -165,6 +165,13 @@ message EditTrackSampleData {
   repeated SampleData data = 3;
 }
 
+message ServerboundRender {
+  string path;
+  optional double sampleRate;
+  optional double sampleDepth
+}
+
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
@@ -189,7 +196,7 @@ service ServerService { // Server bound
   rpc ping (google.protobuf.Empty) returns (ClientboundPong);
   rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
   rpc deleteVST (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
-  rpc render (google.protobuf.Empty) returns (Empty);
+  rpc render (ServerboundRender) returns (Empty);
   rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
   rpc deleteSample (DeleteTrackSample) returns (google.protobuf.Empty);
   rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);
