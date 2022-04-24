@@ -558,62 +558,56 @@ void ServerService::handleEditMidiMessages(WebSocketSession*, std::unique_ptr<EI
     EIMApplication::getEIMInstance()->undoManager.beginNewTransaction();
 }
 
-void ServerService::handleRender(WebSocketSession*, std::function<void(EIMPackets::Empty&)>) {
-    auto file = juce::File::getCurrentWorkingDirectory().getChildFile("test-4-23.wav");
-    auto& track = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
-    track->render(file);
-}
-
 void ServerService::handleAddSample(WebSocketSession*, std::unique_ptr<EIMPackets::TrackSampleData> data) {
-	auto instance = EIMApplication::getEIMInstance();
-	auto& masterTrack = instance->mainWindow->masterTrack;
-	auto& tracks = masterTrack->tracksMap;
-	auto& uuid = data->uuid();
-	if (!tracks.contains(uuid)) return;
-	auto& sampleManager = masterTrack->sampleManager;
-	auto track = (Track*)tracks[uuid]->getProcessor();
-	auto& samplePath = instance->config.samplesPath;
-	std::vector<SampleManager::SampleInfo*> infoArr;
-	for (auto& it : data->data()) {
-		infoArr.push_back(sampleManager.samples.contains(it.file())
-			? &sampleManager.samples[it.file()]
-			: sampleManager.loadSample(samplePath.getChildFile(it.file())));
-	}
-	runOnMainThread([&] {
-		int i = 0;
-		for (auto& it : *data->mutable_data()) {
-			if (infoArr[i] != nullptr) {
-				it.set_duration(infoArr[i]->fullTime);
-				track->addSample(infoArr[i], it.position());
-			}
-			i++;
-		}
-	});
-	instance->listener->boardcast(std::move(EIMMakePackets::makeAddSamplePacket(*data)));
-	masterTrack->checkEndTime();
+    auto instance = EIMApplication::getEIMInstance();
+    auto& masterTrack = instance->mainWindow->masterTrack;
+    auto& tracks = masterTrack->tracksMap;
+    auto& uuid = data->uuid();
+    if (!tracks.contains(uuid)) return;
+    auto& sampleManager = masterTrack->sampleManager;
+    auto track = (Track*)tracks[uuid]->getProcessor();
+    auto& samplePath = instance->config.samplesPath;
+    std::vector<SampleManager::SampleInfo*> infoArr;
+    for (auto& it : data->data()) {
+        infoArr.push_back(sampleManager.samples.contains(it.file()) ?
+                              &sampleManager.samples[it.file()] :
+                              sampleManager.loadSample(samplePath.getChildFile(it.file())));
+    }
+    runOnMainThread([&] {
+        int i = 0;
+        for (auto& it : *data->mutable_data()) {
+            if (infoArr[i] != nullptr) {
+                it.set_duration(infoArr[i]->fullTime);
+                track->addSample(infoArr[i], it.position());
+            }
+            i++;
+        }
+    });
+    instance->listener->boardcast(std::move(EIMMakePackets::makeAddSamplePacket(*data)));
+    masterTrack->checkEndTime();
 }
 
 void ServerService::handleDeleteSample(WebSocketSession*, std::unique_ptr<EIMPackets::DeleteTrackSample> data) {
-	auto instance = EIMApplication::getEIMInstance();
-	auto& masterTrack = instance->mainWindow->masterTrack;
-	auto& tracks = masterTrack->tracksMap;
-	auto& uuid = data->uuid();
-	if (!tracks.contains(uuid)) return;
-	auto& sampleManager = masterTrack->sampleManager;
-	auto track = (Track*)tracks[uuid]->getProcessor();
-	auto& samples = track->samples;
-	int times = 0;
-	DBG(uuid);
-	for (auto it : data->index()) {
-		DBG(it);
-		auto cur = it - times;
-		if (samples.size() > cur) {
-			samples.erase(samples.begin() + cur);
-			times++;
-		}
-	}
-	instance->listener->boardcast(std::move(EIMMakePackets::makeDeleteSamplePacket(*data)));
-	masterTrack->checkEndTime();
+    auto instance = EIMApplication::getEIMInstance();
+    auto& masterTrack = instance->mainWindow->masterTrack;
+    auto& tracks = masterTrack->tracksMap;
+    auto& uuid = data->uuid();
+    if (!tracks.contains(uuid)) return;
+    auto& sampleManager = masterTrack->sampleManager;
+    auto track = (Track*)tracks[uuid]->getProcessor();
+    auto& samples = track->samples;
+    int times = 0;
+    DBG(uuid);
+    for (auto it : data->index()) {
+        DBG(it);
+        auto cur = it - times;
+        if (samples.size() > cur) {
+            samples.erase(samples.begin() + cur);
+            times++;
+        }
+    }
+    instance->listener->boardcast(std::move(EIMMakePackets::makeDeleteSamplePacket(*data)));
+    masterTrack->checkEndTime();
 }
 
 void ServerService::handleEditSample(WebSocketSession*, std::unique_ptr<EIMPackets::EditTrackSampleData> data) {

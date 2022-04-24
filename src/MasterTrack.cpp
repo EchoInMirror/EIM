@@ -18,7 +18,7 @@ MasterTrack::MasterTrack() : AudioProcessorGraph(), juce::AudioPlayHead(), juce:
                          setup.bufferSize == 0 ? 1024 : setup.bufferSize);
     prepareToPlay(getSampleRate(), getBlockSize());
 
-	startTimer(100);
+    startTimer(100);
 }
 
 void MasterTrack::init() {
@@ -116,18 +116,19 @@ void MasterTrack::loadPluginFromFile(juce::var& json, juce::File root,
 }
 
 void MasterTrack::checkEndTime() {
-	int time = 0;
-	auto tmp = currentPositionInfo.bpm * ppq / 60.0;
-	for (auto& trackNode : tracks) {
-		auto track = (Track*)trackNode->getProcessor();
-		auto cur = (int)track->midiSequence.getEndTime();
-		if (cur > time) time = cur;
-		for (auto& sample : track->samples) {
-			auto cur = (int)(sample->startPPQ + (sample->fullTime <= 0 ? sample->info->fullTime * tmp : sample->fullTime));
-			if (cur > time) time = cur;
-		}
-	}
-	checkEndTime(time);
+    int time = 0;
+    auto tmp = currentPositionInfo.bpm * ppq / 60.0;
+    for (auto& trackNode : tracks) {
+        auto track = (Track*)trackNode->getProcessor();
+        auto cur = (int)track->midiSequence.getEndTime();
+        if (cur > time) time = cur;
+        for (auto& sample : track->samples) {
+            auto cur =
+                (int)(sample->startPPQ + (sample->fullTime <= 0 ? sample->info->fullTime * tmp : sample->fullTime));
+            if (cur > time) time = cur;
+        }
+    }
+    checkEndTime(time);
 }
 
 void MasterTrack::checkEndTime(int time) {
@@ -290,19 +291,25 @@ void MasterTrack::processBlockBuffer(juce::AudioBuffer<float>& buffer) {
 }
 
 void MasterTrack::render(juce::File file) {
+    juce::AudioProcessor* pre = this->graphPlayer.getCurrentProcessor();
     this->graphPlayer.setProcessor(nullptr);
+    juce::AudioPlayHead::CurrentPositionInfo copyInfo = this->currentPositionInfo;
     this->currentPositionInfo.ppqPosition = 0;
     this->currentPositionInfo.timeInSamples = 0;
     this->currentPositionInfo.timeInSeconds = 0;
     this->currentPositionInfo.editOriginTime = 0;
-    auto outStream = file.createOutputStream();
+    this->outStream = std::move(file.createOutputStream());
     juce::WavAudioFormat format;
     juce::StringPairArray pair;
     this->bufferBlockSize = this->getBlockSize();
     DBG("start render : " << this->getSampleRate() << "; " << this->getNumOutputChannels());
-    std::unique_ptr<juce::AudioFormatWriter> audioWirte(
-        format.createWriterFor(outStream.release(), this->getSampleRate(), this->getNumOutputChannels(), 16, pair, 0));
+    std::unique_ptr<juce::AudioFormatWriter> audioWirte(format.createWriterFor(
+        this->outStream.get(), this->getSampleRate(), this->getNumOutputChannels(), 16, pair, 0));
     this->currentPositionInfo.isPlaying = true;
-    auto render = new Renderer();
-    render->render(this, std::move(audioWirte));
+    this->renderer = std::make_unique<Renderer>();
+    this->renderer->render(this, std::move(audioWirte), [this, copyInfo, pre]() {
+        DBG("call back");
+        this->currentPositionInfo = copyInfo;
+        this->graphPlayer.setProcessor(pre);
+    });
 }

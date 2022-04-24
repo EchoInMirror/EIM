@@ -68,6 +68,9 @@ private:
     std::unique_ptr<juce::FileChooser> chooser;
     std::vector<std::string> deletedTracks;
 
+    std::unique_ptr<Renderer> renderer;
+    std::unique_ptr<juce::FileOutputStream> outStream;
+
     void calcPositionInfo();
     void timerCallback() override;
 
