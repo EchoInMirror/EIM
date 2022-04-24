@@ -43,6 +43,8 @@ jobs:
           npm install --production
           npm run generate:proto
           npm run build
+          rm -r .parcel-cache
+          rm -r node_modules
 
       - uses: lukka/get-cmake@main
 
