@@ -44,10 +44,10 @@ jobs:
           npm run generate:proto
           npm run build
 
-      - uses: lukka/get-cmake@latest
+      - uses: lukka/get-cmake@main
 
       - name: Restore artifacts, or setup vcpkg (do not install any package)
-        uses: lukka/run-vcpkg@latest
+        uses: lukka/run-vcpkg@main
         id: runvcpkg
         with:
           vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
@@ -55,7 +55,7 @@ jobs:
           vcpkgJsonGlob: '${{ github.workspace }}/vcpkg.json'
 
       - name: Run CMake with vcpkg.json manifest
-        uses: lukka/run-cmake@v10
+        uses: lukka/run-cmake@main
         with:
           cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
           configurePreset: ninja-multi-vcpkg
