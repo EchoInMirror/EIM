@@ -72,14 +72,14 @@ jobs:
 
       - name: Pack
         run: |
-          cd ${{ github.workspace }}/builds
-          cp ../dist/ EIM_artefacts/Release/ -r
-          cp EIMPluginScanner.exe EIM_artefacts/Release/
-          zip -r EIM.zip EIM_artefacts/Release/
+          cd ${{ github.workspace }}/builds/ninja-multi-vcpkg/EIM_artefacts
+          cp ${{ github.workspace }}/dist/ Release/ -r
+          cp ../EIMPluginScanner.exe Release/
+          zip -r EIM.zip Release/
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: builds/EIM.zip
+          file: ${{ github.workspace }}/builds/ninja-multi-vcpkg/EIM_artefacts/EIM.zip
           tag: ${{ github.ref }}
