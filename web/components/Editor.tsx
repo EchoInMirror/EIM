@@ -118,7 +118,6 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
 
   // 加载条状态
   const [loadingCirOn, setLoadingCir] = useState(false)
-  const loadingDisplay = loadingCirOn ? 'flex' : 'none'
 
   useEffect(() => {
     const fn = () => {
@@ -269,6 +268,8 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
     $client.emit('editor:selectedNotes', selectedIndexes)
     return len
   }
+
+  console.log(midi)
 
   return (
     <div
@@ -482,7 +483,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
         }
       }}
     >
-      <Box className='editor-loading-cir' sx={{ display: loadingDisplay }}><Box><CircularProgress /></Box></Box>
+      {loadingCirOn && <Box className='editor-loading-cir'><Box><CircularProgress /></Box></Box>}
       {notes}
       <Menu open={!!contextMenu} onClose={close} anchorReference='anchorPosition' anchorPosition={contextMenu} sx={{ '& .MuiPaper-root': { width: 170 } }}>
         <MenuItem
@@ -668,15 +669,15 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
                     })
                     $client.rpc.addMidiMessages(midis)
                   })
-                  $notice.enqueueSnackbar('操作成功')
+                  $notice.enqueueSnackbar('操作成功', { variant: 'success' })
                 } else {
                   console.log(res)
-                  $notice.enqueueSnackbar(`接口请求失败 ${res.status}`)
+                  $notice.enqueueSnackbar(`接口请求失败 ${res.status}`, { variant: 'error' })
                 }
               },
               err => {
                 console.log(err)
-                $notice.enqueueSnackbar(`错误 ${err.state}`)
+                $notice.enqueueSnackbar(`发生错误! ${err.state}`, { variant: 'error' })
               }
             )
             setLoadingCir(false)

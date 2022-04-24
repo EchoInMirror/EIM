@@ -237,13 +237,13 @@ const EventEditor = memo(function EventEditor ({
               } else {
                 targetMidiIndexes = _midi
               }
-              const waitSometime = Object.keys(targetMidiIndexes).length * (100 + Math.random() * 20 - Math.random() * 20)
+              const waitSometime = Object.keys(targetMidiIndexes).length * (100 + Math.random() * 20 - Math.random() * 20) / 5
               setLoadingCir(true)
 
               for (const id in targetMidiIndexes) {
-                const randomVel: number = Math.floor((Math.random() * 50) + 60)
+                const randomVel: number = Math.floor((Math.random() * 30) + 75)
                 const note = _midi[id]
-                midis.data?.push(Number(id))
+                midis.data?.push(+id)
                 const data = (note.data! << 16 >> 16) | (randomVel << 16)
                 midis.midi?.push({
                   time: note.time,
@@ -253,6 +253,7 @@ const EventEditor = memo(function EventEditor ({
               setTimeout(() => {
                 $client.rpc.editMidiMessages(midis)
                 setLoadingCir(false)
+                $notice.enqueueSnackbar('处理成功!', { variant: 'success' })
               }, waitSometime)
             }}
           >

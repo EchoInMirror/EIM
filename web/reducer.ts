@@ -11,7 +11,7 @@ export const initialState = {
   timeSigDenominator: 4,
   maxNoteTime: 0,
   tracks: { } as Record<string, packets.ITrackInfo | undefined>,
-  remiUrl: 'http://localhost:8010/remi_gen'
+  remiUrl: 'http://abyss.apisium.cn:8010/remi_gen'
 }
 
 export type StateType = typeof initialState
