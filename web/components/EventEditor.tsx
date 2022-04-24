@@ -3,7 +3,6 @@ import packets from '../../packets'
 import React, { useMemo, memo, useEffect, useRef, useState } from 'react'
 import { Resizable } from 're-resizable'
 import { Paper, Box, useTheme, alpha, Select, MenuItem, Button, CircularProgress } from '@mui/material'
-import IMidiMessages = EIMPackets.IMidiMessages
 
 const EventEditorGrid = memo(function EventEditorGrid ({
   width,
@@ -227,7 +226,7 @@ const EventEditor = memo(function EventEditor ({
             size='small'
             onClick={() => {
               if (!_midi) return
-              const midis: IMidiMessages = {
+              const midis: packets.IMidiMessages = {
                 uuid: $globalData.activeTrack,
                 midi: [],
                 data: []
