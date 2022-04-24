@@ -48,6 +48,13 @@ if(MSVC)
     set_property(TARGET EIM PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif(MSVC)
 
+set(pluginScannerPath ${CMAKE_CURRENT_BINARY_DIR}/EIMPluginScanner.exe)
+if(NOT EXISTS ${pluginScannerPath})
+    message(STATUS "Downloading EIMPluginScanner...")
+    file(DOWNLOAD https://github.com/EchoInMirror/EIMPluginScanner/releases/latest/download/EIMPluginScanner.exe ${pluginScannerPath} SHOW_PROGRESS)
+    message(STATUS "Downloaded EIMPluginScanner.")
+endif()
+
 target_compile_definitions(EIM
     PRIVATE
         JUCE_WEB_BROWSER=0
