@@ -7,25 +7,16 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
-    env:
-      BUILD_TYPE: Release
+    name: ${{ matrix.os }}-${{ github.workflow }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        include:
+          - os: windows-latest
+            vcpkgCommitId: '2ac61f87f69f0484b8044f95ab274038fbaf7bdd'
     steps:
-      - name: Restore vcpkg and its artifacts.
-        uses: actions/cache@v3
-        id: vcpkg-cache
-        with:
-          path: |
-            ${{ env.VCPKG_INSTALLATION_ROOT }} 
-            ./build/vcpkg_installed
-            ${{ env.HOME }}/.cache/vcpkg/archives
-            ${{ env.XDG_CACHE_HOME }}/vcpkg/archives
-            ${{ env.LOCALAPPDATA }}\vcpkg\archives
-            ${{ env.APPDATA }}\vcpkg\archives
-          key: ${{ runner.os }}-${{ env.BUILD_TYPE }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('./vcpkg.json')}}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.BUILD_TYPE }}
-
       - name: Get npm cache directory
         id: npm-cache
         run: |
@@ -53,12 +44,22 @@ jobs:
           npm run generate:proto
           npm run build
 
-      - name: Running cmake
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
-          cmake --build . --parallel --config Release
+      - uses: lukka/get-cmake@latest
+
+      - name: Restore artifacts, or setup vcpkg (do not install any package)
+        uses: lukka/run-vcpkg@latest
+        id: runvcpkg
+        with:
+          vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
+          vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
+          vcpkgJsonGlob: '${{ github.workspace }}/vcpkg.json'
+
+      - name: Run CMake with vcpkg.json manifest
+        uses: lukka/run-cmake@latest
+        with:
+          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          configurePreset: ninja-multi-vcpkg
+          buildPreset: ninja-multi-vcpkg
 
       - name: Pack
         run: |
