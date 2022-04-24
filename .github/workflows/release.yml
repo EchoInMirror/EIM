@@ -49,21 +49,15 @@ jobs:
 
       - name: Build web page
         run: |
-          cd ${{ github.workspace }}
           npm install --production
           npm run generate:proto
           npm run build
 
       - name: Running cmake
         run: |
-          cd ${{ github.workspace }}
+          mkdir build
           cd build
           cmake .. -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build Solution
-        run: |
-          cd ${{ github.workspace }}
-          cd build
           cmake --build . --parallel --config Release
 
       - name: Pack
