@@ -197,7 +197,7 @@ const EventEditor = memo(function EventEditor ({
 
   // 加载条状态
   const [loadingCirOn, setLoadingCir] = useState(false)
-  const loadingDisplay = loadingCirOn ? 'block' : 'none'
+  const loadingDisplay = loadingCirOn ? 'flex' : 'none'
   return (
     <Resizable enable={{ top: true }} minHeight={0} className='event-editor'>
       <Box className='event-editor-cir' sx={{ display: loadingDisplay }}><Box><CircularProgress /></Box></Box>
