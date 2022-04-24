@@ -6,7 +6,6 @@ class PluginWindow : public juce::DocumentWindow {
 public:
     PluginWindow(juce::AudioPluginInstance* instance, std::unordered_map<juce::AudioPluginInstance*, PluginWindow>* pluginWindows);
     ~PluginWindow() {
-		DBG("~PluginWindow");
 		clearContentComponent();
 	}
 

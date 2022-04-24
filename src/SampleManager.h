@@ -10,7 +10,7 @@ public:
 		juce::String name;
 		juce::String hash;
 		double fullTime;
-		double sampleRate;// auto positionableSource = new juce::AudioFormatReaderSource(reader, true);
+		double sampleRate;
 		juce::AudioFormatReader* reader;
 	};
 	std::unordered_map<juce::String, SampleInfo> samples;

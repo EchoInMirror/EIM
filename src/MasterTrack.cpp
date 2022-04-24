@@ -116,19 +116,19 @@ void MasterTrack::loadPluginFromFile(juce::var& json, juce::File root,
 }
 
 void MasterTrack::checkEndTime() {
-    int time = 0;
-    auto tmp = currentPositionInfo.bpm * ppq / 60.0;
-    for (auto& trackNode : tracks) {
-        auto track = (Track*)trackNode->getProcessor();
-        auto cur = (int)track->midiSequence.getEndTime();
-        if (cur > time) time = cur;
-        for (auto& sample : track->samples) {
-            auto cur =
-                (int)(sample->startPPQ + (sample->fullTime <= 0 ? sample->info->fullTime * tmp : sample->fullTime));
-            if (cur > time) time = cur;
-        }
-    }
-    checkEndTime(time);
+
+	int time = 0;
+	auto tmp = currentPositionInfo.bpm * ppq / 60.0;
+	for (auto& trackNode : tracks) {
+		auto track = (Track*)trackNode->getProcessor();
+		auto cur = (int)track->midiSequence.getEndTime();
+		if (cur > time) time = cur;
+		for (auto& sample : track->samples) {
+			cur = (int)(sample->startPPQ + (sample->fullTime <= 0 ? sample->info->fullTime * tmp : sample->fullTime));
+			if (cur > time) time = cur;
+		}
+	}
+	checkEndTime(time);
 }
 
 void MasterTrack::checkEndTime(int time) {
@@ -183,13 +183,14 @@ void MasterTrack::transportPlay(bool shouldStartPlaying) {
 void MasterTrack::calcPositionInfo() {
     if (!currentPositionInfo.isPlaying) return;
     currentPositionInfo.timeInSeconds = ((double)currentPositionInfo.timeInSamples) / getSampleRate();
-    currentPositionInfo.ppqPosition = currentPositionInfo.timeInSeconds / 60.0 * currentPositionInfo.bpm * ppq;
-    if (endTime >= currentPositionInfo.ppqPosition) return;
+    currentPositionInfo.ppqPosition = currentPositionInfo.timeInSeconds / 60.0 * currentPositionInfo.bpm;
+	currentPositionInfo.ppqPositionOfLastBarStart = (int)(currentPositionInfo.ppqPosition / currentPositionInfo.timeSigNumerator) * currentPositionInfo.timeSigNumerator;
+    if (endTime >= currentPositionInfo.ppqPosition * ppq) return;
     currentPositionInfo.timeInSeconds = 0;
     currentPositionInfo.timeInSamples = 0;
     currentPositionInfo.ppqPosition = 0;
     EIMPackets::ProjectStatus info;
-    info.set_position((int)currentPositionInfo.ppqPosition);
+    info.set_position((int)currentPositionInfo.ppqPosition * ppq);
     EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makeSetProjectStatusPacket(info));
 }
 
@@ -257,15 +258,15 @@ void MasterTrack::loadProject(juce::File newRoot) {
 }
 
 void MasterTrack::timerCallback() {
-    EIMPackets::ClientboundPing data;
-    data.set_position((int)currentPositionInfo.ppqPosition);
-    for (auto& it : tracks) {
-        auto track = (Track*)it->getProcessor();
-        data.add_levels(track->levelL);
-        data.add_levels(track->levelR);
-        track->levelL = track->levelR = 0.0f;
-    }
-    EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makePingPacket(data));
+	EIMPackets::ClientboundPing data;
+	data.set_position((int)(currentPositionInfo.ppqPosition * ppq));
+	for (auto& it : tracks) {
+		auto track = (Track*)it->getProcessor();
+		data.add_levels(track->levelL);
+		data.add_levels(track->levelR);
+		track->levelL = track->levelR = 0.0f;
+	}
+	EIMApplication::getEIMInstance()->listener->boardcast(EIMMakePackets::makePingPacket(data));
 }
 
 MasterTrack::SystemInfoTimer::SystemInfoTimer() {

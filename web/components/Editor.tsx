@@ -6,14 +6,15 @@ import EventEditor from './EventEditor'
 import PlayRuler, { moveScrollbar } from './PlayRuler'
 import { keyNames } from '../utils'
 import {
-  Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider, ListItemIcon,
-  ListItemText, Typography, Checkbox, TextField, FormControlLabel
+  Paper, Button, Box, useTheme, lighten, alpha, Slider, FormControl, Menu, MenuItem, Select, InputLabel, Divider,
+  ListItemIcon, ListItemText, Typography, Checkbox, TextField, FormControlLabel, CircularProgress
 } from '@mui/material'
 
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import ContentCut from '@mui/icons-material/ContentCut'
 import ContentPaste from '@mui/icons-material/ContentPaste'
 import Lightbulb from '@mui/icons-material/Lightbulb'
+import * as midiManager from 'midi-file'
 
 export let barLength = 0
 export const playHeadRef = createRef<HTMLDivElement>()
@@ -114,6 +115,9 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
   const ref = useRef<HTMLDivElement | null>(null)
   const alignmentWidth = width * alignment
   _alignment = alignment
+
+  // 加载条状态
+  const [loadingCirOn, setLoadingCir] = useState(false)
 
   useEffect(() => {
     const fn = () => {
@@ -264,6 +268,8 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
     $client.emit('editor:selectedNotes', selectedIndexes)
     return len
   }
+
+  console.log(midi)
 
   return (
     <div
@@ -477,6 +483,7 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
         }
       }}
     >
+      {loadingCirOn && <Box className='editor-loading-cir'><Box><CircularProgress /></Box></Box>}
       {notes}
       <Menu open={!!contextMenu} onClose={close} anchorReference='anchorPosition' anchorPosition={contextMenu} sx={{ '& .MuiPaper-root': { width: 170 } }}>
         <MenuItem
@@ -543,7 +550,139 @@ const Notes = memo(function Notes ({ midi, width, height, ppq, color, alignment,
           <ListItemIcon><ContentPaste fontSize='small' /></ListItemIcon>
           <ListItemText>从剪辑版粘贴</ListItemText>
         </MenuItem>
-        <MenuItem>
+        <MenuItem
+          onClick={async () => {
+            setLoadingCir(true)
+
+            function getBinaryNthBit (num: number | undefined, position: number) {
+              // 取数字的二进制的倒序第n位
+              return num ? (num ^ (num >> position << position)) >> (position - 1) : 0
+            }
+
+            function getBinaryNthByte (num: number | undefined, position: number) {
+              // 取数字的二进制的倒序第n个字节 position不要大于4
+              const leftNth = position * 8
+              const rightNth = (position - 1) * 8
+              return num ? (num ^ (num >> leftNth << leftNth)) >> rightNth : 0
+            }
+
+            function getMidiMessageNoteNumber (midiMessage: packets.IMidiMessage) {
+              return midiMessage.data ? getBinaryNthByte(midiMessage.data, 2) - 1 : 0
+            }
+
+            let previousNoteTime = 0
+
+            function midiMessageToObj (midiMessage: packets.IMidiMessage) {
+              // 把IMidiMessage对象转为midi-file包中midi的格式
+              const result = {
+                deltaTime: ((midiMessage.time ?? 0) - previousNoteTime) / 2,
+                channel: 0,
+                type: getBinaryNthBit(midiMessage.data!, 5) ? 'noteOn' : 'noteOff',
+                noteNumber: getMidiMessageNoteNumber(midiMessage),
+                velocity: midiMessage.data! >> 16
+              }
+              previousNoteTime = midiMessage.time ?? 0
+              return result
+            }
+
+            let previousDeltaTime = 0
+
+            function objToMidiMessage (obj: {
+              deltaTime: number,
+              channel: number,
+              type: string,
+              noteNumber: number,
+              velocity: number
+            }) {
+              previousDeltaTime += obj.deltaTime
+              return {
+                time: previousDeltaTime,
+                data: (obj.type === 'noteOn' ? 0x90 : 0x80) | (obj.noteNumber + 1) << 8 | obj.velocity << 16
+              }
+            }
+
+            const midiArray = []
+            midiArray.push({
+              deltaTime: 0,
+              meta: true,
+              type: 'trackName',
+              text: 'default'
+            })
+            for (const i of midi) {
+              midiArray.push(midiMessageToObj(i))
+            }
+            midiArray.push({
+              deltaTime: 0,
+              meta: true,
+              type: 'endOfTrack'
+            })
+            const midiObj: midiManager.MidiData = {
+              header: {
+                format: 1,
+                numTracks: 1,
+                ticksPerBeat: window.$globalData.ppq
+              },
+              // @ts-ignore
+              tracks: [midiArray]
+            }
+            const output = midiManager.writeMidi(midiObj)
+            const outputBuffer = Buffer.from(output)
+            const bytes = new Uint8Array(outputBuffer)
+            const midiFile = new Blob([bytes])
+
+            const formData = new FormData()
+            formData.append('file', midiFile, 'input.mid')
+            close()
+            await fetch(
+              window.$globalData.remiUrl,
+              {
+                method: 'POST',
+                body: formData
+              }
+            ).then(
+              res => {
+                if (res.status === 200) {
+                  res.body?.getReader().read().then(res => {
+                    const getMidiBuffer = Buffer.from(res.value!)
+                    const getMidi = midiManager.parseMidi(getMidiBuffer)
+                    const getMidiArray = getMidi.tracks[1].filter((midiEvent) => {
+                      return midiEvent.type === 'noteOn' || midiEvent.type === 'noteOff'
+                    })
+                    const midis: packets.IMidiMessages = {
+                      uuid: $globalData.activeTrack,
+                      midi: [],
+                      data: []
+                    }
+                    for (const id in getMidiArray) {
+                      midis.data?.push(Number(id))
+                      // @ts-ignore
+                      midis.midi?.push(objToMidiMessage(getMidiArray[id]))
+                    }
+
+                    const delMidi: number[] = []
+                    for (const i in midi) {
+                      delMidi.push(Number(i))
+                    }
+                    $client.rpc.deleteMidiMessages({
+                      uuid: $globalData.activeTrack,
+                      data: delMidi
+                    })
+                    $client.rpc.addMidiMessages(midis)
+                  })
+                  $notice.enqueueSnackbar('操作成功', { variant: 'success' })
+                } else {
+                  console.log(res)
+                  $notice.enqueueSnackbar(`接口请求失败 ${res.status}`, { variant: 'error' })
+                }
+              },
+              err => {
+                console.log(err)
+                $notice.enqueueSnackbar(`发生错误! ${err.state}`, { variant: 'error' })
+              }
+            )
+            setLoadingCir(false)
+          }}
+        >
           <ListItemIcon><Lightbulb fontSize='small' /></ListItemIcon>
           <ListItemText>AI 续写</ListItemText>
         </MenuItem>

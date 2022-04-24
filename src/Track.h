@@ -32,7 +32,6 @@ class Track : public juce::AudioProcessorGraph {
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
     void prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) override;
-    void setPlayHead(juce::AudioPlayHead* newPlayHead) override;
     virtual void setProcessingPrecision(ProcessingPrecision newPrecision);
     virtual void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize);
 

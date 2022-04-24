@@ -10,7 +10,8 @@ export const initialState = {
   timeSigNumerator: 4,
   timeSigDenominator: 4,
   maxNoteTime: 0,
-  tracks: { } as Record<string, packets.ITrackInfo | undefined>
+  tracks: { } as Record<string, packets.ITrackInfo | undefined>,
+  remiUrl: 'http://abyss.apisium.cn:8010/remi_gen'
 }
 
 export type StateType = typeof initialState

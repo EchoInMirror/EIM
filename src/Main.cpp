@@ -10,11 +10,17 @@ void EIMApplication::initialise(const juce::String& commandLine) {
     pluginManager.reset(new PluginManager(config.rootPath));
     auto address = boost::asio::ip::make_address("0.0.0.0");
 
-    listener = boost::make_shared<Listener>(ioc, boost::asio::ip::tcp::endpoint{address, 8088});
+	int port = 8088;
+    listener = boost::make_shared<Listener>(ioc, boost::asio::ip::tcp::endpoint{
+		address, boost::asio::ip::port_type(port) });
     listener->doAccept();
 
     v.reserve(4);
     for (auto i = 0; i < 4; i++) { v.emplace_back([this] { ioc.run(); }).detach();  }
+
+#ifndef JUCE_DEBUG
+	juce::URL("http://127.0.0.1:" + port).launchInDefaultBrowser();
+#endif
 }
 
 void EIMApplication::shutdown() { mainWindow = nullptr; }

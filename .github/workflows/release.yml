@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      VCPKG_ROOT: '${{ github.workspace }}/vcpkg'
+    steps:
+      - name: Restore vcpkg and its artifacts.
+        uses: actions/cache@v3
+        id: vcpkg-cache
+        with:
+          path: |
+            ${{ env.VCPKG_ROOT }}
+            ${{ github.workspace }}/build/vcpkg_installed
+            !${{ env.VCPKG_ROOT }}/.git
+            !${{ env.VCPKG_ROOT }}/buildtrees
+            !${{ env.VCPKG_ROOT }}/packages
+            !${{ env.VCPKG_ROOT }}/downloads
+          key: |
+            ${{ hashFiles( 'vcpkg.json' ) }}-${{ runner.os }}-cache-key-v1
+
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+
+      - uses: actions/cache@v3
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Check out git repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Build web page
+        run: |
+          cd ${{ github.workspace }}
+          npm install --production
+          npm run generate:proto
+          npm run build
+
+      - name: Get vcpkg(windows)
+        if: ${{ runner.os == 'Windows' && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+        run: |
+          cd ${{ github.workspace }}
+          mkdir build -force
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+      - name: Get vcpkg(Linux)
+        if: ${{ runner.os == 'Linux' && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+        run: |
+          cd ${{ github.workspace }}
+          mkdir -p build
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          ./bootstrap-vcpkg.sh
+      - name: install deps and remove vcpkg(Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev xorg-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
+          sudo rm -rf "$VCPKG_INSTALLATION_ROOT"
+        shell: bash
+
+      - name: remove system vcpkg(windows)
+        if: runner.os == 'Windows'
+        run: rm -rf "$VCPKG_INSTALLATION_ROOT"
+        shell: bash
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+
+      - name: Running cmake
+        run: |
+          cd ${{ github.workspace }}
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Solution
+        run: |
+          cd ${{ github.workspace }}
+          cd build
+          cmake --build . --parallel --config Release -DVCPKG_TARGET_TRIPLET=x64-windows-static
+
+      - name: Pack
+        run: |
+          cd ${{ github.workspace }}/build
+          cp ../dist/ EIM_artefacts/Release/ -r
+          zip -r EIM.zip EIM_artefacts/Release/
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/EIM.zip
+          tag: ${{ github.ref }}

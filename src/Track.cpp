@@ -111,14 +111,36 @@ juce::AudioProcessorGraph::NodeID Track::addEffectPlugin(std::unique_ptr<juce::A
 }
 
 void Track::removeEffectPlugin(juce::AudioPluginInstance* instance) {
+	auto found = false;
+	for (auto it = plugins.begin(); it != plugins.end(); it++) if ((*it)->getProcessor() == instance) {
+		plugins.erase(it);
+		found = true;
+		break;
+	}
+	if (!found) return;
+	EIMApplication::getEIMInstance()->pluginManager->pluginWindows.erase(instance);
     for (auto node : getNodes()) {
-        if (node->getProcessor() == instance) removeNode(node);
+		if (node->getProcessor() == instance) {
+			juce::AudioProcessorGraph::NodeID prev, post;
+			for (auto& conn : getConnections()) {
+				if (conn.destination.nodeID == node->nodeID) prev = conn.source.nodeID;
+				else post = conn.destination.nodeID;
+			}
+			addAudioConnection(prev, post);
+			removeNode(node);
+			break;
+		}
     }
 }
 
 void Track::setInstrument(std::unique_ptr<juce::AudioPluginInstance> instance) {
+	if (instrumentNode) {
+		EIMApplication::getEIMInstance()->pluginManager->pluginWindows
+			.erase((juce::AudioPluginInstance*)instrumentNode->getProcessor());
+		removeNode(instrumentNode);
+	}
     if (!instance) {
-        instrumentNode = nullptr;
+		instrumentNode = nullptr;
         return;
     }
     instrumentNode = addNode(std::move(instance));
@@ -139,7 +161,7 @@ void Track::addMidiEventsToBuffer(int sampleCount, juce::MidiBuffer& midiMessage
 	if (!masterTrack) return;
     auto& info = masterTrack->currentPositionInfo;
     if (info.isPlaying) {
-        auto startTime = info.ppqPosition;
+        auto startTime = info.ppqPosition * masterTrack->ppq;
         auto totalTime = sampleCount / getSampleRate() / 60.0 * info.bpm * masterTrack->ppq;
         auto endTime = startTime + totalTime;
         double curTime;
@@ -162,13 +184,21 @@ void Track::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& mid
 		if (masterTrack) {
 			auto& info = masterTrack->currentPositionInfo;
 			if (info.isPlaying) {
-				auto startTime = info.ppqPosition;
+				auto startTime = info.ppqPosition * masterTrack->ppq;
+				auto totalTime = numSamples / getSampleRate() / 60.0 * info.bpm * masterTrack->ppq;
+				auto endTime = startTime + totalTime;
 				auto tmp = info.bpm * masterTrack->ppq / 60.0;
-				for (auto it : samples) if (it->startPPQ <= startTime) {
-					it->positionableSource.setNextReadPosition((int)(it->positionableSource.getTotalLength()
-						* (startTime - it->startPPQ) / (it->fullTime == 0 ? it->info->fullTime * tmp : it->fullTime)));
-					juce::AudioSourceChannelInfo channelInfo(buffer);
-					it->resamplingAudioSource.getNextAudioBlock(channelInfo);
+				juce::AudioBuffer<float> buffer2(buffer.getNumChannels(), buffer.getNumSamples());
+				juce::AudioSourceChannelInfo channelInfo(buffer2);
+				for (auto it : samples) {
+					auto fullPPQ = it->fullTime == 0 ? it->info->fullTime * tmp : it->fullTime;
+					if (it->startPPQ - 10 <= startTime && endTime <= it->startPPQ + fullPPQ + 10) {
+						it->positionableSource.setNextReadPosition((int)(it->positionableSource.getTotalLength()
+							* (startTime - it->startPPQ) / fullPPQ));
+						it->resamplingAudioSource.getNextAudioBlock(channelInfo);
+						buffer.addFrom(0, 0, buffer2.getReadPointer(0), numSamples, 1);
+						buffer.addFrom(1, 0, buffer2.getReadPointer(1), numSamples, 1);
+					}
 				}
 			}
 		}
@@ -256,12 +286,6 @@ void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) 
 	for (auto it : getNodes())
 		it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
 	messageCollector.reset(newSampleRate);
-}
-
-void Track::setPlayHead(juce::AudioPlayHead* newPlayHead) {
-    AudioProcessorGraph::setPlayHead(newPlayHead);
-    for (auto it : getNodes())
-        it->getProcessor()->setPlayHead(newPlayHead);
 }
 
 void Track::setMuted(bool val) {
