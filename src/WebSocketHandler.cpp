@@ -140,7 +140,6 @@ void* saveState(void*) {
 }
 
 void ServerService::handleSave(WebSocketSession* session, std::function<void(EIMPackets::Empty&)> reply) {
-	DBG("aaaa " << (EIMApplication::getEIMInstance()->config.isTempProject() ? "yes" : "not"));
 	if (EIMApplication::getEIMInstance()->config.isTempProject()) handleSaveAs(session);
 	else juce::MessageManager::getInstance()->callFunctionOnMessageThread(saveState, nullptr);
 }
