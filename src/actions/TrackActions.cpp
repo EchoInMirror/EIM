@@ -607,5 +607,31 @@ void ServerService::handleEditSample(WebSocketSession*, std::unique_ptr<EIMPacke
 }
 
 void ServerService::handleLoadMidi(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundLoadMidi> data) {
+	auto instance = EIMApplication::getEIMInstance();
+	auto& masterTrack = instance->mainWindow->masterTrack;
+	auto& tracks = masterTrack->tracksMap;
+	auto& uuid = data->uuid();
+	if (!tracks.contains(uuid)) return;
+	auto track = (Track*)tracks[uuid]->getProcessor();
+	juce::FileInputStream stream(instance->config.midiPath.getChildFile(data->file()));
+	juce::MidiFile midi;
+	if (!midi.readFrom(stream)) return;
 
+	const juce::MidiMessageSequence* seq = nullptr;
+	for (int i = 1, num = 0; i < midi.getNumTracks(); i++) {
+		auto track = midi.getTrack(i);
+		if (track->getNumEvents() > num) {
+			num = track->getNumEvents();
+			seq = track;
+		}
+	}
+	if (seq) {
+		track->midiSequence.clear();
+		track->addMidiEvents(*seq, midi.getTimeFormat());
+		masterTrack->checkEndTime((int)(seq->getEndTime() / midi.getTimeFormat() * masterTrack->ppq));
+		EIMPackets::ClientboundTracksInfo info;
+		track->writeTrackInfo(info.add_tracks());
+		EIMApplication::getEIMInstance()->listener->boardcast(
+			std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+	}
 }

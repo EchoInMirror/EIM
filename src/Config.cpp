@@ -4,7 +4,7 @@ Config::Config() : rootPath(juce::File::getSpecialLocation(juce::File::SpecialLo
     configPath(rootPath.getChildFile("config.json")),
 	projects(rootPath.getChildFile("projects")),
 	samplesPath(rootPath.getChildFile("samples")),
-	midiPath(rootPath.getChildFile("midiPath")),
+	midiPath(rootPath.getChildFile("midi")),
 	tempPath(juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile("EchoInMirror")),
 	tempTracksPath(tempPath.getChildFile("tracks"))
 {
