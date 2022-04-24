@@ -605,3 +605,7 @@ void ServerService::handleDeleteSample(WebSocketSession*, std::unique_ptr<EIMPac
 void ServerService::handleEditSample(WebSocketSession*, std::unique_ptr<EIMPackets::EditTrackSampleData> data) {
 
 }
+
+void ServerService::handleLoadMidi(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundLoadMidi> data) {
+
+}

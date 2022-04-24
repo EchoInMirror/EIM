@@ -60,6 +60,17 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
 				else out.add_files(it.getFileName().toStdString());
 			}
 		}
+		break;
+	}
+	case ExplorerType::ServerboundExplorerData_ExplorerType_MIDIs: {
+		auto file = instance->config.midiPath.getChildFile(path);
+		if (file.isDirectory()) {
+			for (auto& it : file.findChildFiles(juce::File::TypesOfFileToFind::findFilesAndDirectories, false)) {
+				if (it.isDirectory()) out.add_folders(it.getFileName().toStdString());
+				else out.add_files(it.getFileName().toStdString());
+			}
+		}
+		break;
 	}
 	}
 	reply(out);
