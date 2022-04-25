@@ -8,12 +8,17 @@
 
 class MainWindow: public juce::DocumentWindow {
 public:
+	juce::TextButton textButton;
+	juce::Label statusLabel, clientsLabel;
     MainWindow();
     ~MainWindow() { masterTrack = nullptr; }
 
     std::unique_ptr<MasterTrack> masterTrack;
     void closeButtonPressed() override;
 private:
+	juce::Label portLabel;
+	juce::TextEditor portInput;
+	juce::Component mainComponent;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 
@@ -31,11 +36,12 @@ public:
     bool moreThanOneInstanceAllowed() override { return true; }
 
     void initialise(const juce::String& commandLine) override;
+	void initPort(int port);
 
     void shutdown() override;
     void systemRequestedQuit() override;
     static EIMApplication* getEIMInstance();
 private:
-    boost::asio::io_context ioc{ 4 };
-    std::vector<std::thread> v;
+	boost::asio::io_context ioc{ 4 };
+	std::vector<std::thread> v;
 };

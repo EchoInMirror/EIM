@@ -1,15 +1,27 @@
 #include "SharedState.h"
+#include "../Main.h"
+#include "../utils/Utils.h"
 #include "WebSocketSession.h"
 #include <boost/weak_ptr.hpp>
 
 void SharedState::join(WebSocketSession* session) {
     std::lock_guard<std::mutex> lock(mutex);
     sessions.insert(session);
+	runOnMainThread([this] {
+		juce::String str("Current number of clients: ");
+		str += (int)sessions.size();
+		EIMApplication::getEIMInstance()->mainWindow->clientsLabel.setText(str, {});
+	});
 }
 
 void SharedState::leave(WebSocketSession* session) {
     std::lock_guard<std::mutex> lock(mutex);
     sessions.erase(session);
+	runOnMainThread([this] {
+		juce::String str("Current number of clients: ");
+		str += (int)sessions.size();
+		EIMApplication::getEIMInstance()->mainWindow->clientsLabel.setText(str, {});
+	});
 }
 
 void SharedState::send(std::shared_ptr<boost::beast::flat_buffer> message) {

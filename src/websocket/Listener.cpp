@@ -15,6 +15,11 @@ Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint 
 
     acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
     if (ec) return;
+
+	auto& label = EIMApplication::getEIMInstance()->mainWindow->statusLabel;
+	label.setColour(juce::Label::ColourIds::textColourId, juce::Colours::green);
+	label.setText("HTTP server created successfully!", {});
+	EIMApplication::getEIMInstance()->mainWindow->textButton.setEnabled(false);
 }
 
 void Listener::doAccept() {
