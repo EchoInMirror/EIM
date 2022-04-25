@@ -304,22 +304,23 @@ public:
         if (!tracks.contains(uuid)) return false;
         auto& trackPtr = tracks[uuid];
         auto track = (Track*)trackPtr->getProcessor();
-		runOnMainThread([&] {
-			try {
-				getPluginState(_pluginInstance, state);
-			}
-			catch (...) {}
-			if (_isInstrument) {
-				track->setInstrument(nullptr);
-			}
-			else {
-				track->removeEffectPlugin(_pluginInstance);
-			}
-		});
-		_pluginInstance = nullptr;
-		EIMPackets::ClientboundTracksInfo info;
-		track->writeTrackInfo(info.add_tracks());
-		instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+        runOnMainThread([&] {
+            try {
+                getPluginState(_pluginInstance, state);
+            }
+            catch (...) {
+            }
+            if (_isInstrument) {
+                track->setInstrument(nullptr);
+            }
+            else {
+                track->removeEffectPlugin(_pluginInstance);
+            }
+        });
+        _pluginInstance = nullptr;
+        EIMPackets::ClientboundTracksInfo info;
+        track->writeTrackInfo(info.add_tracks());
+        instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
         return true;
     }
 };
@@ -341,52 +342,52 @@ private:
     PluginState state;
 
 public:
-	DeleteVSTAction(std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) : data(std::move(data)) {
-	}
-	bool perform() override {
-		auto instance = EIMApplication::getEIMInstance();
-		auto& masterTrack = instance->mainWindow->masterTrack;
-		auto& tracks = masterTrack->tracksMap;
-		auto& uuid = data->uuid();
-		if (!tracks.contains(uuid)) return false;
-		auto track = (Track*)tracks[uuid]->getProcessor();
-		auto& plugins = track->plugins;
-		if (data->has_index()) {
-			if (plugins.size() <= data->index()) return true;
-			auto plugin = (juce::AudioPluginInstance*)plugins[data->index()]->getProcessor();
-			runOnMainThread([&] {
-				getPluginState(plugin, state);
-				track->removeEffectPlugin(plugin);
-			});
-		}
-		else {
-			auto plugin = track->getInstrumentInstance();
-			if (plugin == nullptr) return true;
-			runOnMainThread([&] {
-				getPluginState(plugin, state);
-				track->setInstrument(nullptr);
-			});
-		}
-		EIMPackets::ClientboundTracksInfo info;
-		track->writeTrackInfo(info.add_tracks());
-		instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
-		return true;
-	}
-	bool undo() override {
-		auto instance = EIMApplication::getEIMInstance();
-		auto& tracks = instance->mainWindow->masterTrack->tracksMap;
-		auto& uuid = data->uuid();
-		if (!tracks.contains(uuid)) return false;
-		auto& trackPtr = tracks[uuid];
-		auto track = (Track*)trackPtr->getProcessor();
-		loadPluginAndAdd(state, track, [this, track](bool, juce::AudioPluginInstance*) {
-			EIMPackets::ClientboundTracksInfo info;
-			track->writeTrackInfo(info.add_tracks());
-			EIMApplication::getEIMInstance()->listener->boardcast(
-				std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
-		});
-		return true;
-	}
+    DeleteVSTAction(std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) : data(std::move(data)) {
+    }
+    bool perform() override {
+        auto instance = EIMApplication::getEIMInstance();
+        auto& masterTrack = instance->mainWindow->masterTrack;
+        auto& tracks = masterTrack->tracksMap;
+        auto& uuid = data->uuid();
+        if (!tracks.contains(uuid)) return false;
+        auto track = (Track*)tracks[uuid]->getProcessor();
+        auto& plugins = track->plugins;
+        if (data->has_index()) {
+            if (plugins.size() <= data->index()) return true;
+            auto plugin = (juce::AudioPluginInstance*)plugins[data->index()]->getProcessor();
+            runOnMainThread([&] {
+                getPluginState(plugin, state);
+                track->removeEffectPlugin(plugin);
+            });
+        }
+        else {
+            auto plugin = track->getInstrumentInstance();
+            if (plugin == nullptr) return true;
+            runOnMainThread([&] {
+                getPluginState(plugin, state);
+                track->setInstrument(nullptr);
+            });
+        }
+        EIMPackets::ClientboundTracksInfo info;
+        track->writeTrackInfo(info.add_tracks());
+        instance->listener->boardcast(std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+        return true;
+    }
+    bool undo() override {
+        auto instance = EIMApplication::getEIMInstance();
+        auto& tracks = instance->mainWindow->masterTrack->tracksMap;
+        auto& uuid = data->uuid();
+        if (!tracks.contains(uuid)) return false;
+        auto& trackPtr = tracks[uuid];
+        auto track = (Track*)trackPtr->getProcessor();
+        loadPluginAndAdd(state, track, [this, track](bool, juce::AudioPluginInstance*) {
+            EIMPackets::ClientboundTracksInfo info;
+            track->writeTrackInfo(info.add_tracks());
+            EIMApplication::getEIMInstance()->listener->boardcast(
+                std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+        });
+        return true;
+    }
 };
 
 void ServerService::handleDeleteVST(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundOpenPluginWindow> data) {
@@ -593,55 +594,55 @@ void ServerService::handleAddSample(WebSocketSession*, std::unique_ptr<EIMPacket
 }
 
 void ServerService::handleDeleteSample(WebSocketSession*, std::unique_ptr<EIMPackets::DeleteTrackSample> data) {
-	auto instance = EIMApplication::getEIMInstance();
-	auto& masterTrack = instance->mainWindow->masterTrack;
-	auto& tracks = masterTrack->tracksMap;
-	auto& uuid = data->uuid();
-	if (!tracks.contains(uuid)) return;
-	// auto& sampleManager = masterTrack->sampleManager;
-	auto track = (Track*)tracks[uuid]->getProcessor();
-	auto& samples = track->samples;
-	int times = 0;
-	for (auto it : data->index()) {
-		auto cur = it - times;
-		if (samples.size() > cur) {
-			samples.erase(samples.begin() + cur);
-			times++;
-		}
-	}
-	instance->listener->boardcast(std::move(EIMMakePackets::makeDeleteSamplePacket(*data)));
-	masterTrack->checkEndTime();
+    auto instance = EIMApplication::getEIMInstance();
+    auto& masterTrack = instance->mainWindow->masterTrack;
+    auto& tracks = masterTrack->tracksMap;
+    auto& uuid = data->uuid();
+    if (!tracks.contains(uuid)) return;
+    // auto& sampleManager = masterTrack->sampleManager;
+    auto track = (Track*)tracks[uuid]->getProcessor();
+    auto& samples = track->samples;
+    int times = 0;
+    for (auto it : data->index()) {
+        auto cur = it - times;
+        if (samples.size() > cur) {
+            samples.erase(samples.begin() + cur);
+            times++;
+        }
+    }
+    instance->listener->boardcast(std::move(EIMMakePackets::makeDeleteSamplePacket(*data)));
+    masterTrack->checkEndTime();
 }
 
 void ServerService::handleEditSample(WebSocketSession*, std::unique_ptr<EIMPackets::EditTrackSampleData> data) {
 }
 
 void ServerService::handleLoadMidi(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundLoadMidi> data) {
-	auto instance = EIMApplication::getEIMInstance();
-	auto& masterTrack = instance->mainWindow->masterTrack;
-	auto& tracks = masterTrack->tracksMap;
-	auto& uuid = data->uuid();
-	if (!tracks.contains(uuid)) return;
-	auto track = (Track*)tracks[uuid]->getProcessor();
-	juce::FileInputStream stream(instance->config.midiPath.getChildFile(data->file()));
-	juce::MidiFile midi;
-	if (!midi.readFrom(stream)) return;
+    auto instance = EIMApplication::getEIMInstance();
+    auto& masterTrack = instance->mainWindow->masterTrack;
+    auto& tracks = masterTrack->tracksMap;
+    auto& uuid = data->uuid();
+    if (!tracks.contains(uuid)) return;
+    auto track = (Track*)tracks[uuid]->getProcessor();
+    juce::FileInputStream stream(instance->config.midiPath.getChildFile(data->file()));
+    juce::MidiFile midi;
+    if (!midi.readFrom(stream)) return;
 
-	const juce::MidiMessageSequence* seq = nullptr;
-	for (int i = 0, num = 0; i < midi.getNumTracks(); i++) {
-		auto it = midi.getTrack(i);
-		if (it->getNumEvents() > num) {
-			num = it->getNumEvents();
-			seq = it;
-		}
-	}
-	if (seq) {
-		track->midiSequence.clear();
-		track->addMidiEvents(*seq, midi.getTimeFormat());
-		masterTrack->checkEndTime((int)(seq->getEndTime() / midi.getTimeFormat() * masterTrack->ppq));
-		EIMPackets::ClientboundTracksInfo info;
-		track->writeTrackInfo(info.add_tracks());
-		EIMApplication::getEIMInstance()->listener->boardcast(
-			std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
-	}
+    const juce::MidiMessageSequence* seq = nullptr;
+    for (int i = 0, num = 0; i < midi.getNumTracks(); i++) {
+        auto it = midi.getTrack(i);
+        if (it->getNumEvents() > num) {
+            num = it->getNumEvents();
+            seq = it;
+        }
+    }
+    if (seq) {
+        track->midiSequence.clear();
+        track->addMidiEvents(*seq, midi.getTimeFormat());
+        masterTrack->checkEndTime((int)(seq->getEndTime() / midi.getTimeFormat() * masterTrack->ppq));
+        EIMPackets::ClientboundTracksInfo info;
+        track->writeTrackInfo(info.add_tracks());
+        EIMApplication::getEIMInstance()->listener->boardcast(
+            std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+    }
 }

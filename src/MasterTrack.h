@@ -44,6 +44,7 @@ public:
     void checkEndTime(int endTime);
 
     bool isRenderEnd() override;
+	float getProgress() override;
     void processBlockBuffer(juce::AudioBuffer<float>&) override;
     void render(juce::File, std::unique_ptr<EIMPackets::ServerboundRender>) override;
 

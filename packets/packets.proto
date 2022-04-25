@@ -171,6 +171,9 @@ message ServerboundRender {
   optional int32 bitsPreSample = 3;
 }
 
+message ClientboundRenderProgress {
+  float progress = 1;
+}
 
 message ServerboundLoadMidi {
   string uuid = 1;
@@ -221,4 +224,5 @@ service ClientService { // Client bound
   rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
   rpc deleteSample (DeleteTrackSample) returns (google.protobuf.Empty);
   rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);
+  rpc renderProgress (ClientboundRenderProgress) returns (google.protobuf.Empty);
 }

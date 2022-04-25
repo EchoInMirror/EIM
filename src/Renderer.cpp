@@ -1,5 +1,5 @@
 #include "Renderer.h"
-#include "Main.h"
+#include "packets.h"
 
 void Renderer::render(Renderable* target, std::unique_ptr<juce::AudioFormatWriter> output,
                       std::function<void()> callback) {
@@ -28,4 +28,8 @@ void Renderer::rendering() {
     this->renderTarget->processBlockBuffer(buffer);
     DBG("buffer : " << buffer.getNumChannels() << " ;" << buffer.getNumSamples());
     this->output->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
+    EIMPackets::ClientboundRenderProgress progress;
+    progress.set_progress(this->renderTarget->getProgress());
+    EIMApplication::getEIMInstance()->listener->boardcast(
+        std::move(EIMMakePackets::makeRenderProgressPacket(progress)));
 }

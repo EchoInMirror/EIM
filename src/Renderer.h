@@ -1,5 +1,7 @@
 #pragma once
+#include "Main.h"
 #include "Renderable.h"
+#include "packets.pb.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
 class Renderer : private juce::Timer {

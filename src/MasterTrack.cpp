@@ -288,6 +288,10 @@ bool MasterTrack::isRenderEnd() {
     return endTime <= currentPositionInfo.ppqPosition * this->ppq;
 }
 
+float MasterTrack::getProgress() {
+    return (float)(currentPositionInfo.ppqPosition * this->ppq) / endTime;
+}
+
 void MasterTrack::processBlockBuffer(juce::AudioBuffer<float>& buffer) {
     juce::MidiBuffer midiBuffer;
     this->processBlock(buffer, midiBuffer);
