@@ -18,6 +18,14 @@ void Renderer::timerCallback() {
         delete this->output.release();
         return;
     }
+    lastSendTime += this->getTimerInterval();
+    if (lastSendTime >= 500) {
+        lastSendTime = 0;
+        EIMPackets::ClientboundRenderProgress progress;
+        progress.set_progress(this->renderTarget->getProgress());
+        EIMApplication::getEIMInstance()->listener->boardcast(
+            std::move(EIMMakePackets::makeRenderProgressPacket(progress)));
+    }
     rendering();
 }
 
@@ -28,8 +36,4 @@ void Renderer::rendering() {
     this->renderTarget->processBlockBuffer(buffer);
     DBG("buffer : " << buffer.getNumChannels() << " ;" << buffer.getNumSamples());
     this->output->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
-    EIMPackets::ClientboundRenderProgress progress;
-    progress.set_progress(this->renderTarget->getProgress());
-    EIMApplication::getEIMInstance()->listener->boardcast(
-        std::move(EIMMakePackets::makeRenderProgressPacket(progress)));
 }

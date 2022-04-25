@@ -11,6 +11,7 @@ public:
     void render(Renderable*, std::unique_ptr<juce::AudioFormatWriter>, std::function<void()> callback = nullptr);
 
 private:
+    int lastSendTime = 0;
     Renderable* renderTarget = nullptr;
     std::unique_ptr<juce::AudioFormatWriter> output;
     std::function<void()> callback;
