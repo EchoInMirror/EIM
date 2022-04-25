@@ -45,7 +45,7 @@ public:
 
     bool isRenderEnd() override;
     void processBlockBuffer(juce::AudioBuffer<float>&) override;
-    void render(juce::File) override;
+    void render(juce::File, std::unique_ptr<EIMPackets::ServerboundRender>) override;
 
     bool getCurrentPosition(CurrentPositionInfo& result) override;
     bool canControlTransport() override {
@@ -70,7 +70,7 @@ private:
 
     std::unique_ptr<Renderer> renderer;
     std::unique_ptr<juce::FileOutputStream> outStream;
-
+    std::unique_ptr<juce::AudioFormatWriter> audioWirte;
     void calcPositionInfo();
     void timerCallback() override;
 

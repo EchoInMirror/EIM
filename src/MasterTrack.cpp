@@ -285,7 +285,7 @@ void MasterTrack::SystemInfoTimer::timerCallback() {
 
 bool MasterTrack::isRenderEnd() {
     DBG(endTime << " , " << currentPositionInfo.ppqPosition);
-    return endTime <= currentPositionInfo.ppqPosition;
+    return endTime <= currentPositionInfo.ppqPosition * this->ppq;
 }
 
 void MasterTrack::processBlockBuffer(juce::AudioBuffer<float>& buffer) {
@@ -293,7 +293,12 @@ void MasterTrack::processBlockBuffer(juce::AudioBuffer<float>& buffer) {
     this->processBlock(buffer, midiBuffer);
 }
 
-void MasterTrack::render(juce::File file) {
+void MasterTrack::render(juce::File file, std::unique_ptr<EIMPackets::ServerboundRender> data) {
+    this->outStream = std::move(file.createOutputStream());
+    if (this->outStream == nullptr) {
+        DBG("error in open file");
+        return;
+    }
     juce::AudioProcessor* pre = this->graphPlayer.getCurrentProcessor();
     this->graphPlayer.setProcessor(nullptr);
     juce::AudioPlayHead::CurrentPositionInfo copyInfo = this->currentPositionInfo;
@@ -301,13 +306,13 @@ void MasterTrack::render(juce::File file) {
     this->currentPositionInfo.timeInSamples = 0;
     this->currentPositionInfo.timeInSeconds = 0;
     this->currentPositionInfo.editOriginTime = 0;
-    this->outStream = std::move(file.createOutputStream());
     juce::WavAudioFormat format;
     juce::StringPairArray pair;
-    this->bufferBlockSize = this->getBlockSize();
     DBG("start render : " << this->getSampleRate() << "; " << this->getNumOutputChannels());
-    std::unique_ptr<juce::AudioFormatWriter> audioWirte(format.createWriterFor(
-        this->outStream.get(), this->getSampleRate(), this->getNumOutputChannels(), 16, pair, 0));
+    this->bufferBlockSize = data->has_bitspresample() ? (int)data->bitspresample() : this->getBlockSize();
+    double sampleRate = data->has_samplerate() ? data->samplerate() : this->getSampleRate();
+    this->audioWirte.reset(
+        format.createWriterFor(this->outStream.get(), sampleRate, this->getNumOutputChannels(), 16, pair, 0));
     this->currentPositionInfo.isPlaying = true;
     this->renderer = std::make_unique<Renderer>();
     this->renderer->render(this, std::move(audioWirte), [this, copyInfo, pre]() {

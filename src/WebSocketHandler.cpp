@@ -210,5 +210,5 @@ void ServerService::handleRender(WebSocketSession*, std::unique_ptr<EIMPackets::
     auto file = juce::File(juce::String(data->path()));
     if (file.exists()) file.deleteFile();
     auto& track = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
-    track->render(file);
+    track->render(file, std::move(data));
 }

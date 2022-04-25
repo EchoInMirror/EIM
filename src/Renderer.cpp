@@ -23,6 +23,7 @@ void Renderer::timerCallback() {
 
 void Renderer::rendering() {
     assert(this->renderTarget != nullptr);
+    assert(this->output != nullptr);
     juce::AudioBuffer<float> buffer(this->output->getNumChannels(), renderTarget->bufferBlockSize);
     this->renderTarget->processBlockBuffer(buffer);
     DBG("buffer : " << buffer.getNumChannels() << " ;" << buffer.getNumSamples());
