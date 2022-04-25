@@ -254,12 +254,20 @@ const Tracks: React.FC = () => {
       >
         <div
           className='content'
-          onDragOver={e => $dragObject?.type === 'loadSample' && e.preventDefault()}
+          onDragOver={e => ($dragObject?.type === 'loadSample' || $dragObject?.type === 'loadMidi') && e.preventDefault()}
           onDrop={e => {
-            if (!$dragObject || $dragObject.type !== 'loadSample') return
-            const alignment = +localStorage.getItem('eim:editor:alignment')! || state.ppq
-            const position = Math.round((e.pageX - e.currentTarget.getBoundingClientRect().left) / noteWidth / alignment) * alignment
-            $client.rpc.addSample({ uuid: id, data: [{ position, file: $dragObject.data }] })
+            if (!$dragObject) return
+            switch ($dragObject.type) {
+              case 'loadSample': {
+                const alignment = +localStorage.getItem('eim:editor:alignment')! || state.ppq
+                const position = Math.round((e.pageX - e.currentTarget.getBoundingClientRect().left) / noteWidth / alignment) * alignment
+                $client.rpc.addSample({ uuid: id, data: [{ position, file: $dragObject.data }] })
+                break
+              }
+              case 'loadMidi':
+                $client.rpc.loadMidi({ uuid: id, file: $dragObject.data })
+                break
+            }
           }}
         >
           <TrackNotes data={it.midi!} width={noteWidth} />

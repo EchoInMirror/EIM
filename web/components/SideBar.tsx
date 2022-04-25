@@ -33,6 +33,7 @@ export interface ItemType {
   type: packets.ServerboundExplorerData.ExplorerType
   mapNodeProps?: (name: string, tree: TreeNode, path: string) => Partial<TreeItemProps> | undefined
   nodeSort?: (a: JSX.Element, b: JSX.Element) => number
+  filter?: (name: string, tree: TreeNode, path: string) => boolean
 }
 const items: ItemType[] = [
   {
@@ -71,7 +72,21 @@ const items: ItemType[] = [
   {
     title: 'MIDI 序列',
     icon: <StraightenOutlined />,
-    type: packets.ServerboundExplorerData.ExplorerType.FAVORITE
+    type: packets.ServerboundExplorerData.ExplorerType.MIDIs,
+    filter (name, tree) {
+      return tree[name] || name.endsWith('.mid')
+    },
+    mapNodeProps (name, tree, data) {
+      if (tree[name]) return
+      return {
+        icon: <StraightenOutlined />,
+        draggable: true,
+        onDragStart: e => {
+          window.$dragObject = { type: 'loadMidi', data: data.replace(/^\//, '') }
+          e.stopPropagation()
+        }
+      }
+    }
   },
   {
     title: '工程',
@@ -92,8 +107,11 @@ const items: ItemType[] = [
     title: '采样',
     icon: <GraphicEqOutlined />,
     type: packets.ServerboundExplorerData.ExplorerType.SAMPLES,
+    filter (name, tree) {
+      return tree[name] || allowAudioExtensions.some(it => name.endsWith(it))
+    },
     mapNodeProps (name, tree, data) {
-      if (tree[name] || !allowAudioExtensions.some(it => name.endsWith(it))) return
+      if (tree[name]) return
       return {
         icon: <GraphicEqOutlined />,
         draggable: true,
@@ -120,6 +138,7 @@ const Item: React.FC<{ tree: TreeNode, parent: string, type: ItemType }> = ({ ty
   const [, update] = useState(0)
   for (const name in tree) {
     const cur = parent + '/' + name
+    if (type.filter && !type.filter(name, tree, cur)) continue
     const children = tree[name] && (subTrees[name] ? <Item tree={subTrees[name]} parent={cur} type={type} /> : <TreeItem nodeId={cur + '$$EMPTY'} />)
     let node: JSX.Element | undefined
     const handleClick = () => {

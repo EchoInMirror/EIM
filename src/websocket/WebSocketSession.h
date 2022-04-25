@@ -3,7 +3,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include "SharedState.h"
-#include "../packets/packets.h"
+#include "../packets.h"
 
 class WebSocketSession : public boost::enable_shared_from_this<WebSocketSession> {
 public:

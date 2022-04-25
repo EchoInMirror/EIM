@@ -17,7 +17,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 include_directories(${Boost_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 
-file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp" "packets/packets.h" "packets/packets.cpp")
+file(GLOB SRC_FILES "src/*.cpp" "src/*.h" "src/**/*.h" "src/**/*.cpp")
 
 add_subdirectory(JUCE)
 juce_add_gui_app(EIM
@@ -47,6 +47,13 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
     set_property(TARGET EIM PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif(MSVC)
+
+set(pluginScannerPath ${CMAKE_CURRENT_BINARY_DIR}/EIMPluginScanner.exe)
+if(NOT EXISTS ${pluginScannerPath})
+    message(STATUS "Downloading EIMPluginScanner...")
+    file(DOWNLOAD https://github.com/EchoInMirror/EIMPluginScanner/releases/latest/download/EIMPluginScanner.exe ${pluginScannerPath} SHOW_PROGRESS)
+    message(STATUS "Downloaded EIMPluginScanner.")
+endif()
 
 target_compile_definitions(EIM
     PRIVATE

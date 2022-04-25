@@ -172,6 +172,11 @@ message ServerboundRender {
 }
 
 
+message ServerboundLoadMidi {
+  string uuid = 1;
+  string file = 2;
+}
+
 service ServerService { // Server bound
   rpc setProjectStatus (ProjectStatus) returns (google.protobuf.Empty);
   rpc getExplorerData (ServerboundExplorerData) returns (ClientboundExplorerData);
@@ -197,6 +202,7 @@ service ServerService { // Server bound
   rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
   rpc deleteVST (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
   rpc render (ServerboundRender) returns (Empty);
+  rpc loadMidi (ServerboundLoadMidi) returns (google.protobuf.Empty);
   rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
   rpc deleteSample (DeleteTrackSample) returns (google.protobuf.Empty);
   rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);

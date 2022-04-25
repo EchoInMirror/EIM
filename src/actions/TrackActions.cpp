@@ -615,3 +615,33 @@ void ServerService::handleDeleteSample(WebSocketSession*, std::unique_ptr<EIMPac
 
 void ServerService::handleEditSample(WebSocketSession*, std::unique_ptr<EIMPackets::EditTrackSampleData> data) {
 }
+
+void ServerService::handleLoadMidi(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundLoadMidi> data) {
+	auto instance = EIMApplication::getEIMInstance();
+	auto& masterTrack = instance->mainWindow->masterTrack;
+	auto& tracks = masterTrack->tracksMap;
+	auto& uuid = data->uuid();
+	if (!tracks.contains(uuid)) return;
+	auto track = (Track*)tracks[uuid]->getProcessor();
+	juce::FileInputStream stream(instance->config.midiPath.getChildFile(data->file()));
+	juce::MidiFile midi;
+	if (!midi.readFrom(stream)) return;
+
+	const juce::MidiMessageSequence* seq = nullptr;
+	for (int i = 0, num = 0; i < midi.getNumTracks(); i++) {
+		auto it = midi.getTrack(i);
+		if (it->getNumEvents() > num) {
+			num = it->getNumEvents();
+			seq = it;
+		}
+	}
+	if (seq) {
+		track->midiSequence.clear();
+		track->addMidiEvents(*seq, midi.getTimeFormat());
+		masterTrack->checkEndTime((int)(seq->getEndTime() / midi.getTimeFormat() * masterTrack->ppq));
+		EIMPackets::ClientboundTracksInfo info;
+		track->writeTrackInfo(info.add_tracks());
+		EIMApplication::getEIMInstance()->listener->boardcast(
+			std::move(EIMMakePackets::makeSyncTracksInfoPacket(info)));
+	}
+}

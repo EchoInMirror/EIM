@@ -1,0 +1,38 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "ninja-multi-vcpkg",
+      "displayName": "Ninja Multi-Config Configure Settings",
+      "description": "Configure with vcpkg toolchain",
+      "binaryDir": "${sourceDir}/builds/${presetName}",
+      "generator": "Ninja Multi-Config",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-multi-vcpkg",
+      "configurePreset": "ninja-multi-vcpkg",
+      "displayName": "Build ninja-multi-vcpkg",
+      "description": "Build ninja-multi-vcpkg Configurations",
+      "configuration": "Release"
+    }
+  ]
+}

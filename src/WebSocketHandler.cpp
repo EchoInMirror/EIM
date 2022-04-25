@@ -67,6 +67,18 @@ void ServerService::handleGetExplorerData(WebSocketSession*, std::unique_ptr<EIM
                     out.add_files(it.getFileName().toStdString());
             }
         }
+        break;
+    }
+    case ExplorerType::ServerboundExplorerData_ExplorerType_MIDIs: {
+        auto file = instance->config.midiPath.getChildFile(path);
+        if (file.isDirectory()) {
+            for (auto& it : file.findChildFiles(juce::File::TypesOfFileToFind::findFilesAndDirectories, false)) {
+                if (it.isDirectory()) out.add_folders(it.getFileName().toStdString());
+                else
+                    out.add_files(it.getFileName().toStdString());
+            }
+        }
+        break;
     }
     }
     reply(out);
@@ -144,7 +156,6 @@ void* saveState(void*) {
 }
 
 void ServerService::handleSave(WebSocketSession* session, std::function<void(EIMPackets::Empty&)> reply) {
-    DBG("aaaa " << (EIMApplication::getEIMInstance()->config.isTempProject() ? "yes" : "not"));
     if (EIMApplication::getEIMInstance()->config.isTempProject()) handleSaveAs(session);
     else
         juce::MessageManager::getInstance()->callFunctionOnMessageThread(saveState, nullptr);
