@@ -9,6 +9,7 @@ public:
     ~Renderable(){};
     int bufferBlockSize = 0;
     virtual bool isRenderEnd() = 0;
+	virtual void renderEnd() = 0;
     virtual float getProgress() = 0;
     virtual void processBlockBuffer(juce::AudioBuffer<float>&) = 0;
     virtual void render(juce::File, std::unique_ptr<EIMPackets::ServerboundRender>) = 0;

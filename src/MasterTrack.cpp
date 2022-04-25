@@ -304,24 +304,28 @@ void MasterTrack::render(juce::File file, std::unique_ptr<EIMPackets::Serverboun
         return;
     }
     juce::AudioProcessor* pre = this->graphPlayer.getCurrentProcessor();
-    this->graphPlayer.setProcessor(nullptr);
+    graphPlayer.setProcessor(nullptr);
     juce::AudioPlayHead::CurrentPositionInfo copyInfo = this->currentPositionInfo;
-    this->currentPositionInfo.ppqPosition = 0;
-    this->currentPositionInfo.timeInSamples = 0;
-    this->currentPositionInfo.timeInSeconds = 0;
-    this->currentPositionInfo.editOriginTime = 0;
+    currentPositionInfo.ppqPosition = 0;
+    currentPositionInfo.timeInSamples = 0;
+    currentPositionInfo.timeInSeconds = 0;
+    currentPositionInfo.editOriginTime = 0;
     juce::WavAudioFormat format;
     juce::StringPairArray pair;
     DBG("start render : " << this->getSampleRate() << "; " << this->getNumOutputChannels());
-    this->bufferBlockSize = data->has_bitspresample() ? (int)data->bitspresample() : this->getBlockSize();
+    bufferBlockSize = data->has_bitspresample() ? (int)data->bitspresample() : this->getBlockSize();
     double sampleRate = data->has_samplerate() ? data->samplerate() : this->getSampleRate();
-    this->audioWirte.reset(
+    audioWirte.reset(
         format.createWriterFor(this->outStream.get(), sampleRate, this->getNumOutputChannels(), 16, pair, 0));
-    this->currentPositionInfo.isPlaying = true;
-    this->renderer = std::make_unique<Renderer>();
-    this->renderer->render(this, std::move(audioWirte), [this, copyInfo, pre]() {
-        DBG("call back");
-        this->currentPositionInfo = copyInfo;
-        this->graphPlayer.setProcessor(pre);
-    });
+    currentPositionInfo.isPlaying = true;
+	renderer.reset(new Renderer(this, std::move(audioWirte), [this, copyInfo, pre]() {
+		DBG("call back");
+		this->currentPositionInfo = copyInfo;
+		this->graphPlayer.setProcessor(pre);
+	}));
+    renderer->render();
+}
+
+void MasterTrack::renderEnd() {
+	renderer.reset(nullptr);
 }

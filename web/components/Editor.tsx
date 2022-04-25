@@ -751,7 +751,7 @@ const Editor: React.FC = () => {
   const steps = state.ppq / 16 * state.timeSigDenominator
 
   return (
-    <div className='editor' style={{ cursor: track ? undefined : 'no-drop' }}>
+    <div className='editor' style={{ cursor: track ? undefined : 'no-drop' }} onKeyDown={e => e.code === 'Space' && e.preventDefault()}>
       <Box className='actions' sx={{ backgroundColor: theme => theme.palette.background.bright }}>
         <Slider
           min={0}

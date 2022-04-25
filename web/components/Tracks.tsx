@@ -65,6 +65,7 @@ const TrackActions = memo(function TrackActions ({ info, index }: { info: packet
           className='name'
           tagName='span'
           html={name}
+          spellCheck='false'
           onChange={e => setName(e.target.value)}
           onBlur={e => $client.rpc.updateTrackInfo({ uuid, name: e.target.innerText })}
           onKeyDown={e => {

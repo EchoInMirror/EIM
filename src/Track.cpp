@@ -20,7 +20,7 @@ Track::Track(juce::File dir, std::function<void(Track*)> callback) : AudioProces
 	name = info.getProperty("name", "Unknown Track").toString().toStdString();
 	color = info.getProperty("color", "#f44336").toString().toStdString();
 	uuid = info.getProperty("uuid", juce::String(randomUuid())).toString().toStdString();
-	chain.get<1>().setGainLinear((float)info.getProperty("volume", 1));
+	chain.get<1>().setGainLinear((float)info.getProperty("volume", 1.0f));
 	chain.get<0>().setPan((pan = (int)info.getProperty("pan", 0)) / 100.0f);
 	if ((bool)info.getProperty("muted", 1)) currentNode->setBypassed(true);
 

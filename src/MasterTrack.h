@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Renderable.h"
 #include "Renderer.h"
 #include "Track.h"
 #include "packets.pb.h"
@@ -45,6 +44,7 @@ public:
 
     bool isRenderEnd() override;
 	float getProgress() override;
+	void renderEnd() override;
     void processBlockBuffer(juce::AudioBuffer<float>&) override;
     void render(juce::File, std::unique_ptr<EIMPackets::ServerboundRender>) override;
 

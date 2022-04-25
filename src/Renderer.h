@@ -1,14 +1,13 @@
 #pragma once
-#include "Main.h"
 #include "Renderable.h"
 #include "packets.pb.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
 class Renderer : private juce::Timer {
 public:
-    Renderer(){};
-    ~Renderer(){};
-    void render(Renderable*, std::unique_ptr<juce::AudioFormatWriter>, std::function<void()> callback = nullptr);
+    Renderer(Renderable*, std::unique_ptr<juce::AudioFormatWriter>, std::function<void()> = nullptr);
+    ~Renderer() {};
+    void render();
 
 private:
     int lastSendTime = 0;

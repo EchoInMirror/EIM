@@ -1,28 +1,30 @@
 #include "Renderer.h"
 #include "packets.h"
+#include "Main.h"
 
-void Renderer::render(Renderable* target, std::unique_ptr<juce::AudioFormatWriter> output,
-                      std::function<void()> callback) {
-    this->renderTarget = target;
-    this->output = std::move(output);
-    this->callback = callback;
-    DBG("start render");
-    startTimer(1);
+Renderer::Renderer(Renderable* target, std::unique_ptr<juce::AudioFormatWriter> output,
+	std::function<void()> callback) : renderTarget(target), output(std::move(output)), callback(callback) {
+}
+
+void Renderer::render() {
+	DBG("start render");
+	startTimer(1);
 }
 
 void Renderer::timerCallback() {
-    if (this->renderTarget == nullptr || this->renderTarget->isRenderEnd()) {
-        if (this->callback != nullptr) this->callback();
+    if (renderTarget == nullptr || renderTarget->isRenderEnd()) {
+        if (callback != nullptr) callback();
         stopTimer();
+		delete output.release();
         DBG("end render");
-        delete this->output.release();
+		renderTarget->renderEnd();
         return;
     }
-    lastSendTime += this->getTimerInterval();
+    lastSendTime += getTimerInterval();
     if (lastSendTime >= 500) {
         lastSendTime = 0;
         EIMPackets::ClientboundRenderProgress progress;
-        progress.set_progress(this->renderTarget->getProgress());
+        progress.set_progress(renderTarget->getProgress());
         EIMApplication::getEIMInstance()->listener->boardcast(
             std::move(EIMMakePackets::makeRenderProgressPacket(progress)));
     }
@@ -30,10 +32,9 @@ void Renderer::timerCallback() {
 }
 
 void Renderer::rendering() {
-    assert(this->renderTarget != nullptr);
-    assert(this->output != nullptr);
-    juce::AudioBuffer<float> buffer(this->output->getNumChannels(), renderTarget->bufferBlockSize);
-    this->renderTarget->processBlockBuffer(buffer);
-    DBG("buffer : " << buffer.getNumChannels() << " ;" << buffer.getNumSamples());
-    this->output->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
+    assert(renderTarget != nullptr);
+    assert(output != nullptr);
+    juce::AudioBuffer<float> buffer(output->getNumChannels(), renderTarget->bufferBlockSize);
+    renderTarget->processBlockBuffer(buffer);
+    output->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
 }
