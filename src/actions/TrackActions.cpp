@@ -619,10 +619,10 @@ void ServerService::handleLoadMidi(WebSocketSession*, std::unique_ptr<EIMPackets
 
 	const juce::MidiMessageSequence* seq = nullptr;
 	for (int i = 0, num = 0; i < midi.getNumTracks(); i++) {
-		auto track = midi.getTrack(i);
-		if (track->getNumEvents() > num) {
-			num = track->getNumEvents();
-			seq = track;
+		auto it = midi.getTrack(i);
+		if (it->getNumEvents() > num) {
+			num = it->getNumEvents();
+			seq = it;
 		}
 	}
 	if (seq) {

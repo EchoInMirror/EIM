@@ -73,7 +73,7 @@ jobs:
       - name: Pack
         run: |
           cd ${{ github.workspace }}/builds/ninja-multi-vcpkg/EIM_artefacts
-          cp ${{ github.workspace }}/dist/**/* Release/ -r
+          cp ${{ github.workspace }}/dist/* Release -r
           cp ../EIMPluginScanner.exe Release/
           Compress-Archive -Path Release/ -DestinationPath EchoInMirror-windows-x64.zip 
 
