@@ -165,6 +165,16 @@ message EditTrackSampleData {
   repeated SampleData data = 3;
 }
 
+message ServerboundRender {
+  string path = 1;
+  optional double sampleRate = 2;
+  optional int32 bitsPreSample = 3;
+}
+
+message ClientboundRenderProgress {
+  float progress = 1;
+}
+
 message ServerboundLoadMidi {
   string uuid = 1;
   string file = 2;
@@ -194,6 +204,7 @@ service ServerService { // Server bound
   rpc ping (google.protobuf.Empty) returns (ClientboundPong);
   rpc browserPath (ServerboundBrowserPath) returns (OptionalString);
   rpc deleteVST (ServerboundOpenPluginWindow) returns (google.protobuf.Empty);
+  rpc render (ServerboundRender) returns (Empty);
   rpc loadMidi (ServerboundLoadMidi) returns (google.protobuf.Empty);
   rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
   rpc deleteSample (DeleteTrackSample) returns (google.protobuf.Empty);
@@ -213,4 +224,5 @@ service ClientService { // Client bound
   rpc addSample (TrackSampleData) returns (google.protobuf.Empty);
   rpc deleteSample (DeleteTrackSample) returns (google.protobuf.Empty);
   rpc editSample (EditTrackSampleData) returns (google.protobuf.Empty);
+  rpc renderProgress (ClientboundRenderProgress) returns (google.protobuf.Empty);
 }
