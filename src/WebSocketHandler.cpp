@@ -3,35 +3,35 @@
 #include "websocket/WebSocketSession.h"
 
 void ServerService::handleSetProjectStatus(WebSocketSession*, std::unique_ptr<EIMPackets::ProjectStatus> data) {
-	auto shouldUpdate = false;
-	auto instance = EIMApplication::getEIMInstance();
-	auto& master = instance->mainWindow->masterTrack;
-	auto& info = master->currentPositionInfo;
-	if (data->has_bpm() && data->bpm() > 10) {
-		info.bpm = data->bpm();
-		shouldUpdate = true;
-	}
-	if (data->has_position()) {
-		if (info.isPlaying) master->stopAllNotes();
-		info.ppqPosition = (double)data->position() / master->ppq;
-		info.timeInSeconds = info.ppqPosition * 60.0 / info.bpm;
-		info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
-		data->clear_position();
-	}
-	if (data->has_isplaying() && data->isplaying() != info.isPlaying) {
-		info.isPlaying = data->isplaying();
-		if (!data->isplaying()) master->stopAllNotes();
-		shouldUpdate = true;
-	}
-	if (data->has_timesignumerator()) {
-		info.timeSigNumerator = data->timesignumerator();
-		shouldUpdate = true;
-	}
-	if (data->has_timesigdenominator()) {
-		info.timeSigDenominator = data->timesigdenominator();
-		shouldUpdate = true;
-	}
-	if (shouldUpdate) instance->listener->boardcast(std::move(EIMMakePackets::makeSetProjectStatusPacket(*data)));
+    auto shouldUpdate = false;
+    auto instance = EIMApplication::getEIMInstance();
+    auto& master = instance->mainWindow->masterTrack;
+    auto& info = master->currentPositionInfo;
+    if (data->has_bpm() && data->bpm() > 10) {
+        info.bpm = data->bpm();
+        shouldUpdate = true;
+    }
+    if (data->has_position()) {
+        if (info.isPlaying) master->stopAllNotes();
+        info.ppqPosition = (double)data->position() / master->ppq;
+        info.timeInSeconds = info.ppqPosition * 60.0 / info.bpm;
+        info.timeInSamples = (juce::int64)(master->getSampleRate() * info.timeInSeconds);
+        data->clear_position();
+    }
+    if (data->has_isplaying() && data->isplaying() != info.isPlaying) {
+        info.isPlaying = data->isplaying();
+        if (!data->isplaying()) master->stopAllNotes();
+        shouldUpdate = true;
+    }
+    if (data->has_timesignumerator()) {
+        info.timeSigNumerator = data->timesignumerator();
+        shouldUpdate = true;
+    }
+    if (data->has_timesigdenominator()) {
+        info.timeSigDenominator = data->timesigdenominator();
+        shouldUpdate = true;
+    }
+    if (shouldUpdate) instance->listener->boardcast(std::move(EIMMakePackets::makeSetProjectStatusPacket(*data)));
 }
 
 using ExplorerType = EIMPackets::ServerboundExplorerData::ExplorerType;
@@ -194,8 +194,9 @@ void ServerService::handlePing(WebSocketSession*, std::function<void(EIMPackets:
     reply(EIMApplication::getEIMInstance()->mainWindow->masterTrack->systemInfo);
 }
 
-void ServerService::handleRender(WebSocketSession*, std::function<void(EIMPackets::Empty&)>) {
-    auto file = juce::File::getCurrentWorkingDirectory().getChildFile("test-4-23.wav");
+void ServerService::handleRender(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundRender> data,
+                                 std::function<void(EIMPackets::Empty&)>) {
+    auto file = juce::File(juce::String(data->path()));
     if (file.exists()) file.deleteFile();
     auto& track = EIMApplication::getEIMInstance()->mainWindow->masterTrack;
     track->render(file);
