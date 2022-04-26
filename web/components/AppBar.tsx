@@ -9,7 +9,7 @@ import { playHeadRef as bottomBarPlayHeadRef, barLength as bottomBarLength } fro
 import { playHeadRef as tracksPlayHeadRef, barLength as tracksLength } from './Tracks'
 import packets, { ClientboundPacket, HandlerTypes } from '../../packets'
 import { keyNames } from '../utils'
-
+import ExportWindow from './ExportWindow'
 import NoteAdd from '@mui/icons-material/NoteAdd'
 import FileOpen from '@mui/icons-material/FileOpen'
 import Save from '@mui/icons-material/Save'
@@ -54,6 +54,7 @@ const LeftSection: React.FC = () => {
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement>()
   const [progress, fn] = useState(0)
   const [open, setOpen] = useState(false)
+  const [exportWindowOn, setExportWindowOn] = useState(false)
   const [state] = useGlobalData()
   setProgress = fn
 
@@ -109,6 +110,7 @@ const LeftSection: React.FC = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
+            setExportWindowOn(true)
             setAnchorEl(undefined)
           }}
         >
@@ -127,6 +129,7 @@ const LeftSection: React.FC = () => {
         </MenuItem>
       </Menu>
       <Settings open={open} setOpen={setOpen} />
+      <ExportWindow open={exportWindowOn} setOpen={setExportWindowOn} />
     </section>
   )
 }
