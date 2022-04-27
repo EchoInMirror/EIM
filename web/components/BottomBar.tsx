@@ -149,7 +149,7 @@ export const actions: Record<string, { title: string, icon: JSX.Element, compone
 }
 
 const BottomBar: React.FC = () => {
-  const [height, setHeight] = useState(() => +localStorage.getItem('eim:bottomBar:height')! || 0)
+  const [height, setHeight] = useState(() => +localStorage.getItem('eim:bottomBar:height')! || 40)
   const action = actions[useContext(BottomBarContext)[0]]
   return (
     <>
