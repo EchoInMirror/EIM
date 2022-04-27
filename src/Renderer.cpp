@@ -3,38 +3,37 @@
 #include "Main.h"
 
 Renderer::Renderer(Renderable* target, std::unique_ptr<juce::AudioFormatWriter> output,
-	std::function<void()> callback) : renderTarget(target), output(std::move(output)), callback(callback) {
+	std::function<void()> callback) : renderTarget(target), output(std::move(output)), callback(callback), buffer(2, 2048) {
 }
 
 void Renderer::render() {
 	DBG("start render");
+	renderTarget->_isRendering = true;
+	renderTarget->renderStart(output->getSampleRate(), 2048);
 	startTimer(1);
 }
 
 void Renderer::timerCallback() {
-    if (renderTarget == nullptr || renderTarget->isRenderEnd()) {
-        if (callback != nullptr) callback();
-        stopTimer();
-		delete output.release();
-        DBG("end render");
+	auto prog = renderTarget->getProgress();
+    if (prog >= 0) {
+		stopTimer();
+		output.reset(nullptr);
+		renderTarget->_isRendering = false;
+		if (callback) callback();
+		progress.set_progress(1);
+		EIMApplication::getEIMInstance()->listener->boardcast(
+			std::move(EIMMakePackets::makeRenderProgressPacket(progress)));
 		renderTarget->renderEnd();
+        DBG("end render");
         return;
     }
-    lastSendTime += getTimerInterval();
-    if (lastSendTime >= 500) {
+    if (++lastSendTime >= 500) {
         lastSendTime = 0;
-        EIMPackets::ClientboundRenderProgress progress;
-        progress.set_progress(renderTarget->getProgress());
-        EIMApplication::getEIMInstance()->listener->boardcast(
-            std::move(EIMMakePackets::makeRenderProgressPacket(progress)));
+        progress.set_progress(prog);
+		EIMApplication::getEIMInstance()->listener->boardcast(
+			std::move(EIMMakePackets::makeRenderProgressPacket(progress)));
     }
-    rendering();
-}
-
-void Renderer::rendering() {
-    assert(renderTarget != nullptr);
-    assert(output != nullptr);
-    juce::AudioBuffer<float> buffer(output->getNumChannels(), renderTarget->bufferBlockSize);
-    renderTarget->processBlockBuffer(buffer);
-    output->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
+	buffer.clear();
+	renderTarget->processBlockBuffer(buffer);
+	output->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
 }

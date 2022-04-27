@@ -1,12 +1,13 @@
 import './ExportWindow.less'
-import * as React from 'react'
+import React, { useEffect } from 'react'
+import packets, { ClientboundPacket } from '../../packets'
+import { FileChooserFlags } from '../utils'
 import {
   Box, Button, styled, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Typography, LinearProgress,
-  LinearProgressProps, Select, MenuItem, FormControl, SelectChangeEvent, TextField
+  LinearProgressProps, Select, MenuItem, FormControl, SelectChangeEvent, TextField, InputAdornment
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { FileChooserFlags } from '../utils'
-import { ClientboundPacket } from '../../packets'
+import BrowserUpdatedIcon from '@mui/icons-material/BrowserUpdated'
 
 function LinearProgressWithLabel (props: LinearProgressProps & { value: number }) {
   return (
@@ -134,7 +135,6 @@ const ExportWindow: React.FC<{ open: boolean, setOpen: (val: boolean) => void }>
   }
 
   const exportYourMusic = () => {
-    // TODO 待完善
     if (exportFilePath === '') {
       $notice.enqueueSnackbar('请选择导出位置!', { variant: 'error' })
       return
@@ -149,18 +149,18 @@ const ExportWindow: React.FC<{ open: boolean, setOpen: (val: boolean) => void }>
     })
 
     setKeepOpen(true)
-    let num = 0
-    const timer = setInterval(function () {
-      // setOpen(true)
-      console.log('RenderProgress', ClientboundPacket.RenderProgress)
-      setProgress(ClientboundPacket.RenderProgress)
-      if (num === 100 || ClientboundPacket.RenderProgress === 100) {
-        clearInterval(timer)
-        setKeepOpen(false)
-      }
-      num++
-    }, 100)
   }
+
+  useEffect(() => {
+    const handleRenderProgress = (data: packets.IClientboundRenderProgress) => {
+      setProgress(data.progress! * 100)
+      if (data.progress! >= 1 && data.progress! < 100) setKeepOpen(true)
+      else setKeepOpen(false)
+    }
+
+    $client.on(ClientboundPacket.RenderProgress, handleRenderProgress)
+    return () => { $client.off(ClientboundPacket.RenderProgress, handleRenderProgress) }
+  }, [])
 
   return (
     <div className='export-window'>
@@ -199,7 +199,10 @@ const ExportWindow: React.FC<{ open: boolean, setOpen: (val: boolean) => void }>
             <TextField
               className='export-window-input'
               value={exportFilePath}
-              InputProps={{ readOnly: true }}
+              InputProps={{
+                readOnly: true,
+                endAdornment: <InputAdornment position='end'><BrowserUpdatedIcon /></InputAdornment>
+              }}
               variant='standard'
               onClick={changeExportFilePath}
             />

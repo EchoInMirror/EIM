@@ -12,11 +12,7 @@ MasterTrack::MasterTrack() : AudioProcessorGraph(), juce::AudioPlayHead(), juce:
     setup = deviceManager.getAudioDeviceSetup();
 
     deviceManager.addAudioCallback(&graphPlayer);
-    graphPlayer.setProcessor(this);
-
-    setPlayConfigDetails(0, 2, setup.sampleRate == 0 ? 48000 : setup.sampleRate,
-                         setup.bufferSize == 0 ? 1024 : setup.bufferSize);
-    prepareToPlay(getSampleRate(), getBlockSize());
+	graphPlayer.setProcessor(this);
 
     startTimer(100);
 }
@@ -142,7 +138,6 @@ void MasterTrack::checkEndTime(int time) {
 }
 
 juce::AudioProcessorGraph::Node::Ptr MasterTrack::addTrack(std::unique_ptr<Track> track) {
-    track->setRateAndBufferSizeDetails(getSampleRate(), getBlockSize());
     track->prepareToPlay(getSampleRate(), getBlockSize());
     auto& obj = *track;
     auto& node = tracks.emplace_back(addNode(std::move(track)));
@@ -187,7 +182,7 @@ void MasterTrack::calcPositionInfo() {
     currentPositionInfo.ppqPositionOfLastBarStart =
         (int)(currentPositionInfo.ppqPosition / currentPositionInfo.timeSigNumerator) *
         currentPositionInfo.timeSigNumerator;
-    if (endTime >= currentPositionInfo.ppqPosition * ppq) return;
+    if (isRendering() || endTime >= currentPositionInfo.ppqPosition * ppq) return;
     currentPositionInfo.timeInSeconds = 0;
     currentPositionInfo.timeInSamples = 0;
     currentPositionInfo.ppqPosition = 0;
@@ -283,49 +278,51 @@ void MasterTrack::SystemInfoTimer::timerCallback() {
     masterTrack->events = 0;
 }
 
-bool MasterTrack::isRenderEnd() {
-    DBG(endTime << " , " << currentPositionInfo.ppqPosition);
-    return endTime <= currentPositionInfo.ppqPosition * this->ppq;
-}
-
 float MasterTrack::getProgress() {
-    return (float)(currentPositionInfo.ppqPosition * this->ppq) / endTime;
+    return (float)((currentPositionInfo.ppqPosition * ppq) / (endTime + currentPositionInfo.timeSigNumerator * ppq));
 }
 
 void MasterTrack::processBlockBuffer(juce::AudioBuffer<float>& buffer) {
     juce::MidiBuffer midiBuffer;
-    this->processBlock(buffer, midiBuffer);
+    processBlock(buffer, midiBuffer);
 }
 
 void MasterTrack::render(juce::File file, std::unique_ptr<EIMPackets::ServerboundRender> data) {
-    this->outStream = std::move(file.createOutputStream());
-    if (this->outStream == nullptr) {
-        DBG("error in open file");
-        return;
-    }
-    juce::AudioProcessor* pre = this->graphPlayer.getCurrentProcessor();
-    graphPlayer.setProcessor(nullptr);
-    juce::AudioPlayHead::CurrentPositionInfo copyInfo = this->currentPositionInfo;
-    currentPositionInfo.ppqPosition = 0;
-    currentPositionInfo.timeInSamples = 0;
-    currentPositionInfo.timeInSeconds = 0;
-    currentPositionInfo.editOriginTime = 0;
-    juce::WavAudioFormat format;
-    juce::StringPairArray pair;
-    DBG("start render : " << this->getSampleRate() << "; " << this->getNumOutputChannels());
-    bufferBlockSize = data->has_bitspresample() ? (int)data->bitspresample() : this->getBlockSize();
-    double sampleRate = data->has_samplerate() ? data->samplerate() : this->getSampleRate();
-    audioWirte.reset(
-        format.createWriterFor(this->outStream.get(), sampleRate, this->getNumOutputChannels(), 16, pair, 0));
-    currentPositionInfo.isPlaying = true;
-	renderer.reset(new Renderer(this, std::move(audioWirte), [this, copyInfo, pre]() {
-		DBG("call back");
-		this->currentPositionInfo = copyInfo;
-		this->graphPlayer.setProcessor(pre);
-	}));
-    renderer->render();
+	auto stream = file.createOutputStream();
+	if (!stream) {
+		EIMApplication::getEIMInstance()->listener->boardcastNotice("Cannot open file!",
+			EIMPackets::ClientboundSendMessage::MessageType::ClientboundSendMessage_MessageType_ERROR);
+		return;
+	}
+    outStream = std::move(stream);
+	juce::WavAudioFormat format;
+	juce::StringPairArray pair;
+    audioWirte.reset(format.createWriterFor(outStream.get(), data->has_samplerate() ? data->samplerate() : 44100
+			, 2, 16, pair, 0));
+	renderer.reset(new Renderer(this, std::move(audioWirte)));
+	runOnMainThread([this] { renderer->render(); });
 }
 
 void MasterTrack::renderEnd() {
 	renderer.reset(nullptr);
+	currentPositionInfo = copyPositionInfo;
+	setNonRealtime(false);
+	graphPlayer.setProcessor(this);
+	EIMApplication::getEIMInstance()->listener->boardcastNotice("Rendered successfully!",
+		EIMPackets::ClientboundSendMessage::MessageType::ClientboundSendMessage_MessageType_SUCCESS);
+	systemInfoTimer.startTimer(1000);
+}
+
+void MasterTrack::renderStart(double _sampleRate, int _blockSize) {
+	systemInfoTimer.stopTimer();
+	graphPlayer.setProcessor(nullptr);
+	setNonRealtime(true);
+	prepareToPlay(_sampleRate, _blockSize);
+	EIMApplication::getEIMInstance()->pluginManager->pluginWindows.clear();
+	copyPositionInfo = this->currentPositionInfo;
+    currentPositionInfo.ppqPosition = 0;
+    currentPositionInfo.timeInSamples = 0;
+    currentPositionInfo.timeInSeconds = 0;
+    currentPositionInfo.editOriginTime = 0;
+	currentPositionInfo.isPlaying = true;
 }

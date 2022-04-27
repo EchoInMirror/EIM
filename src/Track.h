@@ -33,7 +33,6 @@ class Track : public juce::AudioProcessorGraph {
     void processBlock(juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages) override;
     void prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) override;
     virtual void setProcessingPrecision(ProcessingPrecision newPrecision);
-    virtual void setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize);
 
     juce::AudioProcessorGraph::NodeID addEffectPlugin(std::unique_ptr<juce::AudioPluginInstance>);
     void removeEffectPlugin(juce::AudioPluginInstance*);
