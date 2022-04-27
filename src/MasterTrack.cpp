@@ -294,10 +294,9 @@ void MasterTrack::render(juce::File file, std::unique_ptr<EIMPackets::Serverboun
 			EIMPackets::ClientboundSendMessage::MessageType::ClientboundSendMessage_MessageType_ERROR);
 		return;
 	}
-    outStream = std::move(stream);
 	juce::WavAudioFormat format;
 	juce::StringPairArray pair;
-    audioWirte.reset(format.createWriterFor(outStream.get(), data->has_samplerate() ? data->samplerate() : 44100
+    audioWirte.reset(format.createWriterFor(stream.release(), data->has_samplerate() ? data->samplerate() : 44100
 			, 2, 16, pair, 0));
 	renderer.reset(new Renderer(this, std::move(audioWirte)));
 	runOnMainThread([this] { renderer->render(); });

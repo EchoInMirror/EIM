@@ -70,7 +70,6 @@ private:
     std::vector<std::string> deletedTracks;
 
     std::unique_ptr<Renderer> renderer;
-    std::unique_ptr<juce::FileOutputStream> outStream;
     std::unique_ptr<juce::AudioFormatWriter> audioWirte;
     void calcPositionInfo();
     void timerCallback() override;

@@ -162,13 +162,13 @@ const TrackNotes = memo(function TrackNotes ({ data, width }: { data: packets.IM
   )
 })
 
-const MaskBoxImage = memo(function MaskBoxImage ({ url }: { url: string }) {
+const MaskBoxImage = memo(function MaskBoxImage ({ url, width }: { url: string, width: number }) {
   const [loaded, setLoaded] = useState(false)
   useEffect(() => {
     setLoaded(false)
     tryLoadImage(url).then(() => setLoaded(true))
   }, [url])
-  return loaded ? <div style={{ WebkitMaskBoxImage: `url('${url}')` }} /> : <Box className='loading-sample'><CircularProgress size={20} /></Box>
+  return loaded ? <div style={{ WebkitMaskBoxImage: `url('${url}')`, width }} /> : <Box className='loading-sample'><CircularProgress size={20} /></Box>
 })
 const TrackSamples = memo(function TrackSamples ({ uuid, data, noteWidth, bpm, ppq }:
   { data: packets.ISampleData[], noteWidth: number, bpm: number, ppq: number, uuid: string }) {
@@ -193,7 +193,7 @@ const TrackSamples = memo(function TrackSamples ({ uuid, data, noteWidth, bpm, p
               left: noteWidth * it.position!
             }}
           >
-            <MaskBoxImage url={FULL_BACKEND_PATH + 'samples-preview/' + it.file + '.png'} />
+            <MaskBoxImage url={FULL_BACKEND_PATH + 'samples-preview/' + it.file + '.png'} width={(it.fullTime || it.duration! / 60 * bpm * ppq) * noteWidth} />
             <span className='sample-name'>{it.file}</span>
           </div>
         )
