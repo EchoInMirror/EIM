@@ -163,8 +163,8 @@ void ServerService::handleSave(WebSocketSession* session, std::function<void(EIM
 
 std::unique_ptr<juce::FileChooser> chooser;
 void ServerService::handleOpenProject(WebSocketSession*) {
-    chooser = std::make_unique<juce::FileChooser>("Select Project Root", juce::File{}, "*");
     runOnMainThread([] {
+		chooser.reset(new juce::FileChooser("Select Project Root", juce::File{}, "*"));
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
                              [](const juce::FileChooser&) {
                                  if (chooser->getResult() == juce::File{}) return;
@@ -174,8 +174,8 @@ void ServerService::handleOpenProject(WebSocketSession*) {
     });
 }
 void ServerService::handleSaveAs(WebSocketSession*) {
-    chooser = std::make_unique<juce::FileChooser>("Save As", juce::File{}, "*");
     runOnMainThread([] {
+		chooser.reset(new juce::FileChooser("Save As", juce::File{}, "*"));
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
                              [](const juce::FileChooser&) {
                                  if (chooser->getResult() == juce::File{}) return;
@@ -186,12 +186,12 @@ void ServerService::handleSaveAs(WebSocketSession*) {
     });
 }
 
-void ServerService::handleBrowserPath(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundBrowserPath> data,
+void ServerService::handleBrowserPath(WebSocketSession*, std::unique_ptr<EIMPackets::ServerboundBrowserPath> dataPtr,
                                       std::function<void(EIMPackets::OptionalString&)> reply) {
-    chooser =
-        std::make_unique<juce::FileChooser>(data->title(), juce::File{}, data->has_patterns() ? data->patterns() : "*");
-    int type = data->type();
-    runOnMainThread([type, reply] {
+	auto data = dataPtr.get();
+    runOnMainThread([data, reply] {
+		int type = data->type();
+		chooser.reset(new juce::FileChooser(data->title(), juce::File{}, data->has_patterns() ? data->patterns() : "*"));
         chooser->launchAsync(type, [reply](const juce::FileChooser&) {
             EIMPackets::OptionalString res;
             if (chooser->getResult() != juce::File{})

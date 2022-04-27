@@ -12,8 +12,9 @@ public:
 private:
     int lastSendTime = 0;
     Renderable* renderTarget = nullptr;
+	juce::AudioBuffer<float> buffer;
     std::unique_ptr<juce::AudioFormatWriter> output;
     std::function<void()> callback;
+	EIMPackets::ClientboundRenderProgress progress;
     void timerCallback() override;
-    void rendering();
 };

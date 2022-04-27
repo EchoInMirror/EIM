@@ -273,19 +273,7 @@ void Track::prepareToPlay(double sampleRate, int estimatedSamplesPerBlock) {
 		it->resamplingAudioSource.prepareToPlay(estimatedSamplesPerBlock, sampleRate);
 		it->resamplingAudioSource.setResamplingRatio(it->info->sampleRate / sampleRate);
 	}
-    for (auto it : getNodes())
-        it->getProcessor()->prepareToPlay(sampleRate, estimatedSamplesPerBlock);
-}
-
-void Track::setRateAndBufferSizeDetails(double newSampleRate, int newBlockSize) {
-	AudioProcessorGraph::setRateAndBufferSizeDetails(newSampleRate, newBlockSize);
-	for (auto& it : samples) {
-		it->resamplingAudioSource.prepareToPlay(newBlockSize, newSampleRate);
-		it->resamplingAudioSource.setResamplingRatio(it->info->sampleRate / newSampleRate);
-	}
-	for (auto it : getNodes())
-		it->getProcessor()->prepareToPlay(newSampleRate, newBlockSize);
-	messageCollector.reset(newSampleRate);
+	messageCollector.reset(sampleRate);
 }
 
 void Track::setMuted(bool val) {

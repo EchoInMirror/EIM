@@ -1,5 +1,6 @@
 #include "Listener.h"
 #include "../Main.h"
+#include "../packets.h"
 
 Listener::Listener(boost::asio::io_context& ioc, boost::asio::ip::tcp::endpoint endpoint) : ioc(ioc), acceptor(ioc), state(std::make_shared<SharedState>(".")) {
     boost::beast::error_code ec;
@@ -34,3 +35,9 @@ void Listener::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socke
 
 void Listener::boardcast(std::shared_ptr<boost::beast::flat_buffer> message) { state->send(message); }
 void Listener::boardcastExclude(std::shared_ptr<boost::beast::flat_buffer> message, WebSocketSession* session) { state->sendExclude(message, session); }
+void Listener::boardcastNotice(std::string message, EIMPackets::ClientboundSendMessage::MessageType type) {
+	EIMPackets::ClientboundSendMessage msg;
+	msg.set_message(message);
+	msg.set_type(type);
+	boardcast(EIMMakePackets::makeSendMessagePacket(msg));
+}

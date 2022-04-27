@@ -14,7 +14,7 @@ class MasterTrack : public juce::AudioProcessorGraph,
 public:
     std::vector<juce::AudioProcessorGraph::Node::Ptr> tracks;
     std::unordered_map<std::string, juce::AudioProcessorGraph::Node::Ptr> tracksMap;
-    juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo;
+    juce::AudioPlayHead::CurrentPositionInfo currentPositionInfo, copyPositionInfo;
     SampleManager sampleManager;
     short ppq = 96;
     int events = 0;
@@ -42,9 +42,9 @@ public:
     void checkEndTime();
     void checkEndTime(int endTime);
 
-    bool isRenderEnd() override;
 	float getProgress() override;
 	void renderEnd() override;
+	void renderStart(double sampleRate, int blockSize) override;
     void processBlockBuffer(juce::AudioBuffer<float>&) override;
     void render(juce::File, std::unique_ptr<EIMPackets::ServerboundRender>) override;
 
