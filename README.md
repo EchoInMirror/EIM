@@ -1,5 +1,15 @@
 # EIM
 
+A free, open source DAW supports VST.
+
+**New Version: https://github.com/EchoInMirror/EchoInMirror**
+
+## Screenshots
+
+![Overview](./screenshots/overview.png)
+
+![VST](./screenshots/vst.png)
+
 ## Build
 
 ### Prerequisites
