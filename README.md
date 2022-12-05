@@ -2,7 +2,7 @@
 
 A free, open source DAW supports VST.
 
-**New Version: https://github.com/EchoInMirror/EchoInMirror**
+**[WIP] New Version: https://github.com/EchoInMirror/EchoInMirror**
 
 ## Screenshots
 
